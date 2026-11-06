@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Kaiku, Turku map{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="/static/vendor/maplibre/maplibre-gl.css?v={{ asset_v() }}">
+<link rel="stylesheet" href="/static/map.css?v={{ asset_v() }}">
+{% endblock %}
+{% block content %}
+<div class="mapwrap" id="mapwrap" data-pilot="map">
+  <div id="map" aria-label="Map of Turku businesses"></div>
+  <section class="mpanel glass" data-pilot="map-counts" aria-live="polite">
+    <div class="mono mcap">HOLIDAY HOURS 24.12.</div>
+    <div class="mcounts">
+      <div><b id="c-unknown">&ndash;</b><span class="mono"><i class="sw amber"></i>unknown</span></div>
+      <div><b id="c-answered">&ndash;</b><span class="mono"><i class="sw green"></i>answered</span></div>
+    </div>
+    <p class="mfi" lang="fi">Aukioloajat jouluaattona: tuntematon / vastattu</p>
+    <p class="men">Holiday hours: unknown / answered</p>
+    <div class="mono live" id="conn"><i></i>connecting</div>
+  </section>
+  <a class="mqr glass" id="mqr" href="/room" aria-label="Room QR"><img src="/api/room/qr.svg" alt="QR code to join" width="96" height="96"><span class="mono">SCAN</span></a>
+  <section class="mlegend glass" data-pilot="map-legend">
+    <i class="sw amber"></i> Holiday hours unknown <i class="sw green"></i> Answered by room owner <i class="sw cyan"></i> Just arrived<br>
+    <span id="legend-src">Businesses: OpenStreetMap (real). Holiday hours: unknown in public data. Answers: from the room (demo).</span>
+  </section>
+  <ol class="mlatest glass" id="latest" data-pilot="map-latest" aria-label="Latest answers"></ol>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/vendor/maplibre/maplibre-gl.js?v={{ asset_v() }}"></script>
+<script src="/static/map.js?v={{ asset_v() }}" defer></script>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Kaiku, room{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/map.css?v={{ asset_v() }}">{% endblock %}
+{% block content %}
+<div class="roomgrid" data-pilot="room">
+  <section class="roomcta glass">
+    <div class="mono mcap">LIVE ROOM</div>
+    <h1 lang="fi">Skannaa ja ota yritys haltuun</h1>
+    <p class="men big">Scan, become a Turku business owner for a minute</p>
+    <div class="qrbox"><img src="/api/room/qr.svg" alt="QR code to {{ join_url }}" width="320" height="320"></div>
+    <p class="mono url">{{ join_url }}</p>
+    <p class="mfi" lang="fi">Vastaa yhteen kysymykseen: oletko auki jouluaattona? Pisteesi vaihtuu vihreäksi.</p>
+    <p class="men">Answer one question: are you open on Christmas Eve? Your dot turns green.</p>
+    <p class="men">Businesses: OpenStreetMap (real). Holiday hours: unknown in public data. Answers: from the room (demo).</p>
+    <div class="mono live" id="rcount"><b id="r-answered">0</b> answered / <b id="r-total">0</b> businesses</div>
+  </section>
+  <iframe class="roommap" src="/map?embed=1" title="Live map of Turku businesses" loading="eager"></iframe>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function(){var a=document.getElementById('r-answered'),t=document.getElementById('r-total');
+function f(){fetch('/api/room/state').then(r=>r.json()).then(s=>{a.textContent=s.counts.answered;t.textContent=s.counts.total}).catch(()=>{})}
+f();setInterval(f,2000)})();
+</script>
+{% endblock %}
