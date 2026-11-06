@@ -23,4 +23,4 @@ not a public holiday, closed Sundays, so no change.
 **Kit vs ours.** From `vendor/voice-pilot` (MIT, pre-existing, see VENDORED.md): the design (data-pilot targets, spotlight, push to talk, captions, ElevenLabs proxy + cache) and the
 reference code; not loaded at runtime. Written here: every file under `kaiku/voice/`, `voice.js`, `voice.css`, `_voice.html`, the tools, Kaiku prompts, tests.
 
-**Notes.** No business page exists yet, so navigate goes to `/` (the business card and hero live there). Needs `anthropic` in requirements.txt (not ours to edit). `KAIKU_LIVE_VOICE=1` runs live tests.
+**Notes.** There is no separate business page, so navigate goes to `/` (the business card and hero live there). `anthropic` is in requirements.txt. `KAIKU_LIVE_VOICE=1` runs live tests.

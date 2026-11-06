@@ -1,7 +1,7 @@
 # Map, room and join (task 10)
 
 Code: `kaiku/map/{osm,room,router,loadtest}.py`, templates `map.html room.html join.html`, `static/map.js map.css`, `static/vendor/maplibre/` (maplibre-gl 4.7.1, BSD-3, see VENDORED.md).
-Needs the `qrcode` python package (`pip install qrcode`); requirements.txt is core's file, so add `qrcode==8.2` there.
+Needs the `qrcode` package (`qrcode==8.2`, in requirements.txt).
 
 ## Data
 - Businesses: OpenStreetMap contributors (ODbL), Overpass, 1.5 km around 60.4518, 22.2666, named amenity/shop/leisure/healthcare tags. Cached in `data/turku_businesses.json` (fetched_at, mirror, count). 813 real businesses, fetched from overpass-api.de on 6 Nov 2026. Rebuild: `python -m kaiku.map.osm` (3 mirrors, 60 s, 3 retries with backoff). If all fail, 40 points on real street lines named "Kahvila 12" are written, labelled "fictional placeholder" in the file and in the legend.
@@ -20,4 +20,4 @@ The map draws dots from `/api/room/state` alone; SSE (`/api/events`) only adds l
 `python -m kaiku.map.loadtest http://127.0.0.1:8213 20`: 20 parallel answers, time from POST to the SSE apply event: max 381 ms, median 199 ms (serialised by the SQLite event write). A real browser on /map showed 20 answered immediately after the burst.
 
 ## Notes
-`static/app.js` (core) throws `getTotalLength of null` on pages without the home arc; harmless here.
+

@@ -1,7 +1,7 @@
 # DISCLOSURE: brought versus built (kept true at all times)
 
 ## Built
-All application code in this repository was written during the event, after the bell commit e2f7382 (Fri 6 Nov 2026 18:49Z),
+First commit: e2f7382, the bell commit, Fri 6 Nov 2026 18:49:59Z, a fresh repo with conventions only and no code. All application code in this repository was written during the event after it,
 with AI coding tools (Claude Code: Fable orchestrating, Sonnet builders and verifiers). Everything not listed under "Brought" is
 written after that commit.
 
@@ -12,14 +12,26 @@ written after that commit.
 - Map tiles: OpenFreeMap. Map data: OpenStreetMap via Overpass (ODbL).
 - Live feeds: Föli SIRI VM, Fintraffic Digitraffic AIS, Open-Meteo (all CC BY 4.0).
 - Nager.Date public holidays API; Smart Data Models contexts.
-- Services run unmodified: Orion-LD (FIWARE NGSI-LD context broker) and MongoDB, as Docker images.
+- Services run unmodified: Orion-LD (FIWARE NGSI-LD context broker, AGPL-3.0) and MongoDB, as Docker images.
+- ngsi-ld-mcp (`ngsi-ld-mcp/`, MIT, The Mishakin Group) is our own, written during the event.
 - Libraries and APIs: mcp Python SDK, Anthropic SDK (model claude-sonnet-5-5), ElevenLabs API (TTS and STT), Yext sandbox API
   (entity provided by Fonecta), Serper (Google places lookup), Meta WhatsApp Cloud API (test number).
 - Infrastructure: our VPS, domain, and a Cloudflare tunnel.
 - /root/hack/bin scripts (pre-existing process tooling, not product code): deploy, shot, smoke, expose.
 
+## Mocked or not live
+- WhatsApp: the Cloud API client is tested with a fake transport; no real message has been sent from the build box (no token configured on 6 Nov). Without a token the contact step produces the decision link instead.
+- Call lane (ElevenLabs outbound Finnish call): in progress on branch task/call, not on main. It needs a phone number and trunk that were not verified.
+- Google signal (Serper): no key on the build box, so `google_now` is unknown.
+- Peer priors (`data/peer_priors.json`) are hand-made; website parsing is tested on a mocked page.
+- Yext sandbox has no publisher listings: the write is real, the syndication to Google and others is not.
+- Room answers on `/map` are demo data and are not written to Yext.
+
 ## Fictional data
 "Furry Paw Vet Clinic" is Fonecta's sandbox business; its history is a labelled sample we wrote.
 
 ## GenAI in the product
-Claude (suggestion explanations, voice tool loop), ElevenLabs (voice).
+Claude claude-sonnet-5-5: the voice tool loop and the Aura subscription proposals. ElevenLabs: speech to text (scribe_v1) and text to speech. The suggestion engine and its Finnish messages are rules and templates, not a model.
+
+## Data sources and licences
+See docs/DATA_SOURCES.md.
