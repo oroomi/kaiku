@@ -1,0 +1,17 @@
+<div class="drawer-back" id="drawer-back" hidden></div>
+<aside class="drawer glass" id="drawer" hidden aria-label="Demo controls" data-pilot="drawer">
+  <div class="drawer-top"><span class="mono">Demo controls</span><button type="button" class="ghost" id="drawer-close">Close</button></div>
+  <label class="dfield"><span class="mono">Today (time travel)</span>
+    <input type="date" id="tt-date" autocomplete="off" aria-label="Today (time travel)" min="2026-01-01" max="2027-12-31"></label>
+  <label class="dfield"><span class="mono">Holiday</span>
+    <select id="date" aria-label="Holiday date" autocomplete="off">
+      <option value="2026-12-24">24.12.2026 Christmas Eve</option>
+      <option value="2026-11-08">8.11.2026 Father's Day (not a public holiday)</option>
+    </select></label>
+  <div class="drow">
+    <button class="primary" id="run" data-pilot="run-chain" type="button">Run the chain</button>
+    <button class="ghost" id="reset" data-pilot="reset" type="button" title="Removes the holiday hours from the Yext sandbox, clears runs and events, sets the date to 17.12.2026">Reset demo</button>
+  </div>
+  <p class="mono soft" id="d-msg" aria-live="polite"></p>
+  <a class="dlink" href="/judge">Judge view: live events</a>
+</aside>

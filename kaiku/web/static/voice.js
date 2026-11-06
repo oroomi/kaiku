@@ -102,6 +102,10 @@
     $("kv-ai-l").hidden = false; $("kv-ai").textContent = "Mietin…";
     var gen = ++st.gen;
     pushHist("user", text);
+    if (window.kaikuChatAsk) {   /* owner view: speech goes into the one conversation and the chat reply is spoken */
+      return window.kaikuChatAsk(text).then(function (reply) { if (gen !== st.gen) return; pushHist("assistant", reply); deliver(reply, [], text); })
+        .catch(function () { setState("error"); setTimeout(function () { setState("idle"); }, 2500); });
+    }
     return fetch("/api/voice/ask", { method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ text: text, page: location.pathname, lang: "auto", history: hist().slice(0, -1) }) })
       .then(function (r) { if (!r.ok) throw new Error("ask " + r.status); return r.json(); })

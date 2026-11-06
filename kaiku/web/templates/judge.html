@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Kaiku, judge view{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/chat.css?v={{ asset_v() }}">{% endblock %}
+{% block content %}
+{% if keyed %}
+<div class="judge">
+  <div class="statusbar mono" id="statusbar" data-pilot="status" aria-live="polite">
+    <span class="chip" id="st-broker" title="FIWARE NGSI-LD context broker: Orion-LD (live) or the in-memory fallback">BROKER: <b>...</b></span>
+    <span class="chip" id="st-wa" title="WhatsApp: not in use yet means the decision link is shown instead of a message">WhatsApp: <b>...</b></span>
+    <span class="chip" id="st-yext" title="Yext sandbox entity that receives the holiday hours">YEXT: <b>SinceAI07</b></span>
+    <a class="chip back" href="/">Owner view</a>
+  </div>
+  <section class="readback glass" id="readback" aria-live="polite">
+    <span class="mono">YEXT READ-BACK</span>
+    <p id="readback-t">Nothing applied yet. After an approval the hours are written to the Yext sandbox and read back here.</p>
+  </section>
+  <section class="strip glass" data-pilot="event-strip" id="strip" aria-label="Live events">
+    <div class="strip-head"><span class="mono">LIVE EVENTS</span><span class="mono live" id="conn"><i></i><span>connecting</span></span></div>
+    <ol id="rows" class="rows"></ol>
+    <p class="empty" id="rows-empty">Nothing has happened yet. Each step of the chain lands here as it happens.</p>
+  </section>
+</div>
+{% else %}
+<div class="judge"><section class="strip glass">
+  <span class="mono">JUDGE VIEW</span>
+  <p class="empty">This view is for the team and the judges. Open it with the demo key.</p>
+  <p><a class="dlink" href="/">Back to the owner view</a></p>
+</section></div>
+{% endif %}
+{% endblock %}
+{% block scripts %}{% if keyed %}<script src="/static/judge.js?v={{ asset_v() }}" defer></script>{% endif %}{% endblock %}

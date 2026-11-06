@@ -18,7 +18,8 @@ log = logging.getLogger("kaiku.voice.tools")
 ROOT = Path(__file__).resolve().parents[2]
 
 HOME = "/"
-SEL_SUGGESTION = '[data-pilot="hero"]'       # home.html: the arc hero carries the suggestion sentence
+JUDGE = "/judge"                         # the live event strip and the demo clock live on the judge view
+SEL_SUGGESTION = '[data-pilot="hero"]'       # owner.html: the chat thread carries Kaiku's suggestions
 SEL_BUSINESS = '[data-pilot="business-card"]'
 SEL_STRIP = '[data-pilot="event-strip"]'
 SEL_TODAY = '[data-pilot="today"]'
@@ -192,7 +193,7 @@ class Tools:
         n = max(1, min(int(limit or 10), 30))
         ev = self.store.recent_events(n)
         rows = [{"ts": e.ts if isinstance(e.ts, str) else str(e.ts), "step": e.step, "title_fi": e.title_fi, "title_en": e.title_en} for e in ev][-n:]
-        return {"events": rows, "_actions": [{"type": "navigate", "url": HOME}, {"type": "spotlight", "selector": SEL_STRIP}]}
+        return {"events": rows, "_actions": [{"type": "navigate", "url": JUDGE}, {"type": "spotlight", "selector": SEL_STRIP}]}
 
     async def run_chain(self, business_id: str = "furry-paw", holiday_date: str = "2026-12-24") -> dict:
         try:
@@ -205,7 +206,7 @@ class Tools:
         sid = r.get("suggestion_id") if isinstance(r, dict) else None
         return {"started": True, "suggestion_id": sid, "business_id": business_id, "holiday_date": holiday_date,
                 "note": "chain is running; the owner is asked and has the last word",
-                "_actions": [{"type": "navigate", "url": HOME}, {"type": "run_chain", "business_id": business_id, "holiday_date": holiday_date, "suggestion_id": sid},
+                "_actions": [{"type": "navigate", "url": JUDGE}, {"type": "run_chain", "business_id": business_id, "holiday_date": holiday_date, "suggestion_id": sid},
                              {"type": "spotlight", "selector": SEL_STRIP}]}
 
     async def timetravel(self, date: str = "real") -> dict:  # noqa: A002
@@ -222,7 +223,7 @@ class Tools:
                 return {"error": "date must be YYYY-MM-DD or 'real'"}
         b = self._biz("furry-paw") or {}
         return {"today": self._today().isoformat(), "will_detect_within_21_days": self._upcoming(b, 21),
-                "_actions": [{"type": "navigate", "url": HOME}, {"type": "spotlight", "selector": SEL_TODAY}]}
+                "_actions": [{"type": "navigate", "url": JUDGE}, {"type": "spotlight", "selector": SEL_TODAY}]}
 
     async def get_today(self) -> dict:
         t = self._today()

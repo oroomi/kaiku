@@ -9,7 +9,7 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -99,13 +99,40 @@ def healthz():
     return {"ok": True, "broker": broker}
 
 
-@app.get("/", response_class=HTMLResponse)
-def home(request: Request):
-    b = store.get_business("furry-paw")
-    resp = render(request, "home.html", business=b)
+def _keyed(request: Request) -> bool:
     want = os.environ.get("KAIKU_ROOM_KEY", "")
     qk = request.query_params.get("key", "")
-    if want and hmac.compare_digest(qk.encode(), want.encode()):  # keyed laptop: unlock the decision link for this browser
+    return events.has_key(request) or bool(want and hmac.compare_digest(qk.encode(), want.encode()))
+
+
+def _page(request: Request, name: str, **ctx):
+    resp = render(request, name, **ctx)
+    want = os.environ.get("KAIKU_ROOM_KEY", "")
+    qk = request.query_params.get("key", "")
+    if want and hmac.compare_digest(qk.encode(), want.encode()):  # keyed laptop: unlock the demo drawer and the decision link
         resp.set_cookie(events.KEY_COOKIE, qk, httponly=True, samesite="lax", max_age=86400,
                         secure=request.headers.get("x-forwarded-proto") == "https")
+    return resp
+
+
+@app.get("/", response_class=HTMLResponse)
+@app.get("/owner", response_class=HTMLResponse)
+def home(request: Request):
+    """The owner's page is one conversation with Kaiku. Demo controls live in a drawer only the key holder gets."""
+    return _page(request, "owner.html", business=store.get_business("furry-paw"), owner_view=True)
+
+
+@app.get("/owner/drawer", response_class=HTMLResponse)
+def owner_drawer(request: Request):
+    if not _keyed(request):
+        raise HTTPException(403, "demo key needed")
+    return render(request, "_drawer.html")
+
+
+@app.get("/judge", response_class=HTMLResponse)
+def judge(request: Request):
+    k = _keyed(request)
+    resp = _page(request, "judge.html", keyed=k)
+    if not k:
+        resp.status_code = 403
     return resp

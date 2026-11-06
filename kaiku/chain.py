@@ -508,6 +508,59 @@ def _short(d: str) -> str:
     return f"{int(d[8:10])}.{int(d[5:7])}."
 
 
+async def post_decision(b: Business, s: Suggestion, dec: Decision, pause=None) -> Suggestion:
+    """Everything after the owner's decision: save, apply (Yext + broker), receipt, learn. run_chain calls this; so does the
+    owner chat when no chain run is waiting for the answer."""
+    sid, holiday_date, day = s.id, s.holiday_date, _short(s.holiday_date)
+
+    async def pause_(step):
+        if pause:
+            await pause(step)
+    pause_fn = pause_
+    s.status = _STATUS_FOR.get(dec.action, s.status)
+    store.save_suggestion(s)
+    store.save_decision(dec)
+    _ev("decide", b, sid, f"Päätös: {FI_ACTION.get(dec.action, dec.action)}", f"Decision: {dec.action}", phase="decided", action=dec.action, via=dec.via)
+
+    if dec.action != "decline":
+        await pause_fn("apply")
+        r = await _call(STEPS["apply"], s, dec)
+        res, out = r if isinstance(r, tuple) else (r, {})
+        ok = res.yext_status == "ok"
+        verified = out.get("verified")
+        if ok:
+            s.status = "applied"
+            store.save_suggestion(s)
+            res.broker_updated = await _broker(b, sid, f"Päätös kirjattu brokeriin ({day}, oletusinstanssi)",
+                                               f"Decision written to the broker as the default instance ({day})",
+                                               what="truth", day=holiday_date, proposed=out.get("hours") or _hours_to_write(s, dec), status="applied")
+        _ev("apply", b, sid,
+            f"Aukioloajat tallennettu Yextiin ({day}), luettu takaisin" if ok and verified else
+            (f"Aukioloajat päivitetty ({day})" if ok else "Yext-kirjoitus epäonnistui"),
+            f"Hours saved to Yext ({day}), read back and verified" if ok and verified else
+            (f"Hours applied ({day})" if ok else "Yext write failed"),
+            yext_status=res.yext_status, verified=verified, hours=out.get("hours"), entity=out.get("entity_id"), written=out.get("written"),
+            entity_version=out.get("entity_version"), environment=out.get("environment"), publishers=res.publishers,
+            where_it_shows=out.get("where_it_shows", []), broker_updated=res.broker_updated, error=(res.yext_status if not ok else None))
+        if ok and whatsapp_configured():
+            try:
+                from .contact import ladder, router as cr
+                phone = ladder.owner_phone(_s_dict(s))
+                if phone:
+                    await asyncio.to_thread(cr.send_receipt, phone, {**res.model_dump(), "holiday_name_fi": s.holiday_name_fi,
+                                                                     "holiday_name_en": s.holiday_name_en, "hours": out.get("hours")})
+            except Exception as exc:
+                log.warning("receipt failed: %s", exc)
+    await pause_fn("learn")
+    p = await _call(STEPS["learn"], s, dec)
+    try:
+        fi, en, det_ = _learn_text(s, dec, p if isinstance(p, dict) else {})
+    except Exception:
+        fi, en, det_ = "Opittu seuraavaa kertaa varten", "Learned for next time", {}
+    _ev("learn", b, sid, fi, en, action=dec.action, **det_)
+    return s
+
+
 async def run_chain(business_id: str, holiday_date: str, now: Optional[datetime] = None, suggestion_id: Optional[str] = None) -> Optional[Suggestion]:
     b = store.get_business(business_id)
     if b is None:
@@ -566,47 +619,7 @@ async def run_chain(business_id: str, holiday_date: str, now: Optional[datetime]
             _ev("decide", b, sid, "Omistaja ei vastannut ajoissa, ei muutoksia", "Owner did not answer in time, nothing changed",
                 phase="timeout", applied=False)
             return s
-        s.status = _STATUS_FOR.get(dec.action, s.status)
-        store.save_suggestion(s)
-        store.save_decision(dec)
-        _ev("decide", b, sid, f"Päätös: {FI_ACTION.get(dec.action, dec.action)}", f"Decision: {dec.action}", phase="decided", action=dec.action, via=dec.via)
-
-        if dec.action != "decline":
-            await pause("apply")
-            r = await _call(STEPS["apply"], s, dec)
-            res, out = r if isinstance(r, tuple) else (r, {})
-            ok = res.yext_status == "ok"
-            verified = out.get("verified")
-            if ok:
-                s.status = "applied"
-                store.save_suggestion(s)
-                res.broker_updated = await _broker(b, sid, f"Päätös kirjattu brokeriin ({day}, oletusinstanssi)",
-                                                   f"Decision written to the broker as the default instance ({day})",
-                                                   what="truth", day=holiday_date, proposed=out.get("hours") or _hours_to_write(s, dec), status="applied")
-            _ev("apply", b, sid,
-                f"Aukioloajat tallennettu Yextiin ({day}), luettu takaisin" if ok and verified else
-                (f"Aukioloajat päivitetty ({day})" if ok else "Yext-kirjoitus epäonnistui"),
-                f"Hours saved to Yext ({day}), read back and verified" if ok and verified else
-                (f"Hours applied ({day})" if ok else "Yext write failed"),
-                yext_status=res.yext_status, verified=verified, hours=out.get("hours"), entity=out.get("entity_id"), written=out.get("written"),
-                entity_version=out.get("entity_version"), environment=out.get("environment"), publishers=res.publishers,
-                where_it_shows=out.get("where_it_shows", []), broker_updated=res.broker_updated, error=(res.yext_status if not ok else None))
-            if ok and whatsapp_configured():
-                try:
-                    from .contact import ladder, router as cr
-                    phone = ladder.owner_phone(_s_dict(s))
-                    if phone:
-                        await asyncio.to_thread(cr.send_receipt, phone, {**res.model_dump(), "holiday_name_fi": s.holiday_name_fi,
-                                                                         "holiday_name_en": s.holiday_name_en, "hours": out.get("hours")})
-                except Exception as exc:
-                    log.warning("receipt failed: %s", exc)
-        await pause("learn")
-        p = await _call(STEPS["learn"], s, dec)
-        try:
-            fi, en, det_ = _learn_text(s, dec, p if isinstance(p, dict) else {})
-        except Exception:
-            fi, en, det_ = "Opittu seuraavaa kertaa varten", "Learned for next time", {}
-        _ev("learn", b, sid, fi, en, action=dec.action, **det_)
+        s = await post_decision(b, s, dec, pause)
         return s
     except Exception as exc:  # the chain must never die silently
         _ev("detect" if not sid else "broker", b, sid, "Ketju pysähtyi virheeseen", "Chain stopped on an error", error=type(exc).__name__, message=str(exc)[:200])
