@@ -238,11 +238,19 @@ def _business_for(sid: str | None) -> str | None:
         cands.append(getattr(sg, "business_id", None))
     except Exception:
         pass
-    cands.append(DEFAULT_BUSINESS)
     for c in cands:
         if c and store.get_business(c) is not None:
             return c
-    return None
+    if store.get_business(DEFAULT_BUSINESS) is None:
+        return None
+    if sid:  # an id the chat feed does not list belongs to somebody else: the keyword parser handles it
+        try:
+            from kaiku.chat import feed as F  # type: ignore
+            if F.find(DEFAULT_BUSINESS, sid) is None:
+                return None
+        except Exception:
+            return None
+    return DEFAULT_BUSINESS
 
 
 def _is_owner_phone(phone: str) -> bool:

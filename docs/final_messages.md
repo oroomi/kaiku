@@ -2,7 +2,34 @@
 
 Demo business: Furry Paw Vet Clinic (fictional Yext sandbox entity). Items 1 to 4 are the exact Suggestion texts from `python3 -m kaiku.suggest.cli --business data/furry_paw.json` (no network): 24.12. hours, 25.12. closed, 24.12. with no history (ask), 8.11. no change. Text as sent over WhatsApp, with English glosses.
 
-## 1. Suggestion with proposed hours (WhatsApp buttons: Approve / Edit / No thanks)
+## 0b. Step 2 WhatsApp opening: ONE plain text, the same intro and suggestion lines the website chat shows on load (demo date 17.12., fictional Furry Paw Vet Clinic), no buttons
+
+Finnish:
+
+> (Finnish owners get the Finnish suggestion text followed by "Vastaa omin sanoin."; the website chat opening is English only.)
+>
+> Hei, Furry Paw Vet Clinic!
+>
+> Jouluaatto on torstaina 24.12.
+> Viime vuonna aukioloaikanne tuona päivänä oli 9-13.
+> Googlessa näkyy nyt 9-17, mikä ei vastaa ehdotustamme, joten asiakas voi saapua suljetun oven eteen.
+>
+> Ehdotamme, että jouluaattona (24.12.) aukioloaikanne on 9-13.
+> Voitte hyväksyä yhdellä napautuksella, muokata aikaa tai jättää ehdotuksen väliin. Päätös on aina teidän.
+>
+> Vastaa omin sanoin.
+
+English gloss:
+
+> Hi Furry Paw Vet Clinic. I noticed 2 things.
+>
+> Christmas Eve 24.12.: 09:00-13:00. Hi Furry Paw Vet Clinic! Christmas Eve is on Thursday 24.12. Last year you were open 09:00-13:00 that day, but no exception hours have been added this year, so Fonecta Connect now shows your regular Thursday hours (09:00-17:00). We suggest: Thu 24.12. 09:00-13:00.
+>
+> Christmas period: 6 dates. 24.12. 09:00-13:00; 25.12. closed; 26.12. closed; 31.12. 09:00-15:00; 1.1. closed; 6.1. closed. Want me to handle this period every year?. I suggest 24.12. 9-13; 25.12. closed; 26.12. closed; 31.12. 9-15; 1.1. closed; 6.1. closed.
+>
+> Reply in your own words.
+
+## 1. Suggestion with proposed hours (the plain suggestion text; WhatsApp buttons Approve / Edit / No thanks only with WA_BUTTONS=1)
 
 Finnish:
 

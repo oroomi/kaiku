@@ -18,6 +18,8 @@ def hours_text(h) -> str:
         return ""
     if h == "closed" or h == []:
         return "closed"
+    if isinstance(h, list) and h and isinstance(h[0], dict) and "date" in h[0]:  # a period item: one entry per day
+        return "; ".join(f"{d_short(x['date'])} {hours_text(x.get('proposed'))}".strip() for x in h)
     return ", ".join(f"{_t(s['start'])}-{_t(s['end'])}" for s in h)
 
 

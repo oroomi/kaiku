@@ -454,6 +454,17 @@ def _engine_cases() -> dict:
             "ask": sug(cold_biz, "2026-12-24", "2026-12-17"), "nochg": sug(biz, "2026-11-08", "2026-11-01")}
 
 
+WA_OPENING_EN = "\n".join([
+    "Hi Furry Paw Vet Clinic. I noticed 2 things.", "",
+    "Christmas Eve 24.12.: 09:00-13:00. Hi Furry Paw Vet Clinic! Christmas Eve is on Thursday 24.12. Last year you were open 09:00-13:00 that day, but no exception hours have been added this year, so Fonecta Connect now shows your regular Thursday hours (09:00-17:00). We suggest: Thu 24.12. 09:00-13:00.", "",
+    "Christmas period: 6 dates. 24.12. 09:00-13:00; 25.12. closed; 26.12. closed; 31.12. 09:00-15:00; 1.1. closed; 6.1. closed. Want me to handle this period every year?. I suggest 24.12. 9-13; 25.12. closed; 26.12. closed; 31.12. 9-15; 1.1. closed; 6.1. closed.", "",
+    "Reply in your own words."])
+WA_OPENING_FI = ("(Finnish owners get the Finnish suggestion text followed by \"Vastaa omin sanoin.\"; the website chat opening is English only.)\n\n"
+                 + suggestion_text_fi({"business_name": "Furry Paw Vet Clinic", "holiday_date": "2026-12-24", "holiday_name_fi": "Jouluaatto", "kind": "hours",
+                                       "proposed": [{"start": "09:00", "end": "13:00"}], "last_year_hours": [{"start": "09:00", "end": "13:00"}],
+                                       "google_now": [{"start": "09:00", "end": "17:00"}]}) + "\n\nVastaa omin sanoin.")
+
+
 def all_final_messages(path: str | Path | None = None) -> str:
     """Write docs/final_messages.md: every customer-facing message as text, with English glosses. Returns the markdown."""
     c = _engine_cases()
@@ -468,7 +479,9 @@ def all_final_messages(path: str | Path | None = None) -> str:
     em_en = _E.build_message(dict(em_s, owner_language="en"), "owner@example.com")[1]
     with_url = dict(hours, decide_url="https://kaiku.example/decide/sug-furry-paw-2026-12-24")
     items = [
-        ("1. Suggestion with proposed hours (WhatsApp buttons: Approve / Edit / No thanks)", suggestion_text_fi(hours), suggestion_text_en(hours)),
+        ("0b. Step 2 WhatsApp opening: ONE plain text, the same intro and suggestion lines the website chat shows on load (demo date 17.12., fictional Furry Paw Vet Clinic), no buttons",
+         WA_OPENING_FI, WA_OPENING_EN),
+        ("1. Suggestion with proposed hours (the plain suggestion text; WhatsApp buttons Approve / Edit / No thanks only with WA_BUTTONS=1)", suggestion_text_fi(hours), suggestion_text_en(hours)),
         ("2. Suggestion, proposal is closed", suggestion_text_fi(closed), suggestion_text_en(closed)),
         ("3. Ask instead of guess (low confidence or cold start)", ask_text_fi(ask), ask_text_en(ask)),
         ("4. No change needed (reliability: we do not invent work)", no_change_text_fi(nochg), no_change_text_en(nochg)),
