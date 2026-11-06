@@ -23,7 +23,7 @@ English gloss:
 > Last year your hours that day were 9 to 13.
 > Google currently shows 9 to 17, which does not match our suggestion, so customers may arrive at a closed door.
 >
-> We suggest hours of 9 to 13 on christmas eve (24.12.).
+> We suggest hours of 9 to 13 on Christmas Eve (24.12.).
 > Approve with one tap, edit the hours, or skip it. The decision is always yours.
 
 ## 2. Suggestion, proposal is closed
@@ -47,7 +47,7 @@ English gloss:
 > Last year your hours that day were 9 to 13.
 > Google currently shows 9 to 17, which does not match our suggestion, so customers may arrive at a closed door.
 >
-> We suggest being closed on christmas eve (24.12.).
+> We suggest being closed on Christmas Eve (24.12.).
 > Approve with one tap, edit the hours, or skip it. The decision is always yours.
 
 ## 3. Ask instead of guess (low confidence or cold start)
@@ -90,7 +90,7 @@ Finnish:
 
 English gloss:
 
-> Thank you! The christmas eve hours (9 to 13) are now saved. They show on Google, Apple Maps, Bing and Fonecta services.
+> Thank you! The Christmas Eve hours (9 to 13) are now saved. They show on Google, Apple Maps, Bing and Fonecta services.
 
 ## 6. Edit prompt after Muokkaa
 

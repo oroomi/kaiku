@@ -176,7 +176,7 @@ def suggestion_text_en(s: dict) -> str:
     else:
         lines.append("Search engines have no special hours for that day yet, so customers see your regular hours.")
     lines.append("")
-    lines.append(f"We suggest {'being closed' if proposed == 'closed' else 'hours of ' + en_hours(proposed)} on {hol.lower()} ({fi_date(s['holiday_date'])}).")
+    lines.append(f"We suggest {'being closed' if proposed == 'closed' else 'hours of ' + en_hours(proposed)} on {hol} ({fi_date(s['holiday_date'])}).")
     lines.append("Approve with one tap, edit the hours, or skip it. The decision is always yours.")
     return "\n".join(lines)
 
@@ -231,7 +231,7 @@ def receipt_text_en(r: dict) -> str:
     h_txt = h.replace("-", " to ") if isinstance(h, str) and h != "closed" else en_hours(h)
     pubs = r.get("publishers") or PUBLISHERS_DEFAULT
     hol = r.get("holiday_name_en") or "holiday"
-    return f"Thank you! The {hol.lower()} hours ({h_txt}) are now saved. They show on {_join_en(pubs)}."
+    return f"Thank you! The {hol} hours ({h_txt}) are now saved. They show on {_join_en(pubs)}."
 
 
 def _join_fi(items) -> str:
