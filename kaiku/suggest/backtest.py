@@ -147,10 +147,15 @@ def metrics(res):
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("path", nargs="?", default=str(ROOT / "data" / "sample_cases.json"))
-    ap.add_argument("--jsonl", help="write one JSON line per suggestion (for a scoring script)")
+    ap.add_argument("--jsonl", nargs="?", const="-", default=None, metavar="PATH",
+                    help="one JSON line per suggestion (for a scoring script): to stdout as a flag, or to PATH")
     ap.add_argument("--network", action="store_true")
     a = ap.parse_args(argv)
     res = run(load_cases(a.path), a.network)
+    if a.jsonl == "-":
+        for r in res:
+            print(json.dumps(r["suggestion"], ensure_ascii=False))
+        return
     if a.jsonl:
         with open(a.jsonl, "w", encoding="utf-8") as f:
             for r in res:

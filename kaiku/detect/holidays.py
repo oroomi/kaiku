@@ -1,8 +1,10 @@
-"""Finnish holidays from Nager.Date (live), cached in data/holidays_fi_2026.json, plus flag days that are not
+"""Finnish holidays: bundled data/holidays_fi_2026.json first, refreshed from Nager.Date when missing or older than
+30 days (failures keep the bundled file), plus flag days that are not
 public holidays (isänpäivä, äitienpäivä, uudenvuodenaatto), marked public_holiday=false."""
 from __future__ import annotations
 
 import json
+import time
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -34,9 +36,9 @@ def flag_days(year: int) -> list[dict]:
     return out
 
 
-def fetch_year(year: int) -> list[dict]:
+def fetch_year(year: int, timeout: float = 5.0) -> list[dict]:
     import httpx
-    r = httpx.get(API.format(year=year), timeout=15)
+    r = httpx.get(API.format(year=year), timeout=timeout)
     r.raise_for_status()
     out = []
     for h in r.json():
@@ -46,27 +48,56 @@ def fetch_year(year: int) -> list[dict]:
     return out
 
 
-def build_cache(years=(2025, 2026, 2027), path: Path = CACHE) -> list[dict]:
+def build_cache(years=(2025, 2026, 2027), path: Path = CACHE, timeout: float = 5.0) -> list[dict]:
+    """Fetch from Nager.Date and rewrite the cache atomically. Raises on any failure (callers catch)."""
     items = []
     for y in years:
-        items += fetch_year(y) + flag_days(y)
+        items += fetch_year(y, timeout) + flag_days(y)
     # keep 2027 only up to Loppiainen 6.1.2027
     items = [h for h in items if h["date"] <= "2027-01-06" or not h["date"].startswith("2027")]
     items.sort(key=lambda h: h["date"])
-    path.write_text(json.dumps({"source": "https://date.nager.at/api/v3/PublicHolidays/{year}/FI + computed flag days",
-                                "holidays": items}, ensure_ascii=False, indent=1))
+    if len(items) < 20:
+        raise ValueError("Nager.Date returned too few holidays")
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps({"source": "https://date.nager.at/api/v3/PublicHolidays/{year}/FI + computed flag days",
+                               "holidays": items}, ensure_ascii=False, indent=1))
+    tmp.replace(path)
     return items
 
 
 _cache: list[Holiday] | None = None
 
 
+MAX_AGE_DAYS = 30
+
+
+def _stale() -> bool:
+    try:
+        return time.time() - CACHE.stat().st_mtime > MAX_AGE_DAYS * 86400
+    except OSError:
+        return True  # missing
+
+
+def _load_bundled() -> list[dict] | None:
+    try:
+        return json.loads(CACHE.read_text())["holidays"]
+    except Exception:
+        return None
+
+
 def all_holidays() -> list[Holiday]:
+    """Bundled file first. If it is missing or older than 30 days, try Nager.Date (5 s timeout) and rewrite it;
+    on any failure keep the bundled file. Never raises."""
     global _cache
     if _cache is None:
-        if not CACHE.exists():
-            build_cache()
-        data = json.loads(CACHE.read_text())["holidays"]
+        data = _load_bundled()
+        if data is None or _stale():
+            try:
+                data = build_cache()
+            except Exception:
+                data = _load_bundled()  # keep what we have (may be None)
+        if data is None:  # no file, no network: the computed flag days are still true
+            data = [h for y in (2025, 2026, 2027) for h in flag_days(y)]
         _cache = [Holiday(**h) for h in data]
     return _cache
 

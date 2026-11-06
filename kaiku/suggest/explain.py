@@ -7,6 +7,7 @@ WD_ESS = ["maanantaina", "tiistaina", "keskiviikkona", "torstaina", "perjantaina
 WD_GEN = ["maanantain", "tiistain", "keskiviikon", "torstain", "perjantain", "lauantain", "sunnuntain"]
 WD_PLUR = ["maanantaisin", "tiistaisin", "keskiviikkoisin", "torstaisin", "perjantaisin", "lauantaisin", "sunnuntaisin"]
 WD_FI_IDX = {"maanantai": 0, "tiistai": 1, "keskiviikko": 2, "torstai": 3, "perjantai": 4, "lauantai": 5, "sunnuntai": 6}
+WD_FI_NOM = ["maanantai", "tiistai", "keskiviikko", "torstai", "perjantai", "lauantai", "sunnuntai"]
 WD_ABBR = ["ma", "ti", "ke", "to", "pe", "la", "su"]
 WD_EN = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 WD_ABBR_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -79,6 +80,29 @@ def proposal_en(iso: str, hours) -> str:
     return f"{ab} {d_fi(iso)} {hours_en(hours)}."
 
 
+def shows_now(det, wd: int):
+    """What we may say about the published hours, only from verified state.
+    Returns (fi, en) clauses without a leading 'joten'/'so'. Google is named only when Serper verified it."""
+    reg = det.signals["regular_that_day"]["hours"]
+    g = det.signals.get("google_now") or {}
+    if g.get("status") == "shows_hours":
+        if g.get("hours") is not None and hours_key(g["hours"]) == hours_key(reg):
+            return (f"Google näyttää nyt tavalliset {WD_GEN[wd]} aukioloajat ({hours_fi(reg)})",
+                    f"Google now shows your regular {WD_EN[wd]} hours ({hours_en(reg)})")
+        return (f"Google näyttää nyt tämän päivän aukioloajoiksi \"{g.get('text')}\"",
+                f"Google now shows \"{g.get('text')}\" for that day")
+    return (f"Fonecta Connect näyttää nyt tavalliset {WD_GEN[wd]} aukioloajat ({hours_fi(reg)})",
+            f"Fonecta Connect now shows your regular {WD_EN[wd]} hours ({hours_en(reg)})")
+
+
+def past_fi(iso: str) -> str:
+    return f"Päivä {d_fi(iso)} on jo mennyt, joten aukioloaikoihin ei ehdoteta muutosta."
+
+
+def past_en(iso: str) -> str:
+    return f"{d_fi(iso)} has already passed, so no change to the opening hours is suggested."
+
+
 def build_messages(business, det, kind: str, proposed, primary: str) -> tuple[str, str]:
     """primary: lastyear|website|peers|regular|already|ask"""
     iso = det.holiday_date
@@ -97,6 +121,9 @@ def build_messages(business, det, kind: str, proposed, primary: str) -> tuple[st
         if primary == "already":
             return f"{hi} Poikkeusaukioloajat ovat jo lisätty, joten mitään ei tarvitse tehdä.", \
                 f"{hi_en} Exception hours are already set, nothing to do."
+        if not reg and h.get("public_holiday"):
+            return (f"{cap(nfi)} {d_fi(iso)} on {WD_FI_NOM[wd]} ja olette silloin kiinni, joten muutosta ei tarvita."), \
+                (f"{nen} {d_fi(iso)} is on a {WD_EN[wd]} and you are closed then, so no change is needed.")
         if not reg:
             return (f"{hi} Olette {WD_PLUR[wd]} normaalisti suljettu, eikä {nfi.lower()} ole arkipyhä, "
                     f"joten aukioloaikoihin ei tarvita muutosta."), \
@@ -105,8 +132,8 @@ def build_messages(business, det, kind: str, proposed, primary: str) -> tuple[st
         return (f"{hi} Tavalliset {WD_GEN[wd]} aukioloajat ({hours_fi(reg)}) pätevät myös silloin, "
                 f"joten aukioloaikoihin ei tarvita muutosta."), \
             (f"{hi_en} Your regular {WD_EN[wd]} hours ({hours_en(reg)}) apply, so no change is needed.")
-    google_fi = f"joten Google näyttää nyt tavalliset {WD_GEN[wd]} aukioloajat ({hours_fi(reg)})"
-    google_en = f"so Google now shows your regular {WD_EN[wd]} hours ({hours_en(reg)})"
+    sfi, sen = shows_now(det, wd)
+    google_fi, google_en = f"joten {sfi}", f"so {sen}"
     prop_fi, prop_en = proposal_fi(iso, proposed), proposal_en(iso, proposed)
     ly = det.signals["last_year"]
     if primary == "lastyear":

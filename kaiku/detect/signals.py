@@ -7,7 +7,7 @@ from datetime import date
 from pathlib import Path
 
 from kaiku.detect import holidays as hol
-from kaiku.suggest.schema import Business, Holiday
+from kaiku.suggest.schema import Business, Holiday, valid_hours
 
 ROOT = Path(__file__).resolve().parents[2]
 PRIORS = ROOT / "data" / "peer_priors.json"
@@ -36,7 +36,9 @@ def last_year(business: Business, holiday: Holiday) -> dict:
     if prev is None:
         return {"found": False}
     for ex in business.last_year_exceptions:
-        if ex["date"] == prev.date:
+        if ex.get("date") == prev.date:
+            if not valid_hours(ex.get("hours")):  # bad data never becomes a proposal
+                return {"found": False, "invalid": True, "checked_date": prev.date, "bad_hours": ex.get("hours")}
             same_wd = date.fromisoformat(prev.date).weekday() == date.fromisoformat(holiday.date).weekday()
             return {"found": True, "date": prev.date, "hours": ex["hours"], "weekday_same": same_wd,
                     "matched_holiday": prev.name_fi, "weekday_fi_then": hol.WD_FI[date.fromisoformat(prev.date).weekday()]}
@@ -81,7 +83,7 @@ def website(business: Business, holiday: Holiday, timeout: float = 5.0) -> dict 
             continue
         if any(w in low for w in ("poikkeus", "suljettu", "avoinna", "auki", "klo")):
             hrs = parse_hours(low)
-            if hrs is not None:
+            if hrs is not None and valid_hours(hrs):
                 return {"quote": " ".join(line.split()), "hours": hrs, "url": business.website}
     return None
 
@@ -113,7 +115,8 @@ def google_now(business: Business, d) -> dict:
             en = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][d.weekday()]
             txt = oh.get(en) or oh.get(hol.WD_FI[d.weekday()])
             if txt:
-                return {"status": "shows_hours", "weekday": en, "text": txt, "hours": parse_hours(txt)}
+                gh = parse_hours(txt)
+                return {"status": "shows_hours", "weekday": en, "text": txt, "hours": gh if valid_hours(gh) else None}
     except Exception:
         pass
     return {"status": "unknown"}
@@ -130,5 +133,8 @@ def peers(business: Business, holiday: Holiday) -> dict | None:
         out["hours"] = "closed"
     elif val.startswith("short:"):
         a, b = val[6:].split("-")
-        out["hours"] = [{"start": a, "end": b}]
+        hrs = [{"start": a, "end": b}]
+        if not valid_hours(hrs):
+            return None
+        out["hours"] = hrs
     return out

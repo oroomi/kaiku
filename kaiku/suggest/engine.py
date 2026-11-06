@@ -13,7 +13,7 @@ hours of that day becomes no_change. Nothing above 0.6 is ever produced from a g
 from __future__ import annotations
 
 from kaiku.suggest import explain as ex
-from kaiku.suggest.schema import Business, Detection, Suggestion
+from kaiku.suggest.schema import Business, Detection, Suggestion, valid_hours
 
 ASK_BELOW = 0.6
 WDI = ex.WD_FI_IDX
@@ -29,7 +29,23 @@ def _kind(proposed) -> str:
     return "closed" if proposed == "closed" else "hours"
 
 
+def _extras(business: Business, det: Detection) -> dict:
+    h = det.holiday or {}
+    ly = det.signals.get("last_year") or {}
+    return {"business_name": business.name, "holiday_name_fi": h.get("name_fi") or None,
+            "holiday_name_en": h.get("name_en") or None,
+            "last_year_hours": ly["hours"] if ly.get("found") else None,
+            "google_now": dict(det.signals.get("google_now") or {"status": "unknown"}), "decide_url": None}
+
+
 def suggest(business: Business, det: Detection) -> Suggestion:
+    iso0 = det.holiday_date
+    if det.status == "past":
+        return Suggestion(id=f"sug-{business.id}-{iso0}", business_id=business.id, holiday_date=iso0,
+                          kind="no_change", proposed=None, confidence=0.0,
+                          reasons=[_r("google", ex.past_fi(iso0), ex.past_en(iso0))],
+                          message_fi=ex.past_fi(iso0), message_en=ex.past_en(iso0), status="expired",
+                          **_extras(business, det))
     s = det.signals
     iso = det.holiday_date
     h = det.holiday or {}
@@ -42,16 +58,19 @@ def suggest(business: Business, det: Detection) -> Suggestion:
 
     ly = s["last_year"]
     wk = det.signals["regular_that_day"]["weekday_fi"]
-    google_r = _r("google",
-                  f"Google näyttää nyt tavalliset {ex.WD_GEN[WDI[wk]]} aukioloajat ({ex.hours_fi(reg['hours'])}).",
-                  f"Google currently shows the regular {wk} hours ({ex.hours_en(reg['hours'])}).")
+    sfi, sen = ex.shows_now(det, WDI[wk])
+    google_r = _r("google", sfi + ".", sen + ".")
 
     if s.get("this_year"):
         primary, proposed, conf = "already", s["this_year"]["hours"], 0.95
-    elif not public and reg["closed"]:
+    elif reg["closed"]:
         primary, proposed, conf = "regular", "closed", 0.95
-        reasons.append(_r("google", f"Päivä ei ole arkipyhä ja olette normaalisti kiinni {ex.WD_PLUR[WDI[wk]]}.",
-                          f"Not a public holiday and you are normally closed on this weekday."))
+        if public:
+            reasons.append(_r("google", f"Arkipyhä osuu päivälle, jolloin olette normaalisti kiinni ({ex.WD_PLUR[WDI[wk]]}).",
+                              "The public holiday falls on a weekday when you are normally closed."))
+        else:
+            reasons.append(_r("google", f"Päivä ei ole arkipyhä ja olette normaalisti kiinni {ex.WD_PLUR[WDI[wk]]}.",
+                              f"Not a public holiday and you are normally closed on this weekday."))
     elif ly.get("found"):
         primary, proposed = "lastyear", ly["hours"]
         conf = 0.85 if ly["weekday_same"] else 0.75
@@ -83,6 +102,9 @@ def suggest(business: Business, det: Detection) -> Suggestion:
         reasons.append(_r("google", "Päivä ei ole arkipyhä, eikä muutosta kaipaavaa tietoa löytynyt.",
                           "Not a public holiday and no data suggests a change."))
 
+    # a proposal that is not a valid interval list can never reach the customer
+    if primary not in ("already", "ask") and proposed is not None and not valid_hours(proposed):
+        primary, proposed, conf, reasons = "ask", None, 0.3, []
     # gate
     if primary != "already" and conf < ASK_BELOW:
         kind, proposed, primary = "ask", None, "ask"
@@ -103,4 +125,5 @@ def suggest(business: Business, det: Detection) -> Suggestion:
         q = None
     return Suggestion(id=f"sug-{business.id}-{iso}", business_id=business.id, holiday_date=iso, kind=kind,
                       proposed=proposed if isinstance(proposed, list) and kind == "hours" else None,
-                      confidence=conf, reasons=reasons, message_fi=fi, message_en=en, question_fi=q)
+                      confidence=conf, reasons=reasons, message_fi=fi, message_en=en, question_fi=q,
+                      **_extras(business, det))
