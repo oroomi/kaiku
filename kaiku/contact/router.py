@@ -344,3 +344,10 @@ async def inbound(request: Request):
         raise HTTPException(400, "bad json")
     res = await handle_payload(payload)
     return {"ok": True, "decisions": len(res["decisions"]), "statuses": len(res["statuses"])}  # Meta needs a fast 200
+
+
+try:  # call lane: ElevenLabs post-call webhook
+    from . import call_router
+    router.include_router(call_router.router)
+except Exception:
+    pass

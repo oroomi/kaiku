@@ -1,0 +1,38 @@
+{
+ "id": "sg-demo-2026-12-24",
+ "business_id": "SinceAI07",
+ "business_name": "Furry Paw Vet Clinic",
+ "holiday_date": "2026-12-24",
+ "holiday_name_fi": "Jouluaatto",
+ "holiday_name_en": "Christmas Eve",
+ "kind": "hours",
+ "proposed": [
+  {
+   "start": "09:00",
+   "end": "13:00"
+  }
+ ],
+ "confidence": 0.9,
+ "last_year_hours": [
+  {
+   "start": "09:00",
+   "end": "13:00"
+  }
+ ],
+ "google_now": [
+  {
+   "start": "09:00",
+   "end": "17:00"
+  }
+ ],
+ "reasons": [
+  {
+   "source": "last_year",
+   "dataset_id": "x",
+   "text_fi": "Viime jouluaattona olitte auki 9-13.",
+   "text_en": "Last Christmas Eve you were open 9-13."
+  }
+ ],
+ "status": "proposed",
+ "channel_log": []
+}
