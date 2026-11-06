@@ -2,8 +2,8 @@
 {% block title %}Aura, Turku livenä yhdessä välittäjässä{% endblock %}
 {% block head %}
 <!-- MAPLIBRE-CDN-BLOCK: the orchestrator switches these two tags to the vendored local path at merge -->
-<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
-<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<link rel="stylesheet" href="/static/vendor/maplibre/maplibre-gl.css">
+<script src="/static/vendor/maplibre/maplibre-gl.js"></script>
 <!-- /MAPLIBRE-CDN-BLOCK -->
 <link rel="stylesheet" href="/static/aura.css?v={{ asset_v() }}">
 {% endblock %}
