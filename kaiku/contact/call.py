@@ -272,7 +272,7 @@ def outbound_payload(s: dict, to_number: str, agent_id: str, phone_id: str) -> d
             "conversation_initiation_client_data": {
                 "user_id": dv["suggestion_id"],
                 "dynamic_variables": dv,
-                "source_info": {"source": "kaiku", "version": dv["suggestion_id"]}},
+                "source_info": {"source": "unknown", "version": dv["suggestion_id"]}},
             "telephony_call_config": {"ringing_timeout_secs": 30}}
 
 
