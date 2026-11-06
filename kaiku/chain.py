@@ -704,6 +704,13 @@ async def api_reset(request: Request, learn: int = 0, key: str = ""):
     for t in list(_tasks):
         t.cancel()
     out: dict = {}
+    try:  # a scheduled WhatsApp-to-call escalation must not fire after the demo was reset
+        from .contact import ladder as _ladder
+        _ladder.cancel_pending()
+        out["pending_calls_cancelled"] = True
+    except Exception as exc:
+        out["pending_calls_cancelled"] = False
+        log.warning("ladder cancel failed: %s", exc)
     try:
         hrs = await asyncio.to_thread(yext_reset)
         out["yext_holiday_rows"] = len(hrs.get("holidayHours", []))

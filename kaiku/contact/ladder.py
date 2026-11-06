@@ -52,9 +52,18 @@ def template_name() -> str:
     return (os.environ.get("WA_TEMPLATE_NAME") or "").strip()
 
 
+
+def _template_reason(s: dict) -> str:
+    """Template param {{4}} (Peruste): the first reason in Finnish, else the holiday name."""
+    for r in s.get("reasons") or []:
+        t = (r or {}).get("text_fi") or ""
+        if t.strip():
+            return t.strip().rstrip(".")[:200]
+    return M.holiday_name(s).lower()
+
 def _send_hours_template(client: W.WhatsAppClient, phone: str, s: dict, name: str) -> dict:
     return client.send_template_hours(phone, M.business_name(s), M.fi_date(s["holiday_date"]), M.fi_hours(s.get("proposed")),
-                                      M.holiday_name(s).lower(), s["id"], name)
+                                      _template_reason(s), s["id"], name)
 
 
 def _log(s: dict, channel: str, detail: str) -> None:
