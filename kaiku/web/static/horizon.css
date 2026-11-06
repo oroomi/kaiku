@@ -148,3 +148,9 @@ a.primary.link small{font:400 12px var(--sans);opacity:.7}
 [hidden]{display:none!important}
 a.primary.link{flex-direction:column;gap:0;padding:7px 22px;justify-content:center;text-align:center;line-height:1.25}
 @media (min-width:900px){.ba-new b{font-size:56px}.ba-old{font-size:17px}}
+
+.tt-row{display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:10px;min-height:56px}
+.tt{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center}
+.tt .mono{color:var(--ink3);font-size:10px}
+.tt input{background:var(--glass2);color:var(--ink);border:1px solid var(--edge);border-radius:10px;padding:5px 8px;font:400 12px var(--sans);color-scheme:dark;min-height:30px}
+.tt-note{color:var(--cyan);font-size:11px;min-height:14px}

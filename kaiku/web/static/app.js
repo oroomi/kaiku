@@ -3,10 +3,11 @@
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
   /* header date label: every page has #today, only the home drives the rest */
+  var ttToday = "";
   function loadToday() {
-    var el = $("today"); if (!el) return;
-    fetch("/api/today").then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(function (t) { el.textContent = t.label_fi; el.title = t.label_en; })
+    var el = $("today"); if (!el) return Promise.resolve();
+    return fetch("/api/today").then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (t) { el.textContent = t.label_fi; el.title = t.label_en; if ($("tt-date") && t.date) { $("tt-date").value = t.date; ttToday = t.date; } })
       .catch(function () { el.hidden = true; });
   }
   loadToday();
@@ -198,10 +199,34 @@
   $("st-toggle").addEventListener("click", function () {
     var o = $("statusbar").classList.toggle("open"); $("st-toggle").setAttribute("aria-expanded", o ? "true" : "false");
   });
+  var ttTimer = 0;
+  function fiD(iso) { var p = iso.split("-"); return parseInt(p[2], 10) + "." + parseInt(p[1], 10) + "." + p[0]; }
+  function addDays(iso, n) { var d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+  function dayDiff(a, b) { return Math.round((new Date(b + "T12:00:00Z") - new Date(a + "T12:00:00Z")) / 86400000); }
+  function travel(iso, note) {
+    return fetch("/api/timetravel?date=" + iso, { method: "POST" }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function () { return loadToday(); })
+      .then(function () {
+        if (!note) return;
+        $("tt-note").textContent = "Aikamatka: tänään on nyt " + fiD(iso) + " / Time travel: today is now " + fiD(iso);
+        clearTimeout(ttTimer); ttTimer = setTimeout(function () { $("tt-note").textContent = ""; }, 2000);
+      });
+  }
+  $("tt-date").addEventListener("change", function () {
+    var v = $("tt-date").value; if (!v || arc.running) { $("tt-date").value = ttToday; return; }
+    travel(v, true).catch(function () { $("tt-note").textContent = "Aikamatka epäonnistui / time travel failed"; });
+  });
   $("run").addEventListener("click", function () {
     var date = $("date").value;
     setRunning(true);
-    fetch("/api/run?business=furry-paw&date=" + date, { method: "POST" }).then(function (r) { return r.json(); })
+    /* the chain clock must be shortly before the holiday: past or far-off dates first move "today" */
+    jget("/api/today").then(function (t) {
+      var d = dayDiff(t.date, date);
+      var target = d < 0 ? addDays(date, -6) : d > 21 ? addDays(date, -7) : null;
+      return target ? travel(target, true) : null;
+    }).catch(function () { return null; }).then(function () {
+      return fetch("/api/run?business=furry-paw&date=" + date, { method: "POST" });
+    }).then(function (r) { return r.json(); })
       .then(function (j) { runSid = j.suggestion_id; })
       .catch(function () { setRunning(false); setBig("!", "COULD NOT START"); });
   });
@@ -226,7 +251,7 @@
   $("reset").addEventListener("click", function () {
     var btn = $("reset"); btn.disabled = true; $("reset-msg").textContent = "Nollataan... / resetting...";
     fetch("/api/reset", { method: "POST", headers: rkey ? { "X-Kaiku-Key": rkey } : {} })
-      .then(function (r) { if (r.status === 403) throw new Error("key"); return r.json(); }).then(function () { location.reload(); })
+      .then(function (r) { if (r.status === 403) throw new Error("key"); return r.json(); }).then(function () { $("date").value = "2026-12-24"; location.reload(); })
       .catch(function (err) {
         btn.disabled = false;
         $("reset-msg").textContent = err && err.message === "key" ? "Avain puuttuu, avaa sivu ?key=... / key needed, open the page with ?key=..." : "Nollaus epäonnistui / reset failed";

@@ -46,6 +46,9 @@ Routers: expose `router = APIRouter()` in `kaiku/<module>/router.py`; app.py inc
 ## Store
 SQLite (WAL) at `data/kaiku.sqlite`: tables businesses, suggestions, decisions, events, prefs (JSON columns). `store.seed()` loads `data/furry_paw.json`; owner_whatsapp is injected from env, never stored in the file. The seed is labelled sample history: last-year hours are fictional, written by the team.
 
+## Home time travel (6 Nov)
+Run button: if the picked holiday is before the fake today (or >21 days ahead) the page first calls `/api/timetravel?date=<holiday-6d>` (24.12. far-off: -7d = 17.12.), refreshes the Tänään label, shows a 2 s note, then POSTs /api/run. A date input under the picker (`#tt-date`) sets today directly; reset reloads with the picker on 24.12. (`autocomplete=off`).
+
 ## What did not work / notes
 Body background hid the fixed gradient stage (negative z-index); fixed by making body transparent. Cloudflare cached css for 4 h; fixed as above.
 
