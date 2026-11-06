@@ -68,10 +68,17 @@
   </section>
 {% elif state == "expired" %}
   <section class="glass miss" data-pilot="decide-expired">
+    {% if v and v.suggestion_expired %}
+    <p class="prop" lang="fi">Ehdotus vanheni ennen päätöstä.</p>
+    <p class="gl" lang="en">The suggestion expired before a decision.</p>
+    <p class="gl" lang="fi">Kaiku lähettää uuden ehdotuksen.</p>
+    <p class="gl" lang="en">Kaiku will send a new suggestion.</p>
+    {% else %}
     <div class="big">7 pv</div>
     <p class="prop" lang="fi">Linkki on vanhentunut.</p>
     <p class="gl" lang="en">This link has expired.</p>
     <p class="gl" lang="fi">Pyydä uusi linkki Kaikulta.</p>
+    {% endif %}
   </section>
 {% else %}
   <section class="glass panel" aria-labelledby="prop">
@@ -140,6 +147,13 @@
   </section>
   {% endif %}
 
+  <section class="glass miss" id="expired-live" hidden aria-live="polite" data-pilot="decide-expired-live">
+    <p class="prop" lang="fi">Ehdotus vanheni ennen päätöstä.</p>
+    <p class="gl" lang="en">The suggestion expired before a decision.</p>
+    <p class="gl" lang="fi">Kaiku lähettää uuden ehdotuksen.</p>
+    <p class="gl" lang="en">Kaiku will send a new suggestion.</p>
+  </section>
+
   <section class="glass panel" id="thanks" hidden aria-live="polite" data-pilot="thanks">
     <p class="mono lab ok">LÄHETETTY</p>
     <p class="done-line" id="th-fi" lang="fi"></p>
@@ -149,4 +163,4 @@
 {% endif %}
 </div>
 {% endblock %}
-{% block scripts %}{% if state == "open" or state == "done" %}<script src="/static/decide.js?v={{ asset_v() }}" defer></script>{% endif %}{% endblock %}
+{% block scripts %}{% if state != "missing" %}<script src="/static/decide.js?v={{ asset_v() }}" defer></script>{% endif %}{% endblock %}

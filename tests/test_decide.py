@@ -105,3 +105,51 @@ def test_timeout(env, monkeypatch):
     _, s = env
     d = asyncio.run(step.decide_step(s))
     assert d.action == "timeout" and step.pending() == []
+
+
+def test_ghost_suggestion_404_no_event(env):
+    from kaiku import store
+    c, s = env
+    t = _tok(s)
+    before = len(store.recent_events(50))
+    import kaiku.decide.router as rt
+    orig = rt.store.get_suggestion
+    rt.store.get_suggestion = lambda sid: None
+    try:
+        r = c.post(f"/api/decide/{t}", json={"action": "approve"})
+    finally:
+        rt.store.get_suggestion = orig
+    assert r.status_code == 404 and r.json()["message_fi"] == "Ehdotusta ei löydy."
+    assert len(store.recent_events(50)) == before
+    assert c.post(f"/api/decide/{t}", json={"action": "approve"}).status_code == 200
+
+
+def test_late_post_after_timeout_410(env, monkeypatch):
+    from kaiku import store
+    from kaiku.decide import step
+    c, s = env
+    monkeypatch.setenv("KAIKU_DECIDE_TIMEOUT_S", "0.05")
+    t = _tok(s)
+    assert asyncio.run(step.decide_step(s)).action == "timeout"
+    assert store.get_suggestion("sg1").status == "expired"
+    r = c.post(f"/api/decide/{t}", json={"action": "approve"})
+    assert r.status_code == 410 and r.json()["state"] == "expired"
+    assert r.json()["message_fi"] == "Ehdotus vanheni ennen päätöstä. Kaiku lähettää uuden ehdotuksen."
+    page = c.get("/d/" + t).text
+    assert "vanheni ennen päätöstä" in page and "Kiitos, tehty" not in page
+    assert not [e for e in store.recent_events(50) if e.suggestion_id == "sg1" and "Omistaja" in e.title_fi]
+
+
+def test_late_post_honoured_only_when_chain_accepts(env, monkeypatch):
+    from kaiku import chain, store
+    from kaiku.decide import step
+    c, s = env
+    monkeypatch.setenv("KAIKU_DECIDE_TIMEOUT_S", "0.05")
+    t = _tok(s)
+    asyncio.run(step.decide_step(s))
+    calls = []
+    monkeypatch.setattr(chain, "on_decision", lambda d: calls.append(d) or False, raising=False)
+    assert c.post(f"/api/decide/{t}", json={"action": "approve"}).status_code == 410
+    monkeypatch.setattr(chain, "on_decision", lambda d: calls.append(d) or True, raising=False)
+    r = c.post(f"/api/decide/{t}", json={"action": "approve"})
+    assert r.status_code == 200 and r.json()["late"] is True and r.json()["next"] == "apply" and len(calls) == 2

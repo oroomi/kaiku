@@ -20,6 +20,15 @@
   var $ = function (id) { return document.getElementById(id); };
   var reason = null, closed = false, scope = "same", busy = false;
 
+  var tl = $("today");
+  if (tl) {
+    fetch("/api/today").then(function (r) { return r.json(); }).then(function (t) {
+      var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t.date || "");
+      if (m) tl.textContent = parseInt(m[3], 10) + "." + parseInt(m[2], 10) + "." + m[1];
+      else tl.hidden = true;
+    }).catch(function () { tl.hidden = true; });
+  }
+
   var was = $("was");
   if (was) { var t = T["done_" + was.dataset.act]; if (t) was.textContent = t[0] + " (" + t[1] + ")"; }
   if (!$("form")) return;
@@ -72,8 +81,9 @@
     [].forEach.call(root.querySelectorAll("button"), function (b) { b.disabled = true; });
     body.standing_permission = $("perm").checked; body.scope = scope;
     fetch("/api/decide/" + encodeURIComponent(token), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
-      .then(function (r) { return r.json().then(function (j) { return [r.ok, j]; }); })
+      .then(function (r) { return r.json().then(function (j) { return [r.ok, j, r.status]; }); })
       .then(function (x) {
+        if (x[2] === 410) { expired(); return; }
         if (!x[0]) throw new Error("fail");
         thanks(x[1]);
       })
@@ -89,6 +99,12 @@
     submit({ action: "edit", edited: closed ? "closed" : [{ start: $("t-start").value, end: $("t-end").value }] });
   });
   $("s-decline").addEventListener("click", function () { submit({ action: "decline", reason_chip: reason }); });
+
+  function expired() {
+    $("form").hidden = true; $("permbox").hidden = true;
+    $("expired-live").hidden = false;
+    $("expired-live").scrollIntoView({ block: "nearest" });
+  }
 
   function thanks(res) {
     var no = res.next === "skip";
