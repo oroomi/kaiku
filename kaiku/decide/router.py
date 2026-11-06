@@ -6,7 +6,7 @@ from datetime import date, datetime, timezone
 from typing import Literal, Optional, Union
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
 from .. import chain, events, store
@@ -17,6 +17,8 @@ HHMM = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 FI_ACTION = {"approve": "hyväksy", "edit": "muokkasi", "decline": "ei kiitos"}
 EN_ACTION = {"approve": "approved", "edit": "edited", "decline": "declined"}
 FI_WD = ["maanantaina", "tiistaina", "keskiviikkona", "torstaina", "perjantaina", "lauantaina", "sunnuntaina"]
+EXPIRED_FI = "Ehdotus vanheni ennen päätöstä. Kaiku lähettää uuden ehdotuksen."
+EXPIRED_EN = "The suggestion expired before a decision. Kaiku will send a new suggestion."
 
 
 class Span(BaseModel):
@@ -81,6 +83,7 @@ def view_for(token: str, rec: dict) -> dict:
     return {"token": token, "suggestion_id": s.id, "business": {"id": b.id, "name": b.name, "address": b.address},
             "holiday": h, "kind": s.kind, "proposed": sp, "sentence_fi": sentence, "sentence_en": en,
             "reason_fi": r.text_fi if r else "", "reason_en": r.text_en if r else "",
+            "suggestion_expired": s.status == "expired" and not rec["used"],
             "used": rec["used"], "expired": rec["expired"], "decision": rec.get("decision")}
 
 
@@ -100,7 +103,7 @@ def decide_page(request: Request, token: str):
         v = view_for(token, rec)
     except HTTPException:
         return _page(request, "decide.html", 404, state="missing", v=None)
-    state = "expired" if (rec["expired"] and not rec["used"]) else "done" if rec["used"] else "open"
+    state = "expired" if ((rec["expired"] or v["suggestion_expired"]) and not rec["used"]) else "done" if rec["used"] else "open"
     return _page(request, "decide.html", 200, state=state, v=v)
 
 
@@ -138,12 +141,35 @@ async def decide_post(token: str, body: DecideBody):
         raise HTTPException(404, "unknown link")
     if rec["expired"] and not rec["used"]:
         raise HTTPException(410, "link expired")
-    edited = _validate(body)
     sid = rec["suggestion_id"]
+    sug = store.get_suggestion(sid)
+    if not sug:
+        return JSONResponse({"state": "missing", "message_fi": "Ehdotusta ei löydy.",
+                             "message_en": "The suggestion cannot be found."}, status_code=404)
+    edited = _validate(body)
+    late = sug.status == "expired" and sid not in step.pending() and not rec["used"]
     decision = {"suggestion_id": sid, "action": body.action, "edited": edited,
                 "reason_chip": body.reason_chip if body.action == "decline" else None,
                 "standing_permission": bool(body.standing_permission) and body.action != "decline",
                 "scope": body.scope, "via": "web", "at": datetime.now(timezone.utc).isoformat()}
+    if late:
+        # The decide step timed out: nothing waits. Never claim success unless the chain accepts it out of band.
+        fn = getattr(chain, "on_decision", None)
+        ok = False
+        if fn:
+            try:
+                r = fn(decision)
+                if hasattr(r, "__await__"):
+                    r = await r
+                ok = bool(r)
+            except Exception:
+                ok = False
+        if not ok:
+            return JSONResponse({"state": "expired", "message_fi": EXPIRED_FI, "message_en": EXPIRED_EN}, status_code=410)
+        if not tokens.mark_used(token, decision):
+            raise HTTPException(409, "already answered")
+        return {"ok": True, "decision": decision, "waiting_chain": False, "late": True,
+                "next": "skip" if body.action == "decline" else "apply"}
     if not tokens.mark_used(token, decision):
         raise HTTPException(409, "already answered")
     if step.resolve(sid, decision):

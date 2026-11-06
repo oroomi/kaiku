@@ -35,6 +35,17 @@ def _to_decision(sid: str, d: dict) -> Decision:
     return Decision(**{k: v for k, v in d.items() if k in Decision.model_fields} | {"suggestion_id": sid})
 
 
+def _mark_expired(sid: str) -> None:
+    """Record on the suggestion that the owner did not answer in time (late POSTs then get 410)."""
+    try:
+        s = store.get_suggestion(sid)
+        if s and s.status in ("proposed", "sent"):
+            s.status = "expired"
+            store.save_suggestion(s)
+    except Exception:
+        pass
+
+
 async def decide_step(suggestion) -> Decision:
     sid, bid = suggestion.id, suggestion.business_id
     link = tokens.link_for(sid, bid)
@@ -52,6 +63,7 @@ async def decide_step(suggestion) -> Decision:
         d = await asyncio.wait_for(fut, timeout)
     except asyncio.TimeoutError:
         _waiting.pop(sid, None)
+        _mark_expired(sid)
         # "timeout" is outside the Decision literal on purpose: no owner answer, nothing to apply
         return Decision.model_construct(suggestion_id=sid, action="timeout", edited=None, reason_chip=None,
                                         standing_permission=False, via="web", at="")
