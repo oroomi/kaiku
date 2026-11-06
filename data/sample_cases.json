@@ -468,7 +468,7 @@
    "expect_kind": "closed"
   },
   {
-   "case": "6 pyhäinpäivä, last year 10-14 (weekday differs)",
+   "case": "6 pyhäinpäivä, last year 10-14 equals regular Saturday: no_change",
    "business": {
     "id": "SinceAI07",
     "name": "Furry Paw Vet Clinic",
@@ -582,7 +582,7 @@
    "date": "2026-10-31",
    "today": "2026-10-24",
    "target": "10:00-14:00",
-   "expect_kind": "hours"
+   "expect_kind": "no_change"
   },
   {
    "case": "7 cold start shop, juhannusaatto",
