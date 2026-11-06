@@ -279,7 +279,7 @@ def outbound_payload(s: dict, to_number: str, agent_id: str, phone_id: str) -> d
                 "user_id": dv["suggestion_id"],
                 "dynamic_variables": dv,
                 "source_info": {"source": "unknown", "version": dv["suggestion_id"]}},
-            "telephony_call_config": {"ringing_timeout_secs": 30}}
+            "telephony_call_config": {"ringing_timeout_secs": 45}}
 
 
 def place_call(suggestion: dict, to_number: str | None = None, api: Api | None = None) -> dict:
