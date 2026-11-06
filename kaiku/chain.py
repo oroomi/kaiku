@@ -177,8 +177,7 @@ def _sbiz(b: Business):
 
 def _real_detect(business: Business, holiday_date: str, now: datetime) -> Detection:
     from .detect.engine import detect as d
-    # shim: detect._as_date keeps a datetime as is (datetime is a date subclass) and then fails comparing it to a date
-    det = d(_sbiz(business), holiday_date, now.date() if isinstance(now, datetime) else now)
+    det = d(_sbiz(business), holiday_date, now)
     return Detection(business_id=det.business_id, holiday_date=det.holiday_date, signals=det.signals,
                      reason_codes=det.reason_codes, holiday=det.holiday, status=getattr(det, "status", "ok"))
 
@@ -494,7 +493,10 @@ async def run_chain(business_id: str, holiday_date: str, now: Optional[datetime]
         dec = await _call(STEPS["decide"], s)
         s = store.get_suggestion(sid) or s
         if dec.action == "timeout":
-            _ev("decide", b, sid, "Omistaja ei vastannut, mitään ei muutettu", "The owner did not answer, nothing was changed", phase="timeout")
+            s.status = "expired"
+            store.save_suggestion(s)
+            _ev("decide", b, sid, "Omistaja ei vastannut ajoissa, ei muutoksia", "Owner did not answer in time, nothing changed",
+                phase="timeout", applied=False)
             return s
         s.status = _STATUS_FOR.get(dec.action, s.status)
         store.save_suggestion(s)

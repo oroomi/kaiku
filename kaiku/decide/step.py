@@ -66,7 +66,7 @@ async def decide_step(suggestion) -> Decision:
         _mark_expired(sid)
         # "timeout" is outside the Decision literal on purpose: no owner answer, nothing to apply
         return Decision.model_construct(suggestion_id=sid, action="timeout", edited=None, reason_chip=None,
-                                        standing_permission=False, via="web", at="")
+                                        standing_permission=False, scope="same", via="web", at="")
     finally:
         _waiting.pop(sid, None)
     return _to_decision(sid, d)

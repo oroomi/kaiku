@@ -100,6 +100,7 @@ class Decision(BaseModel):
     edited: Union[list[Span], Literal["closed"], None] = None
     reason_chip: Optional[str] = None
     standing_permission: bool = False
+    scope: Literal["same", "all"] = "same"
     via: Literal["whatsapp", "call", "web", "voice"] = "web"
     at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 

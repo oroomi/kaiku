@@ -1,3 +1,4 @@
+anthropic==2.6.0
 anyio==4.16.0
 click==8.5.1
 fastapi==0.162.0
@@ -10,6 +11,7 @@ pydantic==2.14.3
 pytest==9.2.0
 pytest-asyncio==1.4.1.post1
 python-dotenv==1.2.4
+qrcode==8.2
 PyYAML==6.0.3
 starlette==1.10.0
 uvicorn==0.54.0

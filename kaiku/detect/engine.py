@@ -1,7 +1,7 @@
 """detect(business, holiday_date, now) -> Detection: collects every signal and names the reason codes."""
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 
 from kaiku.detect import holidays as hol
 from kaiku.detect import signals as sg
@@ -19,6 +19,8 @@ def _holiday(d: str) -> Holiday:
 def _as_date(x) -> date | None:
     if x is None or x == "":
         return None
+    if isinstance(x, datetime):
+        return x.date()
     return x if isinstance(x, date) else date.fromisoformat(x)
 
 

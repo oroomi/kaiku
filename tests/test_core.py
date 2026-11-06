@@ -67,7 +67,7 @@ def test_events_recent_and_sse_replay(client):
     import asyncio
 
     async def first_chunks():  # call the endpoint directly: TestClient streaming hangs on some starlette versions
-        r = await events.stream(replay=1, last=5)
+        r = await events.stream(replay=1, last=1)
         assert r.media_type.startswith("text/event-stream")
         got = ""
         async for chunk in r.body_iterator:

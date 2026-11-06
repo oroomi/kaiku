@@ -36,7 +36,7 @@ def _emit(step, business_id, title_fi, title_en, detail):
         from kaiku.schema import Event  # type: ignore
         from datetime import datetime, timezone
         ev = Event(ts=datetime.now(timezone.utc).isoformat(), step=step, business_id=business_id,
-                   suggestion_id=None, title_fi=title_fi, title_en=title_en, detail=detail)
+                   suggestion_id="", title_fi=title_fi, title_en=title_en, detail=detail)
         events.emit(ev)
         return True
     except Exception as e:  # ImportError or a signature mismatch must never break the broker

@@ -2,6 +2,7 @@
 (function () {
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
+  if (!$("arc-track") || !$("run") || !$("rows")) return;  // not the home page: nothing to drive
   var LABEL = { detect: "DETECT", suggest: "SUGGEST", contact: "CONTACT", decide: "DECIDE", apply: "APPLY", learn: "LEARN", broker: "BROKER" };
   var ORDER = ["detect", "suggest", "contact", "decide", "apply", "learn"];
   var DAYS = [["mon", "Ma"], ["tue", "Ti"], ["wed", "Ke"], ["thu", "To"], ["fri", "Pe"], ["sat", "La"], ["sun", "Su"]];

@@ -1,10 +1,25 @@
 # DISCLOSURE: brought versus built (kept true at all times)
-All application code in this repository was written after the bell commit e2f7382 (Fri 6 Nov 2026 18:49Z) with AI coding tools
-(Claude Code: Fable orchestrating, Sonnet builders and verifiers).
-Brought and declared: our own MIT library github.com/oroomi/voice-pilot (published 18 Oct 2026, vendored under vendor/ with its
-licence); generic process scripts (screenshot, smoke test, deploy, tunnel) that are not product code; our VPS, domain and
-Cloudflare tunnel; the Yext sandbox entity provided by Fonecta; public data and APIs: Nager.Date public holidays, OpenStreetMap
-(ODbL), Föli open data, Digitraffic (CC BY 4.0), FMI open data, Serper (Google results), Anthropic and ElevenLabs APIs, Meta
-WhatsApp Cloud API (test number), FIWARE Orion-LD and MongoDB (Docker images).
-Fictional data: "Furry Paw Vet Clinic" is Fonecta's sandbox business; its history is a labelled sample we wrote.
-GenAI in the product: Claude (suggestion explanations, voice tool loop), ElevenLabs (voice).
+
+## Built
+All application code in this repository was written during the event, after the bell commit e2f7382 (Fri 6 Nov 2026 18:49Z),
+with AI coding tools (Claude Code: Fable orchestrating, Sonnet builders and verifiers). Everything not listed under "Brought" is
+written after that commit.
+
+## Brought (declared)
+- voice-pilot, github.com/oroomi/voice-pilot (our own, MIT, published 18 Oct 2026), vendored under vendor/voice-pilot with its
+  licence. The design is reused; the server code was rewritten during the event.
+- maplibre-gl 4.7.1, vendored (BSD-3-Clause).
+- Map tiles: OpenFreeMap. Map data: OpenStreetMap via Overpass (ODbL).
+- Live feeds: Föli SIRI VM, Fintraffic Digitraffic AIS, Open-Meteo (all CC BY 4.0).
+- Nager.Date public holidays API; Smart Data Models contexts.
+- Services run unmodified: Orion-LD (FIWARE NGSI-LD context broker) and MongoDB, as Docker images.
+- Libraries and APIs: mcp Python SDK, Anthropic SDK (model claude-sonnet-5-5), ElevenLabs API (TTS and STT), Yext sandbox API
+  (entity provided by Fonecta), Serper (Google places lookup), Meta WhatsApp Cloud API (test number).
+- Infrastructure: our VPS, domain, and a Cloudflare tunnel.
+- /root/hack/bin scripts (pre-existing process tooling, not product code): deploy, shot, smoke, expose.
+
+## Fictional data
+"Furry Paw Vet Clinic" is Fonecta's sandbox business; its history is a labelled sample we wrote.
+
+## GenAI in the product
+Claude (suggestion explanations, voice tool loop), ElevenLabs (voice).
