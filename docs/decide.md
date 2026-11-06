@@ -1,0 +1,14 @@
+# Decide (owner phone page)
+Flow: contact sends `tokens.link_for(sid, bid)` (WhatsApp/call). Opening `/d/<token>` shows the proposal; one tap posts `/api/decide/<token>`, which marks the token used, resolves the chain's waiting decide future, and the page then follows SSE `/api/events` for the apply event of that suggestion.
+Token rule: urlsafe 16 bytes, single use, 7-day expiry, stored in `$KAIKU_DATA_DIR/decide_tokens.json`. `issue()` reuses the live token per suggestion, so contact and the decide step share one link. Bad token 404, used token shows "Kiitos, tehty", expired shows the expiry page.
+Decision: `{suggestion_id, action: approve|edit|decline, edited: [{start,end}]|"closed"|null, reason_chip, standing_permission, scope: same|all, via: "web", at}`. Chip and permission are dropped when they do not apply (decline never carries permission). `scope` is not in the core Decision model; it travels in the dict for learn.
+Chain: `decide_step(suggestion)` registers as `chain.register("decide", ...)`, stores the link in `channel_log` (channel `decide_link`), awaits a future (timeout `KAIKU_DECIDE_TIMEOUT_S`, default 600, returns action "timeout"). `decide.resolve(sid, decision) -> bool` resolves it (False if nobody waits or already resolved); `decide.pending()` lists waiting ids. The WhatsApp webhook and `chain.on_decision` must call `kaiku.decide.resolve`.
+Events: core emits waiting and decided. The router emits its own "Omistaja päätti: ..." event only when no future was waiting.
+Finnish strings (English gloss):
+- Hyväksy (Approve), Muokkaa (Edit), Ei kiitos (No thanks), Suljettu (Closed), Lähetä (Send)
+- Olemme auki normaalisti (We are open as usual), Ajat ovat väärin (The times are wrong), Emme tiedä vielä (We do not know yet), Ei koske meitä (Does not concern us)
+- Saa päivittää tämän jatkossa automaattisesti (Allow Kaiku to apply this automatically next time), (voit perua milloin vain) (you can cancel any time)
+- Kiitos. Päivitän tiedot nyt. (Thank you. I am updating the details now.), Kiitos, tehty. (Thank you, done.)
+- Näkyy: Fonecta Caller, Finder, 020202, Google-yritysprofiili (Shown in: ... Google Business Profile)
+- Tämä linkki ei toimi. (This link does not work.), Linkki on vanhentunut. (This link has expired.)
+Not done: no-JS form fallback.
