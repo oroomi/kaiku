@@ -37,3 +37,8 @@ Free-form messages (text, buttons) can only be sent within 24 h after the custom
 - Test-number access tokens last 24 h; a system-user token is needed for the weekend.
 - A test number can only message numbers on its allowed list (131030).
 - `hello_world` is English; a Finnish template needs Meta approval, so for the demo the first contact uses it only to open the window.
+
+## Message source and register
+- When the Suggestion carries `message_fi`/`message_en` (suggest engine), the lane sends the engine's text verbatim (its holiday name and last-year hours) plus the decide line; the generic text is a fallback that states no fact it was not given.
+- Register is the polite plural throughout (te, teidän: "olette suljettuna", "aukioloaikanne"). When `decide_url` is set, a line "Voitte myös päättää selaimessa: <url>" is added (gloss: You can also decide in the browser).
+- A button tap for an unknown suggestion id logs a warning, replies "En löytänyt ehdotusta, johon tämä vastaus liittyy." (gloss: I could not find the suggestion this reply belongs to.) and emits no Decision.
