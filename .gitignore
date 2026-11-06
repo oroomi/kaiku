@@ -8,3 +8,6 @@ shots/
 .next/
 data/*.sqlite*
 data/tunnel.log
+
+# video outputs (owner reviews first, never committed)
+video/*.mp4
