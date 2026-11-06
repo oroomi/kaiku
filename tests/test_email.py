@@ -46,6 +46,7 @@ def test_finnish_email(env):
 
 
 def test_real_smtp_path(env, monkeypatch):
+    monkeypatch.delenv("KAIKU_NO_SMTP", raising=False)  # this test fakes smtplib itself
     monkeypatch.setenv("SMTP_HOST", "smtp.test")
     monkeypatch.setenv("SMTP_FROM", "kaiku@test.example")
     sent = []

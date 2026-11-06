@@ -34,8 +34,10 @@ def data_dir() -> Path:
 
 
 def env_path() -> Path:
-    for p in (Path(os.environ["KAIKU_ENV"]) if os.environ.get("KAIKU_ENV") else None, ROOT / ".env", CANONICAL_ENV):
-        if p and p.exists():
+    if os.environ.get("KAIKU_ENV"):  # explicit wins, even when the file is missing: tests point here to stay off the live .env
+        return Path(os.environ["KAIKU_ENV"])
+    for p in (ROOT / ".env", CANONICAL_ENV):
+        if p.exists():
             return p
     return CANONICAL_ENV
 

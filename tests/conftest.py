@@ -9,6 +9,16 @@ os.environ["KAIKU_ROOM_KEY"] = "testkey"
 os.environ.setdefault("KAIKU_DATA_DIR", tempfile.mkdtemp(prefix="kaiku-data-"))
 
 
+@pytest.fixture(autouse=True)
+def _never_send_mail(monkeypatch):
+    """The suite never sends email and the live .env never steers a test (KAIKU_LIVE=1 lifts this)."""
+    if os.environ.get("KAIKU_LIVE") == "1":
+        return
+    monkeypatch.setenv("KAIKU_NO_SMTP", "1")
+    for k in ("SMTP_HOST", "SMTP_FROM", "SMTP_USER", "SMTP_PASS", "OWNER_EMAIL"):
+        monkeypatch.delenv(k, raising=False)
+
+
 def pytest_configure(config):
     config.addinivalue_line("markers", "live: hits a real external service (Yext, Orion, Meta, Nager); skipped unless KAIKU_LIVE=1")
     config.addinivalue_line("markers", "network: needs the network; skipped unless KAIKU_LIVE=1")
