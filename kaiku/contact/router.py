@@ -224,7 +224,15 @@ async def handle_payload(payload: dict, client: W.WhatsAppClient | None = None) 
     out = {"decisions": [], "statuses": [], "ignored": 0, "replies": 0, "edit_requested": [], "unknown": []}
     for it in parse_inbound(payload):
         if it["kind"] == "status":
-            out["statuses"].append({k: it.get(k) for k in ("message_id", "status", "to", "errors")})
+            st = {k: it.get(k) for k in ("message_id", "status", "to", "errors")}
+            out["statuses"].append(st)
+            try:  # delivery proof for the demo: data/wa_status.jsonl (sent / delivered / read / failed + Meta error codes)
+                with open(W.data_dir() / "wa_status.jsonl", "a", encoding="utf-8") as fh:
+                    fh.write(json.dumps({"at": _now(), **st}, ensure_ascii=False) + "\n")
+                if st.get("status") == "failed" or st.get("errors"):
+                    log.warning("whatsapp status failed: %s", json.dumps(st.get("errors"), ensure_ascii=False)[:300])
+            except Exception as e:  # never break the 200 to Meta
+                log.warning("wa_status log failed: %s", e)
             continue
         phone = W.normalize_phone(it["from"])
         with _lock:
