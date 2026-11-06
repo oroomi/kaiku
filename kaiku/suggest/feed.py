@@ -126,8 +126,8 @@ def _chat_text(msg: str, en: str, d: str, prop_short: str) -> str:
     and it starts with the card title so the chat does not repeat it."""
     t = re.sub(r"^Hi [^!.]*[!.]\s*", "", msg or "")
     if en:
-        t = re.sub(r"^%s is on (\w+) %s" % (re.escape(en), re.escape(d)), lambda m: f"{en} {d} is a {m.group(1)}", t)
-    t = re.sub(r"\s*We suggest:[^.]*\.\s*$", f" I suggest {prop_short}.", t)
+        t = re.sub(r"^%s is on (\w+) %s" % (re.escape(en), re.escape(d)), lambda m: f"{en} {d} is a {m.group(1)}.", t)
+    t = re.sub(r"\s*We suggest:.*$", f" I suggest {prop_short}.", t)
     return _short_times(t).strip()
 
 

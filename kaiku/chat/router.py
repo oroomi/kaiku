@@ -33,7 +33,8 @@ class ChatIn(BaseModel):
 def _bubble(i: dict) -> dict:
     text = i.get("text_en") or ""
     title = i.get("title_en") or ""
-    body = f"{title}. {text}".strip(". ") + "." if text and not text.startswith(title) else (text or title)
+    body = f"{title}. {text}".strip(". ") if text and not text.startswith(title) else (text or title)
+    body = body if body.endswith(("?", "!", ".")) else body + "."
     if i["kind"] != "no_change" and is_pending(i) and i.get("proposed") and "suggest" not in body.lower():
         body += f" I suggest {hours_text(i['proposed'])}."
     return {"role": "kaiku", "kind": "note" if i["kind"] == "no_change" else "suggestion", "suggestion_id": i["id"],
