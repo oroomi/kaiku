@@ -11,7 +11,7 @@ On screen: Detect, Suggest, Contact, Decide, Apply as five boxes with the Orion-
 Say: Connect suggests, the customer approves: five steps, no login, and the customer has the last word.
 
 ## 3. Live demo frames
-On screen: three screenshots. The home headline (Connect 9-17, Kaiku 9-13) and the event strip; the phone decision page with Approve, Edit, No thanks; the Yext read-back saying verified.
+On screen: three screenshots. The home headline (Connect 9-17, Kaiku 9-13) and the event strip; the owner page chat where the answer is "yes" or "make it 10-14"; the Yext read-back saying verified.
 Say: This is the real app on a phone: one tap writes to the team's Yext entity and we read it back.
 
 ## 4. Reliability
@@ -19,7 +19,7 @@ On screen: two rows. 8.11. Isänpäivä: "no change needed" (not a public holida
 Say: Kaiku does not invent work, and below 0.6 confidence it asks instead of guessing.
 
 ## 5. Learning
-On screen: an edit to 10-14 becomes the next proposal at confidence 0.9 or more; two declines turn it into no change; a "standing permission" tick.
+On screen: an edit to 10-14 becomes the next proposal at confidence 0.9 or more; two declines turn it into no change; the standing-permission question after an approval.
 Say: The second suggestion is better than the first, and recurring changes can get standing permission.
 
 ## 6. The FIWARE spine
@@ -27,7 +27,7 @@ On screen: one Store entity, one attribute `holidayHours`, five datasetIds (last
 Say: One business, many sources, one truth, and every source keeps its own provenance.
 
 ## 7. What we measured (honest)
-On screen: 10 hand-made cases, wrong-suggestion rate 0.0, abstain rate 0.2; the words "self-consistency, not accuracy". 208 tests passing offline (6 live-sending tests skipped unless KAIKU_LIVE=1).
+On screen: 10 hand-made cases, wrong-suggestion rate 0.0, abstain rate 0.2; the words "self-consistency, not accuracy". 308 tests passing offline (6 live-sending tests skipped unless KAIKU_LIVE=1).
 Say: We have not seen Fonecta's data yet. The backtest has a pluggable loader and prints machine-readable output, ready for your scoring script.
 
 ## 8. What is next
