@@ -380,7 +380,8 @@ def test_post_webhook_and_signature(monkeypatch):
 
 # ---------------------------------------------------------------- ladder
 
-def test_ladder_sends_buttons_to_owner_and_logs():
+def test_ladder_sends_buttons_to_owner_and_logs(monkeypatch):
+    monkeypatch.setattr(L.E, "owner_email", lambda s: "")  # no owner email: the ladder starts at WhatsApp
     f = Fake()
     s = dict(SUG, channel_log=[])
     L.contact(s, client=client(f), escalate_s=10**6)
@@ -392,7 +393,8 @@ def test_ladder_sends_buttons_to_owner_and_logs():
     assert res["decisions"][0]["suggestion_id"] == "sg1"
 
 
-def test_ladder_template_first_when_outside_window():
+def test_ladder_template_first_when_outside_window(monkeypatch):
+    monkeypatch.setattr(L.E, "owner_email", lambda s: "")  # no owner email: the ladder starts at WhatsApp
     f = Fake([(400, {"error": {"code": 131047, "message": "x"}}), (200, {"messages": [{"id": "wamid.T"}]}),
               (200, {"messages": [{"id": "wamid.B"}]}), (200, {})])
     s = dict(SUG, channel_log=[])
@@ -405,6 +407,7 @@ def test_ladder_template_first_when_outside_window():
 
 
 def test_ladder_escalates_to_call_when_undecided(monkeypatch):
+    monkeypatch.setattr(L.E, "owner_email", lambda s: "")  # no owner email: the ladder starts at WhatsApp
     import sys, types, time
     called = []
     mod = types.ModuleType("kaiku.contact.call"); mod.place_call = lambda s: called.append(s["id"])
