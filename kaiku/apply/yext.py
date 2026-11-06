@@ -131,7 +131,23 @@ class YextSandbox:
         snap = json.loads(Path(snapshot_file).read_text())
         if snap.get("entity_id") not in (None, entity_id):
             raise YextError("snapshot belongs to another entity")
-        return self.update_entity(entity_id, hours_payload(snap["hours"]))
+        hours = dict(snap["hours"])
+        hours.setdefault("holidayHours", [])  # omitted key keeps the live rows; [] clears them
+        res = self.update_entity(entity_id, hours_payload(hours))
+        if self.get_hours(entity_id).get("holidayHours", []) != hours["holidayHours"]:
+            raise YextError("revert not verified on read-back")
+        return res
+
+    def reset_demo(self, entity_id: str) -> dict:
+        """Remove ALL holiday rows, keep regular hours, verify by read-back, return the hours."""
+        cur = self.get_hours(entity_id)
+        new = {k: v for k, v in cur.items() if k != "holidayHours"}
+        new["holidayHours"] = []
+        self.update_entity(entity_id, hours_payload(new))
+        after = self.get_hours(entity_id)
+        if after.get("holidayHours"):
+            raise YextError("reset not verified: holiday rows remain")
+        return after
 
     def set_hours(self, entity_id: str, hours: dict) -> dict:
         """Replaces regular hours, keeping existing holidayHours unless `hours` carries its own."""

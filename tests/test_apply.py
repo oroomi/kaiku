@@ -50,3 +50,23 @@ def test_live_write_verify_remove():
         c = YextSandbox()
         c.remove_holiday_hours("SinceAI07", "2027-06-01")
     assert all(x["date"] != "2027-06-01" for x in c.get_hours("SinceAI07").get("holidayHours", []))
+
+
+@pytest.mark.live
+@pytest.mark.skipif(not has_key(), reason="no YEXT_API_KEY")
+def test_live_revert_clears_row_and_keeps_regular_hours():
+    c = YextSandbox()
+    c.reset_demo("SinceAI07")
+    snap = c.snapshot("SinceAI07")  # zero holiday rows -> no holidayHours key
+    try:
+        r = apply_suggestion("SinceAI07", "2027-06-02", "closed", c)
+        assert r["verified"]
+        c.revert("SinceAI07", snap)
+    finally:
+        snap.unlink(missing_ok=True)
+    h = c.get_hours("SinceAI07")
+    assert not h.get("holidayHours")
+    for d in ("monday", "tuesday", "wednesday", "thursday", "friday"):
+        assert h[d]["openIntervals"] == [{"start": "09:00", "end": "17:00"}]
+    assert h["saturday"]["openIntervals"] == [{"start": "10:00", "end": "14:00"}]
+    assert h["sunday"].get("isClosed") is True
