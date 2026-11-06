@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Kaiku, your opening hours{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/chat.css?v={{ asset_v() }}">{% endblock %}
+{% block content %}
+<div class="chat" id="chat" data-biz="{{ business.id if business else 'furry-paw' }}">
+  <section class="chat-card glass">
+    <header class="chat-head" data-pilot="business-card">
+      <i class="kdot" aria-hidden="true"></i>
+      <div class="who"><b id="c-name">{{ business.name if business else "Your business" }}</b><span class="mono">Kaiku · Fonecta Connect</span></div>
+      <button type="button" class="demo-btn mono" id="demo-btn" hidden aria-expanded="false" aria-controls="drawer">Demo</button>
+    </header>
+    <div class="thread" id="thread" data-pilot="hero" role="log" aria-live="polite" aria-label="Conversation with Kaiku"></div>
+  </section>
+  <form class="composer" id="composer" autocomplete="off">
+    <div class="quick" id="quick" aria-label="Quick replies">
+      <button type="button" data-say="Yes, do it">Yes, do it</button>
+      <button type="button" data-say="Change the hours">Change the hours</button>
+      <button type="button" data-say="No thanks">No thanks</button>
+    </div>
+    <div class="field">
+      <input id="msg" name="msg" type="text" inputmode="text" enterkeyhint="send" maxlength="400" placeholder="Answer Kaiku" aria-label="Your answer to Kaiku" autocomplete="off">
+      <button type="submit" id="send" aria-label="Send"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+  </form>
+</div>
+<div id="drawer-host"></div>
+{% endblock %}
+{% block scripts %}<script src="/static/chat.js?v={{ asset_v() }}" defer></script>{% endblock %}
