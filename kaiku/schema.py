@@ -32,6 +32,7 @@ class Business(BaseModel):
     last_year_exceptions: list[Exception_] = Field(default_factory=list)
     website: Optional[str] = None
     owner_whatsapp: Optional[str] = None
+    owner_language: str = "en"  # language of every owner-facing text: "en" (demo default) or "fi"
     source: str = ""
     note: Optional[str] = None
     exceptions: list[Exception_] = Field(default_factory=list)  # exception hours already set for the coming year (suggest builder)

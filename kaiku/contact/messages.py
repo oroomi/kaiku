@@ -1,4 +1,6 @@
-"""Finnish customer messages for the Kaiku contact step (WhatsApp, and the same words for the call).
+"""Customer messages for the Kaiku contact step (WhatsApp, and the same words for the call).
+
+English is the default (owner_language "en"); Finnish stays per owner (owner_language "fi"). Dispatchers pick via owner_lang().
 
 All builders take a Suggestion dict (see CLAUDE.md data contracts) and are tolerant of missing optional fields.
 Rules: correct Finnish, no em dashes, dates "24.12.", times "9-13".
@@ -154,12 +156,12 @@ def _join_lines(lines) -> str:
     return "\n".join(l for l in lines if l is not None)
 
 
-def suggestion_text(s: dict) -> str:
+def suggestion_text_fi(s: dict) -> str:
     kind = s.get("kind")
     if kind == "ask":
-        return ask_text(s)
+        return ask_text_fi(s)
     if kind == "no_change":
-        return no_change_text(s)
+        return no_change_text_fi(s)
     if s.get("message_fi"):  # the engine's own facts, verbatim
         return _join_lines([s["message_fi"], "", DECIDE_FI, _url_line_fi(s)])
     name = business_name(s)
@@ -212,7 +214,7 @@ def suggestion_text_en(s: dict) -> str:
     return _join_lines(lines)
 
 
-def ask_text(s: dict) -> str:
+def ask_text_fi(s: dict) -> str:
     if s.get("message_fi"):
         return _join_lines([s["message_fi"], "", _url_line_fi(s)] if s.get("decide_url") else [s["message_fi"]])
     return _join_lines([
@@ -235,7 +237,7 @@ def ask_text_en(s: dict) -> str:
         _url_line_en(s)])
 
 
-def no_change_text(s: dict) -> str:
+def no_change_text_fi(s: dict) -> str:
     if s.get("message_fi"):
         return s["message_fi"]
     lead = f"{_cap(holiday_name(s))} on {_when_fi(s)}" if _has_name(s) else f"{_cap(_when_fi(s))}"
@@ -253,7 +255,7 @@ def no_change_text_en(s: dict) -> str:
             f"Nothing to do, and no changes are coming to your hours.")
 
 
-def unknown_suggestion_text() -> str:
+def unknown_suggestion_text_fi() -> str:
     return "En löytänyt ehdotusta, johon tämä vastaus liittyy."
 
 
@@ -265,7 +267,7 @@ def _hours_from_result(r: dict):
     return r.get("hours_text") or r.get("hours")
 
 
-def receipt_text(r: dict) -> str:
+def receipt_text_fi(r: dict) -> str:
     """r: ApplyResult dict, optionally enriched with holiday_name_fi, hours (list|'closed') or hours_text."""
     h = _hours_from_result(r)
     h_txt = h if isinstance(h, str) and h != "closed" else fi_hours(h)
@@ -279,14 +281,18 @@ def receipt_text(r: dict) -> str:
     return f"Kiitos! {what} Ne näkyvät {pub_txt}."
 
 
+CHANNELS_EN = "Google, Fonecta Finder, 020202 and the other channels Connect publishes to"
+
+
 def receipt_text_en(r: dict) -> str:
     h = _hours_from_result(r)
     h_txt = h.replace("-", " to ") if isinstance(h, str) and h != "closed" else en_hours(h)
-    pubs = r.get("publishers") or PUBLISHERS_DEFAULT
-    hol = r.get("holiday_name_en") or "exception day"
+    h_txt = h_txt.replace(" to ", "-") if h_txt != "closed" else h_txt
+    hol = r.get("holiday_name_en") or "Exception day"
+    day = f"{hol} {fi_date(r['holiday_date'])}" if r.get("holiday_date") else hol
     if h_txt == "closed":
-        return f"Thank you! The {hol} closure is now saved. It shows on {_join_en(pubs)}."
-    return f"Thank you! The {hol} hours ({h_txt}) are now saved. They show on {_join_en(pubs)}."
+        return f"Done. {day} closure is saved and will show on {CHANNELS_EN}."
+    return f"Done. {day} hours {h_txt} are saved and will show on {CHANNELS_EN}."
 
 
 def _join_fi(items) -> str:
@@ -308,15 +314,15 @@ def _join_en(items) -> str:
     return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
 
 
-def edit_prompt_text() -> str:
+def edit_prompt_text_fi() -> str:
     return "Selvä. Kirjoittakaa uusi aukioloaika vastaamalla tähän viestiin, esimerkiksi \"9-13\" tai \"suljettu\"."
 
 
 def edit_prompt_text_en() -> str:
-    return "Sure. Reply with the new hours, for example \"9-13\" or \"closed\"."
+    return "Reply with the new hours, like 9-13, or 'closed'."
 
 
-def decline_thanks_text() -> str:
+def decline_thanks_text_fi() -> str:
     return "Selvä, aukioloaikoihin ei tehdä muutoksia. Kiitos vastauksesta! Voitte muuttaa päätöstä milloin tahansa."
 
 
@@ -324,12 +330,85 @@ def decline_thanks_text_en() -> str:
     return "Understood, no changes will be made to your hours. Thanks for replying! You can change your mind any time."
 
 
-def unknown_reply_text() -> str:
+def unknown_reply_text_fi() -> str:
     return "En ymmärtänyt vastausta. Voitte painaa jotakin painikkeista tai kirjoittaa esimerkiksi \"9-13\" tai \"suljettu\"."
 
 
 def unknown_reply_text_en() -> str:
-    return "I did not understand that. Tap one of the buttons or write for example \"9-13\" or \"closed\"."
+    return "Sorry, I did not understand that. Tap one of the buttons, or write the hours like 9-13, or 'closed'."
+
+
+# ---------------------------------------------------------------- language dispatch (English is the default)
+
+DEFAULT_LANG = "en"
+_seed_lang: str | None = None
+
+
+def _seed_language() -> str:
+    """owner_language of the demo business seed (data/furry_paw.json); 'en' when absent."""
+    global _seed_lang
+    if _seed_lang is None:
+        import json
+        try:
+            v = json.loads((Path(__file__).resolve().parents[2] / "data" / "furry_paw.json").read_text(encoding="utf-8")).get("owner_language")
+        except (OSError, ValueError):
+            v = None
+        _seed_lang = v if v in ("en", "fi") else DEFAULT_LANG
+    return _seed_lang
+
+
+def owner_lang(x=None) -> str:
+    """'en' | 'fi' from a Business or Suggestion (dict or object): x.owner_language, x.business.owner_language,
+    else the demo seed's setting, else 'en'."""
+    def pick(o):
+        if o is None:
+            return None
+        v = o.get("owner_language") if isinstance(o, dict) else getattr(o, "owner_language", None)
+        return str(v).lower()[:2] if v else None
+    for cand in (x, (x.get("business") if isinstance(x, dict) else getattr(x, "business", None))):
+        v = pick(cand)
+        if v in ("en", "fi"):
+            return v
+    return _seed_language()
+
+
+def suggestion_text(s: dict) -> str:
+    return suggestion_text_fi(s) if owner_lang(s) == "fi" else suggestion_text_en(s)
+
+
+def ask_text(s: dict) -> str:
+    return ask_text_fi(s) if owner_lang(s) == "fi" else ask_text_en(s)
+
+
+def no_change_text(s: dict) -> str:
+    return no_change_text_fi(s) if owner_lang(s) == "fi" else no_change_text_en(s)
+
+
+def receipt_text(r: dict) -> str:
+    return receipt_text_fi(r) if owner_lang(r) == "fi" else receipt_text_en(r)
+
+
+def edit_prompt_text(lang: str | None = None) -> str:
+    return edit_prompt_text_fi() if owner_lang({"owner_language": lang}) == "fi" else edit_prompt_text_en()
+
+
+def decline_thanks_text(lang: str | None = None) -> str:
+    return decline_thanks_text_fi() if owner_lang({"owner_language": lang}) == "fi" else decline_thanks_text_en()
+
+
+def unknown_reply_text(lang: str | None = None) -> str:
+    return unknown_reply_text_fi() if owner_lang({"owner_language": lang}) == "fi" else unknown_reply_text_en()
+
+
+def unknown_suggestion_text(lang: str | None = None) -> str:
+    return unknown_suggestion_text_fi() if owner_lang({"owner_language": lang}) == "fi" else unknown_suggestion_text_en()
+
+
+def button_titles(s: dict | None = None, lang: str | None = None) -> list[tuple[str, str]]:
+    """[(action, title)] for approve/edit/decline in the owner's language."""
+    fi = (owner_lang({"owner_language": lang}) if lang else owner_lang(s)) == "fi"
+    return [("approve", "Hyväksy"), ("edit", "Muokkaa"), ("decline", "Ei kiitos")] if fi else \
+        [("approve", "Approve"), ("edit", "Edit"), ("decline", "No thanks")]
 
 
 # ---------------------------------------------------------------- export
@@ -366,17 +445,17 @@ def all_final_messages(path: str | Path | None = None) -> str:
                   "publishers": ["Google", "Apple Maps", "Bing"]}
     with_url = dict(hours, decide_url="https://kaiku.example/decide/sug-furry-paw-2026-12-24")
     items = [
-        ("1. Suggestion with proposed hours (WhatsApp buttons: Hyväksy / Muokkaa / Ei kiitos)", suggestion_text(hours), suggestion_text_en(hours)),
-        ("2. Suggestion, proposal is closed", suggestion_text(closed), suggestion_text_en(closed)),
-        ("3. Ask instead of guess (low confidence or cold start)", ask_text(ask), ask_text_en(ask)),
-        ("4. No change needed (reliability: we do not invent work)", no_change_text(nochg), no_change_text_en(nochg)),
-        ("5. Receipt after apply (hours)", receipt_text(rec), receipt_text_en(rec)),
-        ("5b. Receipt after apply (closed day, singular)", receipt_text(rec_closed), receipt_text_en(rec_closed)),
-        ("5c. Suggestion when a decide link exists (example URL)", suggestion_text(with_url), suggestion_text_en(with_url)),
-        ("5d. Button for a suggestion we do not know", unknown_suggestion_text(), unknown_suggestion_text_en()),
-        ("6. Edit prompt after Muokkaa", edit_prompt_text(), edit_prompt_text_en()),
-        ("7. Thanks after Ei kiitos", decline_thanks_text(), decline_thanks_text_en()),
-        ("8. Reply not understood", unknown_reply_text(), unknown_reply_text_en()),
+        ("1. Suggestion with proposed hours (WhatsApp buttons: Approve / Edit / No thanks)", suggestion_text_fi(hours), suggestion_text_en(hours)),
+        ("2. Suggestion, proposal is closed", suggestion_text_fi(closed), suggestion_text_en(closed)),
+        ("3. Ask instead of guess (low confidence or cold start)", ask_text_fi(ask), ask_text_en(ask)),
+        ("4. No change needed (reliability: we do not invent work)", no_change_text_fi(nochg), no_change_text_en(nochg)),
+        ("5. Receipt after apply (hours)", receipt_text_fi(rec), receipt_text_en(rec)),
+        ("5b. Receipt after apply (closed day, singular)", receipt_text_fi(rec_closed), receipt_text_en(rec_closed)),
+        ("5c. Suggestion when a decide link exists (example URL)", suggestion_text_fi(with_url), suggestion_text_en(with_url)),
+        ("5d. Button for a suggestion we do not know", unknown_suggestion_text_fi(), unknown_suggestion_text_en()),
+        ("6. Edit prompt after Edit", edit_prompt_text_fi(), edit_prompt_text_en()),
+        ("7. Thanks after No thanks", decline_thanks_text_fi(), decline_thanks_text_en()),
+        ("8. Reply not understood", unknown_reply_text_fi(), unknown_reply_text_en()),
     ]
     out = ["# Final customer messages", "",
            "Demo business: Furry Paw Vet Clinic (fictional Yext sandbox entity). Items 1 to 4 are the exact Suggestion texts from `python3 -m kaiku.suggest.cli --business data/furry_paw.json` (no network): 24.12. hours, 25.12. closed, 24.12. with no history (ask), 8.11. no change. Text as sent over WhatsApp, with English glosses.", ""]

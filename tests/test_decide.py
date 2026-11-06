@@ -14,8 +14,11 @@ def env(tmp_path, monkeypatch):
     from kaiku import store
     store.reset(tmp_path / "k.sqlite")
     store.seed()
+    from kaiku.schema import Reason
     s = Suggestion(id="sg1", business_id="furry-paw", holiday_date="2026-12-24", kind="hours",
-                   proposed=[Span(start="09:00", end="13:00")], confidence=0.9)
+                   proposed=[Span(start="09:00", end="13:00")], confidence=0.9,
+                   reasons=[Reason(source="last_year", dataset_id="x", text_fi="Viime jouluaattona olitte auki 9-13.",
+                                   text_en="Last Christmas Eve you were open 9-13.")])
     store.save_suggestion(s)
     from kaiku.app import app
     from kaiku.decide import step
@@ -44,9 +47,39 @@ def test_bad_token_404_and_page_renders(env):
     c, s = env
     assert c.get("/d/nope").status_code == 404
     r = c.get("/d/" + _tok(s))
-    assert r.status_code == 200 and "Furry Paw Vet Clinic" in r.text and "Jouluaattona 24.12. auki klo 9-13" in r.text
+    assert r.status_code == 200 and "Furry Paw Vet Clinic" in r.text
+    # English by default
+    assert "Christmas Eve, Thursday 24.12.: open 9-13" in r.text and "Last Christmas Eve you were open 9-13." in r.text
+    assert ">Approve<" in r.text and ">Edit<" in r.text and ">No thanks<" in r.text and "WHY" in r.text
+    for fi in ("Hyväksy", "Muokkaa", "Ei kiitos", "MIKSI", "Jouluaattona"):
+        assert fi not in r.text, fi
+    for pilot in ("decide-page", "proposal", "approve", "edit", "decline", "standing-permission", "why"):
+        assert f'data-pilot="{pilot}"' in r.text
+    assert 'data-lang="en"' in r.text
     assert "—" not in r.text and "–" not in r.text.replace("&ndash;", "")
-    assert c.get("/api/decide/" + _tok(s)).json()["sentence_fi"].startswith("Jouluaattona")
+    j = c.get("/api/decide/" + _tok(s)).json()
+    assert j["sentence_fi"].startswith("Jouluaattona") and j["lang"] == "en"
+    assert j["sentence_en"] == "Christmas Eve, Thursday 24.12.: open 9-13"
+
+
+def test_finnish_page_when_owner_language_fi(env):
+    from kaiku import store
+    c, s = env
+    b = store.get_business("furry-paw")
+    store.save_business(b.model_copy(update={"owner_language": "fi"}))
+    r = c.get("/d/" + _tok(s))
+    assert r.status_code == 200 and 'data-lang="fi"' in r.text
+    assert "Jouluaattona 24.12. auki klo 9-13" in r.text and "Hyväksy" in r.text and "MIKSI" in r.text
+    assert "Kiitos, tehty" not in r.text
+
+
+def test_english_missing_and_done_states(env):
+    c, s = env
+    assert "This link does not work." in c.get("/d/nope").text
+    t = _tok(s)
+    assert c.post(f"/api/decide/{t}", json={"action": "decline"}).status_code == 200
+    page = c.get("/d/" + t).text
+    assert "Thank you, done." in page and "DONE" in page and "Kiitos" not in page
 
 
 def test_approve_resolves_waiting_future(env):
@@ -66,7 +99,7 @@ def test_approve_resolves_waiting_future(env):
     assert r.json()["decision"]["scope"] == "all"
     assert step.pending() == [] and step.resolve("sg1", {}) is False
     assert c.post(f"/api/decide/{t}", json={"action": "approve"}).status_code == 409
-    assert "Kiitos, tehty" in c.get("/d/" + t).text
+    assert "Thank you, done." in c.get("/d/" + t).text
 
 
 def test_edit_validation(env):
@@ -136,7 +169,7 @@ def test_late_post_after_timeout_410(env, monkeypatch):
     assert r.status_code == 410 and r.json()["state"] == "expired"
     assert r.json()["message_fi"] == "Ehdotus vanheni ennen päätöstä. Kaiku lähettää uuden ehdotuksen."
     page = c.get("/d/" + t).text
-    assert "vanheni ennen päätöstä" in page and "Kiitos, tehty" not in page
+    assert "The suggestion expired before a decision." in page and "Thank you, done." not in page
     assert not [e for e in store.recent_events(50) if e.suggestion_id == "sg1" and "Omistaja" in e.title_fi]
 
 

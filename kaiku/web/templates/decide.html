@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Kaiku, päätös{% endblock %}
+{% block title %}{{ "Kaiku, päätös" if lang == "fi" else "Kaiku, your decision" }}{% endblock %}
 {% block head %}
 <style>
 .dc{max-width:460px;margin:0 auto;display:grid;gap:14px}
@@ -57,74 +57,106 @@
 </style>
 {% endblock %}
 {% block content %}
-<div class="dc" id="dc" data-pilot="decide-page" data-token="{{ v.token if v else '' }}" data-sid="{{ v.suggestion_id if v else '' }}">
+{% set fi = (lang == "fi") %}
+<div class="dc" id="dc" data-pilot="decide-page" data-token="{{ v.token if v else '' }}" data-sid="{{ v.suggestion_id if v else '' }}" data-lang="{{ 'fi' if fi else 'en' }}">
 {% if state == "missing" %}
   <section class="glass miss" data-pilot="decide-missing">
     <div class="big">404</div>
+    {% if fi %}
     <p class="prop" lang="fi">Tämä linkki ei toimi.</p>
     <p class="gl" lang="en">This link does not work.</p>
     <p class="gl" lang="fi">Pyydä uusi linkki Kaikulta.</p>
     <p class="gl" lang="en">Ask Kaiku for a new link.</p>
+    {% else %}
+    <p class="prop" lang="en">This link does not work.</p>
+    <p class="gl" lang="en">Ask Kaiku for a new link.</p>
+    {% endif %}
   </section>
 {% elif state == "expired" %}
   <section class="glass miss" data-pilot="decide-expired">
     {% if v and v.suggestion_expired %}
-    <p class="prop" lang="fi">Ehdotus vanheni ennen päätöstä.</p>
-    <p class="gl" lang="en">The suggestion expired before a decision.</p>
-    <p class="gl" lang="fi">Kaiku lähettää uuden ehdotuksen.</p>
-    <p class="gl" lang="en">Kaiku will send a new suggestion.</p>
+      {% if fi %}
+      <p class="prop" lang="fi">Ehdotus vanheni ennen päätöstä.</p>
+      <p class="gl" lang="en">The suggestion expired before a decision.</p>
+      <p class="gl" lang="fi">Kaiku lähettää uuden ehdotuksen.</p>
+      <p class="gl" lang="en">Kaiku will send a new suggestion.</p>
+      {% else %}
+      <p class="prop" lang="en">The suggestion expired before a decision.</p>
+      <p class="gl" lang="en">Kaiku will send a new suggestion.</p>
+      {% endif %}
     {% else %}
-    <div class="big">7 pv</div>
-    <p class="prop" lang="fi">Linkki on vanhentunut.</p>
-    <p class="gl" lang="en">This link has expired.</p>
-    <p class="gl" lang="fi">Pyydä uusi linkki Kaikulta.</p>
+      {% if fi %}
+      <div class="big">7 pv</div>
+      <p class="prop" lang="fi">Linkki on vanhentunut.</p>
+      <p class="gl" lang="en">This link has expired.</p>
+      <p class="gl" lang="fi">Pyydä uusi linkki Kaikulta.</p>
+      {% else %}
+      <div class="big">7 days</div>
+      <p class="prop" lang="en">This link has expired.</p>
+      <p class="gl" lang="en">Ask Kaiku for a new link.</p>
+      {% endif %}
     {% endif %}
   </section>
 {% else %}
   <section class="glass panel" aria-labelledby="prop">
     <div class="biz"><b>{{ v.business.name }}</b><span class="mono lab">FONECTA CONNECT</span></div>
+    {% if fi %}
     <div class="mono hol">{{ v.holiday.name_fi }} {{ v.holiday.date_fi }}</div>
     <h1 class="prop" id="prop" lang="fi" data-pilot="proposal">{{ v.sentence_fi }}</h1>
     <p class="gl" lang="en">{{ v.sentence_en }}</p>
-    {% if v.reason_fi %}
+    {% else %}
+    <div class="mono hol">{{ v.holiday.name_en }} {{ v.holiday.date_fi }}</div>
+    <h1 class="prop" id="prop" lang="en" data-pilot="proposal">{{ v.sentence_en }}</h1>
+    {% endif %}
+    {% if (v.reason_fi if fi else v.reason_en) %}
     <div class="why" data-pilot="why">
-      <span class="mono lab">MIKSI</span>
+      <span class="mono lab">{{ "MIKSI" if fi else "WHY" }}</span>
+      {% if fi %}
       <p lang="fi">{{ v.reason_fi }}</p>
       <p class="gl" lang="en">{{ v.reason_en }}</p>
+      {% else %}
+      <p lang="en">{{ v.reason_en }}</p>
+      {% endif %}
     </div>
     {% endif %}
 
     {% if state == "open" %}
     <div id="form">
       <div class="btns">
-        <button class="btn go" id="b-approve" type="button" data-pilot="approve"><span class="t">Hyväksy<span class="sub">Approve</span></span></button>
-        <button class="btn" id="b-edit" type="button" aria-expanded="false" aria-controls="d-edit" data-pilot="edit"><span class="t">Muokkaa<span class="sub">Edit</span></span></button>
+        <button class="btn go" id="b-approve" type="button" data-pilot="approve"><span class="t">{% if fi %}Hyväksy<span class="sub">Approve</span>{% else %}Approve{% endif %}</span></button>
+        <button class="btn" id="b-edit" type="button" aria-expanded="false" aria-controls="d-edit" data-pilot="edit"><span class="t">{% if fi %}Muokkaa<span class="sub">Edit</span>{% else %}Edit{% endif %}</span></button>
         <div class="drawer" id="d-edit" hidden>
           <div class="times">
-            <label><span class="mono lab">ALKAA</span><input type="time" id="t-start" value="{{ v.proposed[0].start if v.proposed else '09:00' }}"></label>
+            <label><span class="mono lab">{{ "ALKAA" if fi else "OPENS" }}</span><input type="time" id="t-start" value="{{ v.proposed[0].start if v.proposed else '09:00' }}"></label>
             <span class="dash">&ndash;</span>
-            <label><span class="mono lab">PÄÄTTYY</span><input type="time" id="t-end" value="{{ v.proposed[0].end if v.proposed else '17:00' }}"></label>
+            <label><span class="mono lab">{{ "PÄÄTTYY" if fi else "CLOSES" }}</span><input type="time" id="t-end" value="{{ v.proposed[0].end if v.proposed else '17:00' }}"></label>
           </div>
-          <div class="chips"><button class="chip" id="c-closed" type="button" aria-pressed="false">Suljettu</button></div>
-          <p class="cglo" lang="en">Starts, ends, closed. Pick the hours you want.</p>
+          <div class="chips"><button class="chip" id="c-closed" type="button" aria-pressed="false">{{ "Suljettu" if fi else "Closed" }}</button></div>
+          {% if fi %}<p class="cglo" lang="en">Starts, ends, closed. Pick the hours you want.</p>{% else %}<p class="cglo" lang="en">Pick the hours you want, or closed.</p>{% endif %}
           <p class="err" id="e-err" role="alert" hidden></p>
-          <button class="btn go send" id="s-edit" type="button">Lähetä<span class="sub" style="margin-left:6px">Send</span></button>
+          <button class="btn go send" id="s-edit" type="button">{% if fi %}Lähetä<span class="sub" style="margin-left:6px">Send</span>{% else %}Send{% endif %}</button>
         </div>
-        <button class="btn" id="b-decline" type="button" aria-expanded="false" aria-controls="d-decline" data-pilot="decline"><span class="t">Ei kiitos<span class="sub">No thanks</span></span></button>
+        <button class="btn" id="b-decline" type="button" aria-expanded="false" aria-controls="d-decline" data-pilot="decline"><span class="t">{% if fi %}Ei kiitos<span class="sub">No thanks</span>{% else %}No thanks{% endif %}</span></button>
         <div class="drawer" id="d-decline" hidden>
-          <span class="mono lab">SYY (VALINNAINEN)</span>
+          <span class="mono lab">{{ "SYY (VALINNAINEN)" if fi else "REASON (OPTIONAL)" }}</span>
           <div class="chips" id="reasons"></div>
           <p class="cglo" lang="en" id="r-gloss">Reason (optional). Tap one, then send.</p>
-          <button class="btn go send" id="s-decline" type="button">Lähetä<span class="sub" style="margin-left:6px">Send</span></button>
+          <button class="btn go send" id="s-decline" type="button">{% if fi %}Lähetä<span class="sub" style="margin-left:6px">Send</span>{% else %}Send{% endif %}</button>
         </div>
       </div>
     </div>
     {% else %}
     <div class="vis" id="done-box">
+      {% if fi %}
       <p class="mono lab ok">TEHTY</p>
       <p class="done-line" lang="fi">Kiitos, tehty.</p>
       <p class="gl" lang="en">Thank you, done.</p>
       {% if v.decision %}<p class="gl" id="was" lang="fi" data-act="{{ v.decision.action }}"></p>{% endif %}
+      {% else %}
+      <p class="mono lab ok">DONE</p>
+      <p class="done-line" lang="en">Thank you, done.</p>
+      {% if v.decision %}<p class="gl" id="was" lang="en" data-act="{{ v.decision.action }}"></p>{% endif %}
+      {% endif %}
     </div>
     {% endif %}
   </section>
@@ -133,30 +165,40 @@
   <section class="glass" id="permbox" data-pilot="standing-permission">
     <label class="perm" for="perm">
       <span>
+        {% if fi %}
         <p lang="fi">Saa päivittää tämän jatkossa automaattisesti</p>
         <p class="s" lang="fi">(voit perua milloin vain)</p>
         <p class="g" lang="en">Allow Kaiku to apply this automatically next time</p>
+        {% else %}
+        <p lang="en">Allow Kaiku to apply this automatically next time</p>
+        <p class="s" lang="en">(you can cancel any time)</p>
+        {% endif %}
       </span>
       <input class="sw" id="perm" type="checkbox" role="switch">
     </label>
     <div class="scope" id="scope" hidden>
-      <button class="chip" type="button" data-scope="same" aria-pressed="true">Vain tämä pyhä</button>
-      <button class="chip" type="button" data-scope="all" aria-pressed="false">Kaikki pyhät</button>
-      <p class="cglo" lang="en" style="width:100%;margin:0">Only this holiday, or every holiday.</p>
+      <button class="chip" type="button" data-scope="same" aria-pressed="true">{{ "Vain tämä pyhä" if fi else "This holiday only" }}</button>
+      <button class="chip" type="button" data-scope="all" aria-pressed="false">{{ "Kaikki pyhät" if fi else "All holidays" }}</button>
+      {% if fi %}<p class="cglo" lang="en" style="width:100%;margin:0">Only this holiday, or every holiday.</p>{% endif %}
     </div>
   </section>
   {% endif %}
 
   <section class="glass miss" id="expired-live" hidden aria-live="polite" data-pilot="decide-expired-live">
+    {% if fi %}
     <p class="prop" lang="fi">Ehdotus vanheni ennen päätöstä.</p>
     <p class="gl" lang="en">The suggestion expired before a decision.</p>
     <p class="gl" lang="fi">Kaiku lähettää uuden ehdotuksen.</p>
     <p class="gl" lang="en">Kaiku will send a new suggestion.</p>
+    {% else %}
+    <p class="prop" lang="en">The suggestion expired before a decision.</p>
+    <p class="gl" lang="en">Kaiku will send a new suggestion.</p>
+    {% endif %}
   </section>
 
   <section class="glass panel" id="thanks" hidden aria-live="polite" data-pilot="thanks">
-    <p class="mono lab ok">LÄHETETTY</p>
-    <p class="done-line" id="th-fi" lang="fi"></p>
+    <p class="mono lab ok">{{ "LÄHETETTY" if fi else "SENT" }}</p>
+    <p class="done-line" id="th-fi" lang="{{ 'fi' if fi else 'en' }}"></p>
     <p class="gl" id="th-en" lang="en"></p>
     <div class="vis" id="vis"></div>
   </section>

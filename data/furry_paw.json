@@ -29,6 +29,7 @@
   ],
   "website": "https://furrypaw.example",
   "owner_whatsapp": null,
+  "owner_language": "en",
   "source": "yext-sandbox",
   "note": "Fictional sample history written by the team; the business entity is Fonecta's Yext sandbox entity SinceAI07."
 }

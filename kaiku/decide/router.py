@@ -1,4 +1,4 @@
-"""Owner phone page /d/<token> and its JSON API."""
+"""Owner phone page /d/<token> and its JSON API. English by default, Finnish when the business owner_language is fi."""
 from __future__ import annotations
 
 import re
@@ -10,12 +10,14 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
 from .. import chain, events, store
+from ..contact import messages as M
 from . import step, tokens
 
 router = APIRouter()
 HHMM = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 FI_ACTION = {"approve": "hyväksy", "edit": "muokkasi", "decline": "ei kiitos"}
 EN_ACTION = {"approve": "approved", "edit": "edited", "decline": "declined"}
+EN_WD = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 FI_WD = ["maanantaina", "tiistaina", "keskiviikkona", "torstaina", "perjantaina", "lauantaina", "sunnuntaina"]
 EXPIRED_FI = "Ehdotus vanheni ennen päätöstä. Kaiku lähettää uuden ehdotuksen."
 EXPIRED_EN = "The suggestion expired before a decision. Kaiku will send a new suggestion."
@@ -59,7 +61,7 @@ def _holiday(iso: str) -> dict:
         name_fi, name_en, ess = name_fi or ch[0], name_en or ch[1], ch[2]
     d = date.fromisoformat(iso)
     return {"name_fi": name_fi or "Pyhäpäivä", "name_en": name_en or "Holiday",
-            "essive": ess or FI_WD[d.weekday()], "date_fi": f"{d.day}.{d.month}."}
+            "essive": ess or FI_WD[d.weekday()], "date_fi": f"{d.day}.{d.month}.", "weekday_en": EN_WD[d.weekday()]}
 
 
 def view_for(token: str, rec: dict) -> dict:
@@ -69,18 +71,20 @@ def view_for(token: str, rec: dict) -> dict:
         raise HTTPException(404, "suggestion not found")
     h = _holiday(s.holiday_date)
     sp = [x.model_dump() for x in s.proposed] if s.proposed else None
+    lang = M.owner_lang(b)
     when = f"{h['essive'].capitalize()} {h['date_fi']}"
+    when_en = f"{h['weekday_en']} {h['date_fi']}"
     if s.kind == "hours" and sp:
         sentence = f"{when} auki klo {spans_fi(sp)}"
-        en = f"On {h['name_en']} ({h['date_fi']}) open {spans_fi(sp)}"
+        en = f"{h['name_en']}, {when_en}: open {spans_fi(sp)}"
     elif s.kind == "closed":
         sentence = f"{when} suljettu"
-        en = f"On {h['name_en']} ({h['date_fi']}) closed"
+        en = f"{h['name_en']}, {when_en}: closed"
     else:
         sentence = f"{when} ei muutosta aukioloaikoihin"
-        en = f"On {h['name_en']} ({h['date_fi']}) no change to the hours"
+        en = f"{h['name_en']}, {when_en}: no change to the hours"
     r = s.reasons[0] if s.reasons else None
-    return {"token": token, "suggestion_id": s.id, "business": {"id": b.id, "name": b.name, "address": b.address},
+    return {"token": token, "lang": lang, "suggestion_id": s.id, "business": {"id": b.id, "name": b.name, "address": b.address},
             "holiday": h, "kind": s.kind, "proposed": sp, "sentence_fi": sentence, "sentence_en": en,
             "reason_fi": r.text_fi if r else "", "reason_en": r.text_en if r else "",
             "suggestion_expired": s.status == "expired" and not rec["used"],
@@ -89,6 +93,7 @@ def view_for(token: str, rec: dict) -> dict:
 
 def _page(request: Request, name: str, status: int = 200, **ctx):
     from ..app import render
+    ctx.setdefault("lang", (ctx.get("v") or {}).get("lang") or M.owner_lang(None))
     resp = render(request, name, **ctx)
     resp.status_code = status
     return resp

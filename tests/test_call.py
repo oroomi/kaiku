@@ -8,9 +8,10 @@ from kaiku.contact import call_router as CR
 from kaiku.contact import router as R
 
 SUG = {"id": "sg-1", "business_id": "SinceAI07", "business_name": "Furry Paw Vet Clinic", "holiday_date": "2026-12-24",
-       "holiday_name_fi": "Jouluaatto", "kind": "hours", "proposed": [{"start": "09:00", "end": "13:00"}],
+       "holiday_name_fi": "Jouluaatto", "holiday_name_en": "Christmas Eve", "kind": "hours", "proposed": [{"start": "09:00", "end": "13:00"}],
        "last_year_hours": [{"start": "09:00", "end": "13:00"}],
-       "reasons": [{"source": "last_year", "dataset_id": "x", "text_fi": "Viime jouluaattona olitte auki 9-13.", "text_en": "."}]}
+       "reasons": [{"source": "last_year", "dataset_id": "x", "text_fi": "Viime jouluaattona olitte auki 9-13.", "text_en": "Last Christmas Eve you were open 9-13."}]}
+SUG_FI = dict(SUG, owner_language="fi")
 
 
 class Fake:
@@ -43,13 +44,35 @@ def test_agent_payload_shape_and_env_store(env):
     m, url, h, p = f.calls[0]
     assert url.endswith("/v1/convai/agents/create") and h["xi-api-key"] == "k"
     cc = p["conversation_config"]
-    assert cc["agent"]["language"] == "fi" and cc["tts"]["voice_id"] == "voice1"
-    assert cc["tts"]["model_id"] == "eleven_flash_v2_5" and "Hyväksytkö" in cc["agent"]["prompt"]["prompt"]
-    assert "{{holiday_date_fi}}" in cc["agent"]["prompt"]["prompt"]
+    assert cc["agent"]["language"] == "en" and cc["tts"]["voice_id"] == "voice1"
+    assert cc["agent"]["first_message"] == ("Hi, this is Kaiku, the Fonecta Connect assistant. "
+                                            "I'm calling about your opening hours, do you have a moment?")
+    assert cc["tts"]["model_id"] == "eleven_flash_v2" and "Do you approve?" in cc["agent"]["prompt"]["prompt"]
+    assert "{{holiday_date}}" in cc["agent"]["prompt"]["prompt"] and "Speak only English" in cc["agent"]["prompt"]["prompt"]
+    dc = p["platform_settings"]["data_collection"]
+    assert "approve" in dc["action"]["description"] and "HH:MM-HH:MM" in dc["hours"]["description"] and "ä" not in json.dumps(dc)
     assert "—" not in json.dumps(p, ensure_ascii=False) and "–" not in json.dumps(p, ensure_ascii=False)
     assert "ELEVENLABS_AGENT_ID=ag_1" in env.read_text()
     assert oct(env.stat().st_mode)[-3:] == "600"
     assert C.ensure_agent(C.Api("k", Fake([])))["created"] is False  # idempotent, no call
+
+
+def test_agent_payload_finnish_per_owner():
+    p = C.agent_payload("voice1", lang="fi")
+    assert p["conversation_config"]["agent"]["language"] == "fi"
+    assert "Hyväksytkö" in p["conversation_config"]["agent"]["prompt"]["prompt"]
+    assert p["conversation_config"]["agent"]["first_message"] == C.FIRST_MESSAGE_FI
+
+
+def test_update_agent_patches_and_verifies(env, monkeypatch):
+    monkeypatch.setenv("ELEVENLABS_AGENT_ID", "ag_9")
+    f = Fake([(200, {}), (200, {"conversation_config": {"agent": {"language": "en", "first_message": C.FIRST_MESSAGE}}})])
+    r = C.update_agent(C.Api("k", f), "en")
+    assert r["ok"] and r["language"] == "en"
+    assert f.calls[0][0] == "PATCH" and f.calls[0][1].endswith("/v1/convai/agents/ag_9")
+    body = f.calls[0][3]
+    assert body["conversation_config"]["agent"]["language"] == "en" and "data_collection" in body["platform_settings"]
+    assert f.calls[1][0] == "GET"
 
 
 def test_webhook_stores_secret(env):
@@ -95,10 +118,23 @@ def test_place_call_payload_and_log(env, tmp_path, monkeypatch):
     assert f.calls[0][1].endswith(("/v1/convai/twilio/outbound-call", "/v1/convai/sip-trunk/outbound-call"))
     assert p["to_number"] == "+358451291684" and p["agent_id"] == "ag_1" and p["agent_phone_number_id"] == "ph1"
     dv = p["conversation_initiation_client_data"]["dynamic_variables"]
-    assert dv["holiday_date_fi"] == "24.12." and dv["proposed_hours"] == "9-13" and dv["suggestion_id"] == "sg-1"
-    assert dv["business_name"] == "Furry Paw Vet Clinic" and dv["holiday_name_fi"] == "jouluaatto"
+    assert dv["holiday_name"] == "Christmas Eve" and dv["holiday_date"] == "December 24"
+    assert dv["proposed_hours"] == "9 AM to 1 PM" and dv["suggestion_id"] == "sg-1" and dv["last_year"] == "9 AM to 1 PM"
+    assert dv["business_name"] == "Furry Paw Vet Clinic" and dv["reason"] == "Last Christmas Eve you were open 9-13"
+    assert "holiday_name_fi" not in dv
     log = (tmp_path / "call_log.jsonl").read_text()
     assert "conv_1" in log and "secretkey" not in log and "451291684" not in log
+
+
+def test_dynamic_variables_finnish_per_owner():
+    dv = C.dynamic_variables(SUG_FI)
+    assert dv["holiday_date_fi"] == "24.12." and dv["proposed_hours"] == "9-13" and dv["holiday_name_fi"] == "jouluaatto"
+    assert dv["reason"] == "Viime jouluaattona olitte auki 9-13"
+
+
+def test_dynamic_variables_english_closed_and_unknown():
+    dv = C.dynamic_variables(dict(SUG, kind="closed", proposed="closed", last_year_hours=None))
+    assert dv["proposed_hours"] == "closed" and dv["last_year"] == "no data"
 
 
 def test_place_call_failure(env, monkeypatch):
@@ -131,6 +167,15 @@ def test_ladder_signature_compat(env):
     ("suljettu", {"action": "edit", "edited": "closed"}),
     ("hmm en tiedä", {"action": "decline"}),
     ("mitä sanoit", None),
+    ("yes", {"action": "approve"}), ("Yeah, sure", {"action": "approve"}), ("ok", {"action": "approve"}),
+    ("I approve", {"action": "approve"}), ("no", {"action": "decline"}), ("Nope", {"action": "decline"}),
+    ("no thanks", {"action": "decline"}),
+    ("nine to one", {"action": "edit", "edited": [{"start": "09:00", "end": "13:00"}]}),
+    ("9 to 1", {"action": "edit", "edited": [{"start": "09:00", "end": "13:00"}]}),
+    ("9am to 1pm", {"action": "edit", "edited": [{"start": "09:00", "end": "13:00"}]}),
+    ("ten to two", {"action": "edit", "edited": [{"start": "10:00", "end": "14:00"}]}),
+    ("we're closed that day", {"action": "edit", "edited": "closed"}),
+    ("what did you say", None),
 ])
 def test_parse_utterance(text, expect):
     assert CR.parse_utterance(text) == expect
@@ -159,6 +204,16 @@ def test_webhook_three_outcomes_via_transcript(env):
         d = r["decision"]
         assert d["action"] == action and d["edited"] == edited and d["via"] == "call" and d["suggestion_id"] == sid
         assert R.is_decided(sid)
+
+
+def test_webhook_english_transcript(env):
+    def tre(user_last):
+        return [{"role": "agent", "message": "Hi, do you have a moment?"}, {"role": "user", "message": "no worries, go on"},
+                {"role": "agent", "message": "Christmas Eve is December 24. Do you approve?"}, {"role": "user", "message": user_last}]
+    for i, (said, action, edited) in enumerate([("Yeah sure", "approve", None), ("No thanks", "decline", None),
+                                                 ("nine to one", "edit", [{"start": "09:00", "end": "13:00"}])]):
+        d = run(payload(f"sg-e{i}", tre(said)))["decision"]
+        assert d["action"] == action and d["edited"] == edited and d["via"] == "call"
 
 
 def test_webhook_structured_analysis_wins(env):

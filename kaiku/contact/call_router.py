@@ -42,7 +42,7 @@ def signature_ok(secret: str, body: bytes, header: str | None, now: float | None
     return hmac.compare_digest(mac, parts.get("v0", ""))
 
 
-# ------------------------------------------------------------------ Finnish transcript parser
+# ------------------------------------------------------------------ transcript parser (English and Finnish)
 
 _ELA = {"yhdestä": 1, "kahdesta": 2, "kolmesta": 3, "neljästä": 4, "viidestä": 5, "kuudesta": 6, "seitsemästä": 7,
         "kahdeksasta": 8, "yhdeksästä": 9, "kymmenestä": 10, "yhdestätoista": 11, "kahdestatoista": 12,
@@ -55,15 +55,21 @@ _ILL = {"yhteen": 1, "kahteen": 2, "kolmeen": 3, "neljään": 4, "viiteen": 5, "
 _NOM = {"yksi": 1, "kaksi": 2, "kolme": 3, "neljä": 4, "viisi": 5, "kuusi": 6, "seitsemän": 7, "kahdeksan": 8,
         "yhdeksän": 9, "kymmenen": 10, "yksitoista": 11, "kaksitoista": 12}
 
+_EN_NUM = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+           "eleven": 11, "twelve": 12, "noon": 12}
+_EN_WORDS = re.compile(r"\b(" + "|".join(_EN_NUM) + r")\s*(am|pm|a\.m\.|p\.m\.)?\s*(?:to|until|till|through|-)\s*(" +
+                       "|".join(_EN_NUM) + r")\s*(am|pm|a\.m\.|p\.m\.)?\b")
+
 _NUM = r"(\d{1,2})(?:[:.](\d{2}))?"
-_DIGITS = re.compile(rf"(?:klo\.?\s*)?{_NUM}\s*(?:-|–|—|to|alkaen|ja)\s*(?:klo\.?\s*)?{_NUM}")
+_DIGITS = re.compile(rf"(?:klo\.?\s*|from\s+)?{_NUM}\s*(am|pm)?\s*(?:-|–|—|to|until|till|alkaen|ja)\s*(?:klo\.?\s*)?{_NUM}\s*(am|pm)?")
 _WORDS = re.compile(r"\b(" + "|".join(sorted(_ELA, key=len, reverse=True)) + r")\s+(?:klo\s+)?(" +
                     "|".join(sorted(_ILL, key=len, reverse=True)) + r")(?:\s+asti)?\b")
 _WORDS_NOM = re.compile(r"\b(" + "|".join(sorted(_NOM, key=len, reverse=True)) + r")\s+(" +
                         "|".join(sorted(_ILL, key=len, reverse=True)) + r")\b")
-_CLOSED = re.compile(r"\b(suljettu|suljemme|kiinni|ei ole auki|ollaan kiinni|olemme kiinni|closed)\b")
-_DECLINE = re.compile(r"\b(ei|en|ei kiitos|älä muuta|ei muutosta|ei halua)\b")
-_APPROVE = re.compile(r"\b(kyllä|kylla|joo|juu|jees|hyväksyn|hyväksytään|selvä|sopii|okei|ok|oikein|just niin|voit päivittää)\b")
+_CLOSED = re.compile(r"\b(suljettu|suljemme|kiinni|ei ole auki|ollaan kiinni|olemme kiinni|closed|we are closed|we're closed|not open)\b")
+_DECLINE = re.compile(r"\b(ei|en|ei kiitos|älä muuta|ei muutosta|ei halua|no|nope|no thanks|no thank you|don't|do not|leave it|not now)\b")
+_APPROVE = re.compile(r"\b(kyllä|kylla|joo|juu|jees|hyväksyn|hyväksytään|selvä|sopii|okei|ok|oikein|just niin|voit päivittää|"
+                      r"yes|yeah|yep|yup|sure|okay|approve|approved|i approve|go ahead|sounds good|that's right|that is right|correct|please do)\b")
 
 
 def _hhmm(h: int, m: str | None) -> str | None:
@@ -71,6 +77,13 @@ def _hhmm(h: int, m: str | None) -> str | None:
     if not (0 <= h <= 24 and 0 <= mi < 60):
         return None
     return f"{h:02d}:{mi:02d}"
+
+
+def _ampm(h: int, ap: str | None) -> int:
+    if not ap:
+        return h
+    ap = ap[0]
+    return (0 if h == 12 else h) if ap == "a" else (h if h == 12 else h + 12)
 
 
 def _span(a: int, b: int) -> list[dict] | None:
@@ -89,12 +102,19 @@ def parse_hours(text: str):
         return "closed"
     m = _DIGITS.search(t)
     if m:
-        a, b = _hhmm(int(m[1]), m[2]), _hhmm(int(m[3]), m[4])
+        ha, hb = _ampm(int(m[1]), m[3]), _ampm(int(m[4]), m[6])
+        a, b = _hhmm(ha, m[2]), _hhmm(hb, m[5])
         if a and b:
-            if b <= a and int(m[3]) < 12 and not m[4]:
-                b = _hhmm(int(m[3]) + 12, None)
+            if b <= a and int(m[4]) < 12 and not m[5] and not m[6]:
+                b = _hhmm(int(m[4]) + 12, None)
             if b and a < b:
                 return [{"start": a, "end": b}]
+    m = _EN_WORDS.search(t)
+    if m:
+        ha, hb = _ampm(_EN_NUM[m[1]], m[2]), _ampm(_EN_NUM[m[3]], m[4])
+        if hb <= ha and hb < 12 and not (m[2] or m[4]):  # "nine to one" -> 9-13
+            hb += 12
+        return _span(ha, hb)
     m = _WORDS.search(t)
     if m:
         return _span(_ELA[m[1]], _ILL[m[2]])
@@ -114,17 +134,17 @@ def parse_utterance(text: str) -> dict | None:
         return {"action": "edit", "edited": h}
     if _DECLINE.search(t) and not _APPROVE.search(t):
         return {"action": "decline"}
-    if _APPROVE.search(t) and not re.search(r"\bei\b", t):
+    if _APPROVE.search(t) and not re.search(r"\b(ei|no|nope|not)\b", t):
         return {"action": "approve"}
     return None
 
 
 def parse_transcript(transcript: list[dict]) -> dict | None:
-    """Last owner turn that says something decisive, only after the agent has asked 'Hyväksytkö'."""
+    """Last owner turn that says something decisive, only after the agent has asked 'Do you approve' / 'Hyväksytkö'."""
     turns = [(x.get("role"), x.get("message") or "") for x in transcript or []]
     start = 0
     for i, (role, msg) in enumerate(turns):
-        if role == "agent" and "hyväksyt" in msg.lower():
+        if role == "agent" and ("hyväksyt" in msg.lower() or "approve" in msg.lower()):
             start = i + 1
             break
     for role, msg in reversed(turns[start:]):

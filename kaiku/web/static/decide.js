@@ -3,8 +3,9 @@
   var root = document.getElementById("dc");
   if (!root) return;
   var token = root.dataset.token, sid = root.dataset.sid;
-  // Every Finnish string with its English gloss.
-  var T = {
+  // English by default; Finnish (with English glosses) when the page says data-lang="fi".
+  var FI = root.dataset.lang === "fi";
+  var T_FI = {
     thanks: ["Kiitos. Päivitän tiedot nyt.", "Thank you. I am updating the details now."],
     thanksNo: ["Kiitos. En muuta mitään.", "Thank you. I will change nothing."],
     waiting: ["Odotan, että tiedot päivittyvät...", "Waiting for the details to update..."],
@@ -14,8 +15,23 @@
     fail: ["Jokin meni vikaan. Yritä uudelleen.", "Something went wrong. Try again."],
     done_approve: ["Hyväksytty", "Approved"], done_edit: ["Muokattu", "Edited"], done_decline: ["Ei kiitos", "Declined"],
     chips: [["Olemme auki normaalisti", "We are open as usual"], ["Ajat ovat väärin", "The times are wrong"],
-            ["Emme tiedä vielä", "We do not know yet"], ["Ei koske meitä", "Does not concern us"]]
+            ["Emme tiedä vielä", "We do not know yet"], ["Ei koske meitä", "Does not concern us"]],
+    gloss: ["Tap send.", "Reason (optional). Tap one, then send."]
   };
+  var T_EN = {
+    thanks: ["Thank you. I am updating the details now.", ""],
+    thanksNo: ["Thank you. I will change nothing.", ""],
+    waiting: ["Waiting for the details to update...", ""],
+    seen: ["Shown in: Fonecta Caller, Finder, 020202, Google Business Profile", ""],
+    sent: ["Sent", ""],
+    bad: ["Check the times: the start must be before the end.", ""],
+    fail: ["Something went wrong. Try again.", ""],
+    done_approve: ["Approved", ""], done_edit: ["Edited", ""], done_decline: ["Declined", ""],
+    chips: [["We are open as usual", ""], ["The times are wrong", ""], ["We do not know yet", ""], ["Does not concern us", ""]],
+    gloss: ["Tap send.", "Reason (optional). Tap one, then send."]
+  };
+  var T = FI ? T_FI : T_EN;
+  function both(p) { return p[1] ? p[0] + " (" + p[1] + ")" : p[0]; }
   window.KAIKU_DECIDE_I18N = T;
   var $ = function (id) { return document.getElementById(id); };
   var reason = null, closed = false, scope = "same", busy = false;
@@ -30,20 +46,20 @@
   }
 
   var was = $("was");
-  if (was) { var t = T["done_" + was.dataset.act]; if (t) was.textContent = t[0] + " (" + t[1] + ")"; }
+  if (was) { var t = T["done_" + was.dataset.act]; if (t) was.textContent = both(t); }
   if (!$("form")) return;
 
   var chips = $("reasons");
   T.chips.forEach(function (c) {
     var b = document.createElement("button");
     b.type = "button"; b.className = "chip"; b.setAttribute("aria-pressed", "false");
-    b.textContent = c[0]; b.title = c[1]; b.setAttribute("aria-label", c[0] + " (" + c[1] + ")");
+    b.textContent = c[0]; if (c[1]) b.title = c[1]; b.setAttribute("aria-label", both(c));
     b.addEventListener("click", function () {
       var on = b.getAttribute("aria-pressed") !== "true";
       [].forEach.call(chips.children, function (x) { x.setAttribute("aria-pressed", "false"); });
       b.setAttribute("aria-pressed", on ? "true" : "false");
       reason = on ? c[0] : null;
-      $("r-gloss").textContent = on ? c[1] + ". Tap send." : "Reason (optional). Tap one, then send.";
+      $("r-gloss").textContent = on ? (c[1] || c[0]) + ". " + T.gloss[0] : T.gloss[1];
     });
     chips.appendChild(b);
   });
@@ -75,7 +91,7 @@
     if (busy) return;
     var s = $("t-start").value, e = $("t-end").value;
     if (body.action === "edit" && !closed && (!s || !e || s >= e)) {
-      var er = $("e-err"); er.textContent = T.bad[0] + " (" + T.bad[1] + ")"; er.hidden = false; return;
+      var er = $("e-err"); er.textContent = both(T.bad); er.hidden = false; return;
     }
     busy = true;
     [].forEach.call(root.querySelectorAll("button"), function (b) { b.disabled = true; });
@@ -90,7 +106,7 @@
       .catch(function () {
         busy = false;
         [].forEach.call(root.querySelectorAll("button"), function (b) { b.disabled = false; });
-        var er = $("e-err"); er.textContent = T.fail[0] + " (" + T.fail[1] + ")"; er.hidden = false;
+        var er = $("e-err"); er.textContent = both(T.fail); er.hidden = false;
         $("d-edit").hidden = false;
       });
   }
@@ -111,16 +127,16 @@
     $("form").hidden = true; $("permbox").hidden = true;
     var th = $("thanks"); th.hidden = false;
     $("th-fi").textContent = no ? T.thanksNo[0] : T.thanks[0];
-    $("th-en").textContent = no ? T.thanksNo[1] : T.thanks[1];
+    $("th-en").textContent = no ? T.thanksNo[1] : T.thanks[1]; $("th-en").hidden = !$("th-en").textContent;
     th.scrollIntoView({ block: "nearest" });
     if (no) return;
     var vis = $("vis");
-    vis.innerHTML = '<div class="pend"><i></i><span>' + T.waiting[0] + '</span></div><p class="gl" style="margin:6px 0 0 16px">' + T.waiting[1] + "</p>";
+    vis.innerHTML = '<div class="pend"><i></i><span>' + T.waiting[0] + '</span></div>' + (T.waiting[1] ? '<p class="gl" style="margin:6px 0 0 16px">' + T.waiting[1] + "</p>" : "");
     var es = new EventSource("/api/events?replay=1&last=50");
     es.addEventListener("kaiku", function (m) {
       var e; try { e = JSON.parse(m.data); } catch (_) { return; }
       if (e.suggestion_id !== sid || e.step !== "apply" || (e.detail && e.detail.error)) return;
-      vis.innerHTML = '<div class="seen">' + T.seen[0] + '</div><p class="gl" style="margin:6px 0 0">' + T.seen[1] + "</p>";
+      vis.innerHTML = '<div class="seen">' + T.seen[0] + '</div>' + (T.seen[1] ? '<p class="gl" style="margin:6px 0 0">' + T.seen[1] + "</p>" : "");
       es.close();
     });
   }
