@@ -10,6 +10,7 @@ fn(business_id, today, client) -> list[card dict] and must return [] when it has
 from __future__ import annotations
 
 import json
+import re
 import time
 from datetime import date, timedelta
 from pathlib import Path
@@ -104,12 +105,38 @@ def _source_values(det) -> list[dict]:
     return out
 
 
+_TIME_RANGE = re.compile(r"\b(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})\b")
+
+
+def _short_times(text: str) -> str:
+    """'09:00-13:00' -> '9-13', '09:30-17:00' -> '9:30-17' (the demo writes times as 9-13)."""
+    def one(m):
+        a = f"{int(m.group(1))}" + ("" if m.group(2) == "00" else ":" + m.group(2))
+        b = f"{int(m.group(3))}" + ("" if m.group(4) == "00" else ":" + m.group(4))
+        return f"{a}-{b}"
+    return _TIME_RANGE.sub(one, text or "")
+
+
+def _hshort(hours) -> str:
+    return _short_times(ex.hours_en(hours))
+
+
+def _chat_text(msg: str, en: str, d: str, prop_short: str) -> str:
+    """The chat bubble form of a WhatsApp message: no greeting, short times, 'I suggest 9-13.' at the end,
+    and it starts with the card title so the chat does not repeat it."""
+    t = re.sub(r"^Hi [^!.]*[!.]\s*", "", msg or "")
+    if en:
+        t = re.sub(r"^%s is on (\w+) %s" % (re.escape(en), re.escape(d)), lambda m: f"{en} {d} is a {m.group(1)}", t)
+    t = re.sub(r"\s*We suggest:[^.]*\.\s*$", f" I suggest {prop_short}.", t)
+    return _short_times(t).strip()
+
+
 def _holiday_card(b: Business, s, det) -> dict:
     en, fi = _hname(s)
     d = _dm(s.holiday_date)
-    prop_en = ex.hours_en(_proposed(s))
+    prop_en = _hshort(_proposed(s))
     return {"id": f"feed-{b.id}-holiday_hours-{s.holiday_date}", "kind": "holiday_hours",
-            "title_en": f"{en or 'Holiday'} {d}: {prop_en}", "text_en": s.message_en,
+            "title_en": f"{en or 'Holiday'} {d}", "text_en": _chat_text(s.message_en, en, d, prop_en),
             "title_fi": f"{fi or 'Pyhä'} {d}: {ex.hours_fi(_proposed(s))}", "text_fi": s.message_fi,
             "proposed": _proposed(s), "confidence": s.confidence,
             "reasons": [_reason_row(r) for r in s.reasons], "status": "proposed", "holiday_date": s.holiday_date,
@@ -139,7 +166,8 @@ def _no_change_card(b: Business, s) -> dict:
     d = _dm(s.holiday_date)
     return {"id": f"feed-{b.id}-no_change-{s.holiday_date}", "kind": "no_change",
             "title_en": f"{en} {d}: no change needed", "title_fi": f"{fi} {d}: ei muutosta",
-            "text_en": s.message_en, "text_fi": s.message_fi, "proposed": None, "confidence": s.confidence,
+            "text_en": _short_times(re.sub(r"^Hi [^!.]*[!.]\s*", "", s.message_en or "")), "text_fi": s.message_fi,
+            "proposed": None, "confidence": s.confidence,
             "reasons": [_reason_row(r) for r in s.reasons], "status": "info", "holiday_date": s.holiday_date}
 
 
@@ -150,13 +178,13 @@ def _period_card(b: Business, p, start: date, end: date, items: list, permitted:
         dates.append({"date": s.holiday_date, "name_en": en, "name_fi": fi, "kind": s.kind,
                       "proposed": _proposed(s), "confidence": s.confidence})
     n = len(dates)
-    lines_en = "; ".join(f"{_dm(x['date'])} {ex.hours_en(x['proposed']) if x['kind'] != 'no_change' else 'no change'}" for x in dates)
+    lines_en = "; ".join(f"{_dm(x['date'])} {_hshort(x['proposed']) if x['kind'] != 'no_change' else 'no change'}" for x in dates)
     lines_fi = "; ".join(f"{_dm(x['date'])} {ex.hours_fi(x['proposed']) if x['kind'] != 'no_change' else 'ei muutosta'}" for x in dates)
     ask_en = "Want me to handle this period every year?"
     reasons = [_reason_row(r) for s in items for r in s.reasons[:1]]
     return {"id": f"feed-{b.id}-period-{p['key']}-{start.year}", "kind": "period",
             "title_en": f"{p['name_en']}: {n} dates", "title_fi": f"{p['name_fi']}: {n} päivää",
-            "text_en": f"{lines_en}. {ask_en}" if not permitted else f"{lines_en}.",
+            "text_en": f"I suggest {lines_en}. {ask_en}" if not permitted else f"I suggest {lines_en}.",
             "text_fi": f"{lines_fi}. Hoidanko tämän jakson puolestasi joka vuosi?" if not permitted else f"{lines_fi}.",
             "proposed": dates, "confidence": round(min(x["confidence"] for x in dates), 4), "reasons": reasons,
             "status": "proposed", "period": {"key": p["key"], "start": start.isoformat(), "end": end.isoformat()},
