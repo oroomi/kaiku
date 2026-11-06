@@ -34,6 +34,7 @@ class Business(BaseModel):
     owner_whatsapp: Optional[str] = None
     source: str = ""
     note: Optional[str] = None
+    exceptions: list[Exception_] = Field(default_factory=list)  # exception hours already set for the coming year (suggest builder)
 
 
 class Holiday(BaseModel):
@@ -51,6 +52,8 @@ class Detection(BaseModel):
         "regular_that_day": None, "last_year": None, "website": None,
         "google_now": None, "peers": None})
     reason_codes: list[str] = Field(default_factory=list)
+    holiday: Optional[dict] = None  # {date, name_fi, name_en, public_holiday, weekday}, added by the detect builder
+    status: str = "ok"              # "ok" | "past" (the date is before today)
 
 
 class Reason(BaseModel):
@@ -78,6 +81,17 @@ class Suggestion(BaseModel):
     message_en: str = ""
     status: Literal["proposed", "sent", "approved", "edited", "declined", "applied", "expired"] = "proposed"
     channel_log: list[ChannelLog] = Field(default_factory=list)
+    # fields added by the suggest builder for the contact lane and the ask kind
+    question_fi: Optional[str] = None
+    business_name: Optional[str] = None
+    holiday_name_fi: Optional[str] = None
+    holiday_name_en: Optional[str] = None
+    last_year_hours: Optional[Union[list[Span], Literal["closed"]]] = None
+    google_now: Optional[dict] = None
+    decide_url: Optional[str] = None
+    # set by learn.prefs.apply_prefs
+    auto_apply: bool = False
+    auto_apply_reason_fi: Optional[str] = None
 
 
 class Decision(BaseModel):

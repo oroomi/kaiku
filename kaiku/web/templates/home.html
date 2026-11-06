@@ -2,6 +2,11 @@
 {% block title %}Kaiku, holiday hours that ask once{% endblock %}
 {% block content %}
 <div class="home">
+  <div class="statusbar mono" id="statusbar" data-pilot="status" aria-live="polite">
+    <span class="chip" id="st-broker" title="FIWARE NGSI-LD context broker: Orion-LD (live) or the in-memory fallback">BROKER: <b>...</b></span>
+    <span class="chip" id="st-wa" title="WhatsApp: not in use yet means the decision link is shown instead of a message">WhatsApp: <b>...</b></span>
+    <span class="chip" id="st-yext" title="Yext sandbox entity that receives the holiday hours">YEXT: <b>SinceAI07</b></span>
+  </div>
   <section class="hero glass" data-pilot="hero" id="hero" aria-live="polite">
     <div class="arc-wrap">
       <svg class="arc" viewBox="0 0 440 250" role="img" aria-label="Chain progress arc">
@@ -45,5 +50,9 @@
     <dl class="hours" id="b-hours"></dl>
     <p class="note" id="b-note">{{ business.note if business and business.note else "" }}</p>
   </section>
+  <footer class="foot" data-pilot="reset">
+    <button class="ghost" id="reset" type="button" title="Reset demo: removes the holiday hours from the Yext sandbox, clears runs and events, sets the date to 17.12.2026">Nollaa demo <small>Reset demo</small></button>
+    <span class="mono soft" id="reset-msg" aria-live="polite"></span>
+  </footer>
 </div>
 {% endblock %}

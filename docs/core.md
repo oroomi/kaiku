@@ -22,6 +22,8 @@ The Playwright browsers under /root/.cache/ms-playwright match the system python
 | GET `/api/today` | `{date, label_fi, label_en}`; delegates to `kaiku.learn.timetravel.today()` when that module exists, else pref `today` (default 2026-12-17) |
 | GET `/api/events?replay=1&last=50` | Server-Sent Events, `event: kaiku`, `data:` = Event JSON, `: keepalive` comment every 15 s |
 | GET `/api/events/recent?limit=50&business=` | JSON list, oldest first |
+| GET `/api/status` | `{broker: orion-ld or fallback, whatsapp_configured, yext_entity: SinceAI07, today, public_url, voice}` |
+| POST `/api/reset` | demo reset: `YextSandbox.reset_demo` (zero holiday rows), all suggestions and events cleared, broker entity re-created with status missing (no proposed instance), clock set to 2026-12-17; `?learn=1` also clears learned prefs. Returns status plus `reset` details |
 | POST `/api/stub/decide/{id}?action=approve` | releases the stub decide step when `KAIKU_STUB_DECIDE=wait` |
 
 ## Event schema
@@ -46,3 +48,13 @@ SQLite (WAL) at `data/kaiku.sqlite`: tables businesses, suggestions, decisions, 
 
 ## What did not work / notes
 Body background hid the fixed gradient stage (negative z-index); fixed by making body transparent. Cloudflare cached css for 4 h; fixed as above.
+
+## Wiring (integration, 6 Nov)
+`chain.py` installs the real steps at import, each guarded (a missing module keeps its stub):
+- detect and suggest: `kaiku.detect.engine.detect` and `kaiku.suggest.engine.suggest` through adapters (pydantic Business to their dataclasses and back), run in a thread. `now` is `learn.timetravel.now()`. Core keeps its own suggestion id. Then `learn.prefs.apply_prefs`, then `decide_url` from `kaiku.decide.tokens.link_for` (placeholder `PUBLIC_URL/d/<id>` if decide is absent).
+- contact: `chain.contact_step` is re-registered by app.py after `kaiku.contact.ladder` import, because the ladder registers a dict-taking function against the Suggestion contract. With WhatsApp configured it calls the ladder in a thread. Degraded rule: without WA_TOKEN no message leaves; the event says "WhatsApp ei ole vielä käytössä, päätöslinkki valmis" with `detail {decide_url, message_fi, degraded}`, the channel_log records BLOCKED and "call lane not configured", and the chain continues. For `no_change` no decision is asked: decide, apply and learn emit "skipped" events.
+- decide: the real step from `kaiku.decide` (waits up to 600 s for the link; the stub auto-approve only remains if that module is missing). `chain.on_decision(decision)` resolves `decide.resolve`, else the stub future. Decline skips apply; action `timeout` stops the chain without writing.
+- apply: `kaiku.apply.apply_suggestion("SinceAI07", date, hours)` (real sandbox write, read-back `verified`), event carries `where_it_shows`. Receipt via `contact.router.send_receipt` only if WhatsApp is configured.
+- learn: `learn.prefs.record_decision`, learn event says what was learned.
+- broker: before detect status `missing`; after suggest the `proposed` datasetId instance; after apply the default instance and status `applied` (broker docs enum). Failures emit "Broker ei vastaa" and never stop the chain. Lifespan seeds the entity and calls `ensure_subscriptions()`.
+Tests: `python3 -m pytest -q` (offline; `live`/`network` markers skipped unless KAIKU_LIVE=1; conftest points sqlite and data dir at temp).

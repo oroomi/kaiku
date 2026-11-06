@@ -78,6 +78,17 @@
   /* ---------- event strip ---------- */
   var runSid = null;
   function markDone() { Array.prototype.forEach.call(rows.querySelectorAll(".row.cur"), function (r) { r.classList.remove("cur"); }); }
+  function extra(e) {
+    var d = e.detail || {}, h = "";
+    if (d.decide_url && (e.step === "contact" || d.phase === "waiting")) {
+      h += '<small><a href="' + esc(d.decide_url) + '" target="_blank" rel="noopener" data-pilot="decide-link">Avaa päätöslinkki (omistajan näkymä)</a> <i>Open the decision link (owner view)</i></small>';
+    }
+    if (e.step === "apply" && d.where_it_shows && d.where_it_shows.length) {
+      h += '<small>' + d.where_it_shows.filter(function (p) { return p.kind === "named"; }).map(function (p) { return esc(p.name); }).join(", ") +
+        (d.verified ? " (sandbox, luettu takaisin / read back)" : " (sandbox)") + '</small>';
+    }
+    return h;
+  }
   function addEvent(e, live) {
     if (live && e.step === "detect" && !arc.running) { setRunning(true); }
     $("rows-empty").hidden = true;
@@ -87,7 +98,7 @@
     li.className = "row" + (err ? " err" : "") + (live && !err && e.step !== "learn" ? " cur" : "");
     li.setAttribute("data-step", e.step);
     li.innerHTML = '<span class="dot"></span><span class="lab">' + (LABEL[e.step] || e.step) + '</span><span class="ttl">' + esc(e.title_fi) +
-      '<small>' + esc(e.title_en) + '</small></span><time>' + hhmmss(e.ts) + '</time>';
+      '<small>' + esc(e.title_en) + '</small>' + extra(e) + '</span><time>' + hhmmss(e.ts) + '</time>';
     rows.appendChild(li);
     rows.scrollTop = rows.scrollHeight;
     if (!live) return;
@@ -123,7 +134,25 @@
       .catch(function () { setRunning(false); setBig("!", "COULD NOT START"); });
   });
 
+  /* ---------- status strip + reset ---------- */
+  function setChip(id, text, ok) { var c = $(id); c.querySelector("b").textContent = text; c.className = "chip" + (ok ? " ok" : ""); }
+  function loadStatus() {
+    return jget("/api/status").then(function (s) {
+      setChip("st-broker", s.broker === "orion-ld" ? "Orion-LD" : "varakäsittelijä", s.broker === "orion-ld");
+      $("st-broker").title = s.broker === "orion-ld" ? "FIWARE NGSI-LD context broker Orion-LD is live" : "Orion-LD is not reachable, the in-memory fallback keeps the chain alive";
+      setChip("st-wa", s.whatsapp_configured ? "käytössä" : "ei käytössä", s.whatsapp_configured);
+      $("st-wa").title = s.whatsapp_configured ? "WhatsApp in use: the message goes to the owner's phone" : "WhatsApp not in use yet: the decision link is shown instead of a message";
+      setChip("st-yext", s.yext_entity, true);
+    }).catch(function () { setChip("st-broker", "no data", false); });
+  }
+  $("reset").addEventListener("click", function () {
+    var btn = $("reset"); btn.disabled = true; $("reset-msg").textContent = "Nollataan... / resetting...";
+    fetch("/api/reset", { method: "POST" }).then(function (r) { return r.json(); }).then(function () { location.reload(); })
+      .catch(function () { btn.disabled = false; $("reset-msg").textContent = "Nollaus epäonnistui / reset failed"; });
+  });
+
   /* ---------- boot ---------- */
+  loadStatus();
   $("rows-empty").hidden = false;
   loadToday();
   jget("/api/business/furry-paw").then(renderBusiness).catch(function () {});

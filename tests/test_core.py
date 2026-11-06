@@ -64,36 +64,154 @@ def test_events_recent_and_sse_replay(client):
     events.emit(Event(step="detect", business_id="furry-paw", title_fi="testi", title_en="test"))
     rec = client.get("/api/events/recent?limit=5").json()
     assert rec and rec[-1]["title_en"] == "test"
-    with client.stream("GET", "/api/events?replay=1") as r:
-        assert r.headers["content-type"].startswith("text/event-stream")
+    import asyncio
+
+    async def first_chunks():  # call the endpoint directly: TestClient streaming hangs on some starlette versions
+        r = await events.stream(replay=1, last=5)
+        assert r.media_type.startswith("text/event-stream")
         got = ""
-        for chunk in r.iter_text():
-            got += chunk
+        async for chunk in r.body_iterator:
+            got += chunk if isinstance(chunk, str) else chunk.decode()
             if "data:" in got:
                 break
+        await r.body_iterator.aclose()
+        return got
+    got = asyncio.run(first_chunks())
     assert "event: kaiku" in got and '"title_en":"test"' in got
 
 
-def test_run_creates_events(client):
-    sid = client.post("/api/run?business=furry-paw&date=2026-12-24").json()["suggestion_id"]
-    deadline = time.time() + 15
-    while time.time() < deadline:
-        s = client.get(f"/api/suggestions/{sid}")
-        if s.status_code == 200 and s.json()["status"] == "applied":
-            break
-        time.sleep(0.3)
-    s = client.get(f"/api/suggestions/{sid}").json()
-    assert s["kind"] == "hours" and s["proposed"] == [{"start": "09:00", "end": "13:00"}] and s["status"] == "applied"
-    time.sleep(0.5)
-    steps = [e["step"] for e in client.get("/api/events/recent?limit=50").json() if e["suggestion_id"] == sid]
-    for want in ["detect", "suggest", "contact", "decide", "apply", "learn"]:
-        assert want in steps
-    assert client.get("/api/business/furry-paw").json()["id"] == "furry-paw"
-
-
-def test_no_change_case_and_registry():
-    b = store.get_business("furry-paw")
-    s = chain.suggest(b, chain.detect(b, "2026-11-08", None))
-    assert s.kind == "no_change" and s.proposed is None
+def test_registry_rejects_unknown_step():
     with pytest.raises(ValueError):
         chain.register("nope", lambda: None)
+
+
+# ---------- wiring tests (fakes: fallback broker, fake Yext, no network, no WhatsApp) ----------
+from datetime import date  # noqa: E402
+
+from kaiku.broker.fallback import FallbackBroker  # noqa: E402
+from kaiku.learn import timetravel  # noqa: E402
+
+HOURS_13 = [{"start": "09:00", "end": "13:00"}]
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _module_fakes():
+    mp = pytest.MonkeyPatch()
+    fb = FallbackBroker()
+    mp.setattr(chain, "get_broker", lambda: fb)
+    mp.setattr(chain, "whatsapp_configured", lambda: False)
+    mp.setattr(chain, "yext_reset", lambda: {"holidayHours": []})
+    from kaiku.detect import signals
+    mp.setattr(signals, "website", lambda b, h: None)
+    mp.setattr(signals, "google_now", lambda b, d: {"status": "unknown"})
+    yield fb
+    mp.undo()
+
+
+@pytest.fixture
+def wired(monkeypatch, tmp_path, _module_fakes):
+    monkeypatch.setenv("KAIKU_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("PUBLIC_URL", "https://kaiku.example")
+    calls = []
+
+    def fake_apply(entity, day, proposed):
+        calls.append((entity, day, proposed))
+        return {"yext_status": "ok", "entity_id": entity, "date": day, "written": {"date": day}, "verified": True,
+                "entity_version": "t0", "environment": "sandbox"}
+
+    monkeypatch.setattr(chain, "apply_backend", fake_apply)
+    monkeypatch.setattr(chain, "STUB_DECIDE_DELAY", 0)
+    monkeypatch.setitem(chain.STEPS, "decide", chain.decide)  # the stub: auto-approve at once
+    timetravel.set_today(date(2026, 12, 17))
+    store.clear_runs("furry-paw")
+    store.seed(force=True)
+    _module_fakes.__init__()  # fresh in-memory broker
+    yield calls
+    timetravel.clear()
+
+
+def _run(client, day, until="learn", timeout=15):
+    sid = client.post(f"/api/run?business=furry-paw&date={day}").json()["suggestion_id"]
+    end = time.time() + timeout
+    while time.time() < end:
+        evs = [e for e in client.get("/api/events/recent?limit=100").json() if e["suggestion_id"] == sid]
+        if any(e["step"] == until for e in evs):
+            return sid, evs
+        time.sleep(0.1)
+    raise AssertionError("chain did not reach " + until)
+
+
+def test_chain_end_to_end_with_fakes(client, wired, _module_fakes):
+    sid, evs = _run(client, "2026-12-24")
+    steps = [e["step"] for e in evs if e["step"] != "broker"]
+    assert steps[:2] == ["detect", "suggest"] and steps[-1] == "learn"
+    for want in ["detect", "suggest", "contact", "decide", "apply", "learn"]:
+        assert want in steps
+    s = client.get(f"/api/suggestions/{sid}").json()
+    assert s["kind"] == "hours" and s["proposed"] == HOURS_13 and s["confidence"] == 0.75 and s["status"] == "applied"
+    assert s["decide_url"].startswith("https://kaiku.example/d/")
+    contact = next(e for e in evs if e["step"] == "contact")
+    assert contact["title_fi"] == "WhatsApp ei ole vielä käytössä, päätöslinkki valmis"
+    assert contact["title_en"] == "WhatsApp not configured yet, decision link ready"
+    assert contact["detail"]["decide_url"] == s["decide_url"] and "24.12." in contact["detail"]["message_fi"]
+    assert wired == [("SinceAI07", "2026-12-24", HOURS_13)]
+    apply_ev = next(e for e in evs if e["step"] == "apply")
+    assert apply_ev["detail"]["verified"] is True and len(apply_ev["detail"]["where_it_shows"]) >= 4
+    ent = _module_fakes.get_entity("urn:ngsi-ld:Store:furry-paw")
+    inst = {i.get("datasetId", "default"): i["value"] for i in ent["holidayHours"]}
+    assert inst["urn:ngsi-ld:dataset:kaiku:proposed"]["hours"] == HOURS_13 and inst["default"]["hours"] == HOURS_13
+    assert any(e["step"] == "broker" for e in evs)
+
+
+def test_decline_skips_apply(client, wired, monkeypatch):
+    async def decline(s):
+        return Decision(suggestion_id=s.id, action="decline", reason_chip="Ajat ovat väärin")
+    monkeypatch.setitem(chain.STEPS, "decide", decline)
+    sid, evs = _run(client, "2026-12-24")
+    assert wired == []
+    assert not any(e["step"] == "apply" for e in evs)
+    assert client.get(f"/api/suggestions/{sid}").json()["status"] == "declined"
+    learn = next(e for e in evs if e["step"] == "learn")
+    assert "hylättiin" in learn["title_fi"]
+
+
+def test_edit_applies_edited_hours(client, wired, monkeypatch):
+    async def edit(s):
+        return Decision(suggestion_id=s.id, action="edit", edited=[{"start": "10:00", "end": "14:00"}])
+    monkeypatch.setitem(chain.STEPS, "decide", edit)
+    _run(client, "2026-12-24")
+    assert wired == [("SinceAI07", "2026-12-24", [{"start": "10:00", "end": "14:00"}])]
+
+
+def test_no_change_path(client, wired):
+    timetravel.set_today(date(2026, 11, 2))
+    sid, evs = _run(client, "2026-11-08")
+    s = client.get(f"/api/suggestions/{sid}").json()
+    assert s["kind"] == "no_change" and s["proposed"] is None and wired == []
+    assert next(e for e in evs if e["step"] == "decide")["detail"]["phase"] == "skipped"
+
+
+def test_on_decision_resolves_stub_waiter(client, wired):
+    import asyncio
+
+    async def go():
+        loop = asyncio.get_running_loop()
+        fut = loop.create_future()
+        chain._waiters["zz"] = fut
+        assert await chain.on_decision({"suggestion_id": "zz", "action": "approve"})
+        return fut.result().action
+    assert asyncio.run(go()) == "approve"
+
+
+def test_status_and_reset_shapes(client, wired):
+    st = client.get("/api/status").json()
+    assert set(st) == {"broker", "whatsapp_configured", "yext_entity", "today", "public_url", "voice"}
+    assert st["broker"] in ("orion-ld", "fallback") and st["yext_entity"] == "SinceAI07" and st["whatsapp_configured"] is False
+    timetravel.set_today(date(2026, 5, 1))
+    _run(client, "2026-12-24")
+    r = client.post("/api/reset").json()
+    assert r["today"] == "2026-12-17" and r["reset"]["yext_holiday_rows"] == 0 and r["reset"]["broker_reset"] is True
+    assert client.get("/api/suggestions?business=furry-paw").json() == []
+    assert client.get("/api/events/recent?limit=10").json() == []
+    ent = chain.get_broker().get_entity("urn:ngsi-ld:Store:furry-paw")
+    assert "holidayHours" not in ent and ent["holidayHoursStatus"]["value"]["status"] == "missing"

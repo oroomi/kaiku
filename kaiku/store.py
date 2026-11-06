@@ -135,3 +135,15 @@ def get_pref(key: str, default: Any = None) -> Any:
 
 def set_pref(key: str, value: Any) -> None:
     _x("INSERT OR REPLACE INTO prefs(key,value) VALUES(?,?)", (key, json.dumps(value)))
+
+
+def clear_runs(business_id: str) -> dict:
+    """Demo reset: drop the business's suggestions, their decisions, and all events."""
+    with _lock:
+        ids = [r["id"] for r in _q("SELECT id FROM suggestions WHERE business_id=?", (business_id,))]
+        for sid in ids:
+            _x("DELETE FROM decisions WHERE suggestion_id=?", (sid,))
+        _x("DELETE FROM suggestions WHERE business_id=?", (business_id,))
+        n = len(_q("SELECT id FROM events"))
+        _x("DELETE FROM events")  # single-business demo: every event goes, including strays from other modules
+    return {"suggestions": len(ids), "events": n}

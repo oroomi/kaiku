@@ -1,6 +1,7 @@
 """Kaiku FastAPI app. Module routers are included when they exist (try/except ImportError)."""
 from __future__ import annotations
 
+import asyncio
 import importlib
 import logging
 from contextlib import asynccontextmanager
@@ -22,6 +23,12 @@ templates = Jinja2Templates(directory=str(WEB / "templates"))
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     store.seed()
+    try:  # FIWARE spine: entity with holidayHoursStatus, then the two standing subscriptions. Never blocks start-up.
+        await asyncio.to_thread(chain.broker_seed, "furry-paw")
+        from .broker.subs import ensure_subscriptions
+        await asyncio.to_thread(ensure_subscriptions)
+    except Exception as exc:
+        log.warning("broker start-up: %s", exc)
     yield
 
 
@@ -57,6 +64,13 @@ for _m in ["broker", "contact", "decide", "voice", "map", "learn", "mcp_bridge",
             app.include_router(importlib.import_module(f"kaiku.{_m}").router)
         except (ImportError, AttributeError):
             log.info("module %s not present", _m)
+
+
+try:  # importing the ladder registers its dict-based contact step; core then re-registers the Suggestion adapter
+    import kaiku.contact.ladder  # noqa: F401
+except Exception as _e:  # pragma: no cover
+    log.info("contact ladder not importable: %s", _e)
+chain.register("contact", chain.contact_step)
 
 
 def render(request: Request, name: str, **ctx):
