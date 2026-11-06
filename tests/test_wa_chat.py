@@ -48,7 +48,7 @@ def isolated(tmp_path, monkeypatch):
     chat_router._sessions.clear()
     W.set_client(None)
 
-    def live(bid):
+    def live(bid, *a, **k):  # the chat feed takes network=... now
         d = json.loads(json.dumps(FEED))
         for it in d["suggestions"]:
             s = store.get_suggestion(it["id"])

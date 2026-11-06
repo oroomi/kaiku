@@ -24,9 +24,18 @@ def api_feed(business_id: str, date: str | None = Query(None), network: int = Qu
     key = (business_id, d, network)
     hit = _cache.get(key)
     if hit and time.time() - hit[0] < TTL:
-        return hit[1]
+        return _decided(hit[1])
     res = feed.build_feed(business_id, d, use_network=bool(network))
     if res.get("error"):
         raise HTTPException(404, res["error"])
     _cache[key] = (time.time(), res)
-    return res
+    return _decided(res)
+
+
+def _decided(res: dict) -> dict:
+    """Overlay the owner's recorded decisions (approved / declined) on a copy; the cached engine output stays untouched."""
+    try:
+        from kaiku.chat.feed import with_decisions
+        return with_decisions(res)
+    except Exception:
+        return res

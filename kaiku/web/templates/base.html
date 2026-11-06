@@ -12,14 +12,14 @@
 <link rel="stylesheet" href="/static/horizon.css?v={{ asset_v() }}">
 {% block head %}{% endblock %}
 </head>
-<body class="{% if is_embed %}is-embed {% endif %}{% if owner_view %}owner-view{% endif %}">
+<body{% if is_embed %} class="is-embed"{% endif %}>
 <div class="stage" aria-hidden="true"><i class="glow g1"></i><i class="glow g2"></i></div>
 <header class="top">
   <a class="brand" href="/" aria-label="Kaiku"><svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><path d="M5 23a11 11 0 0 1 22 0" fill="none" stroke="#8fd3e8" stroke-width="2.4" stroke-linecap="round"/><circle cx="21.5" cy="12.5" r="2.7" fill="#fff"/></svg><span>Kaiku</span></a>
-  {% if not owner_view %}<nav class="nav mono" aria-label="Pages">
+  <nav class="nav mono" aria-label="Pages">
     <a href="/" title="Home">Home</a><a href="/map" title="Map">Map</a><a href="/room" title="Room">Room</a>
-  </nav>{% endif %}
-  <div class="clock mono" id="today" data-pilot="today"{% if owner_view %} hidden{% endif %}>Today: ...</div>
+  </nav>
+  <div class="clock mono" id="today" data-pilot="today">Today: ...</div>
 </header>
 <main data-pilot-root>
 {% block content %}{% endblock %}

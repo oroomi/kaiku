@@ -135,14 +135,16 @@ def _send_hours_template(client: W.WhatsAppClient, phone: str, s: dict, name: st
                                       _template_reason(s), s["id"], name, lang)
 
 
-def _log(s: dict, channel: str, detail: str, title_en: str | None = None, title_fi: str | None = None) -> None:
+def _log(s: dict, channel: str, detail: str, title_en: str | None = None, title_fi: str | None = None,
+         message_en: str | None = None) -> None:
+    """message_en = the text the owner actually received; the owner page thread shows it."""
     entry = {"channel": channel, "at": _now(), "detail": detail}
     s.setdefault("channel_log", []).append(entry)
     try:
         from kaiku import events  # type: ignore
         events.emit(events.Event(ts=entry["at"], step="contact", business_id=s.get("business_id"), suggestion_id=s.get("id"),
                                  title_fi=title_fi or f"Yhteydenotto: {channel}", title_en=title_en or f"Contact: {channel}",
-                                 detail={"detail": detail, "channel": channel}))
+                                 detail={"detail": detail, "channel": channel, **({"message_en": message_en} if message_en else {})}))
     except Exception:
         pass
 
@@ -155,7 +157,8 @@ def contact(suggestion: dict, client: W.WhatsAppClient | None = None, escalate_s
     if to and s.get("kind") != "no_change":
         r = E.send_decision_email(s, to)
         if r.get("ok") and not r.get("dry_run"):
-            _log(s, "email", "sent to " + E.mask(to), "Email sent with the decision link", "Sähköposti lähetetty päätöslinkillä")
+            _log(s, "email", "sent to " + E.mask(to), "Email sent with the decision link", "Sähköposti lähetetty päätöslinkillä",
+                 message_en=f"Email to {E.mask(to)}: \"{r.get('subject') or 'your holiday hours, one question'}\" with the decision link.")
         elif r.get("ok"):
             _log(s, "email", "dry run: " + str(r.get("path")), "Email drafted (dry run, no SMTP configured)",
                  "Sähköposti luonnosteltu (testitila, SMTP ei käytössä)")
@@ -211,7 +214,7 @@ def _whatsapp(s: dict, client: W.WhatsAppClient | None = None, escalate_s: float
     if r.get("ok"):
         R.register_sent(phone, s["id"], r.get("message_id"), s.get("business_id"), M.owner_lang(s))
         s["status"] = "sent"
-        _log(s, "whatsapp", f"sent {s.get('kind')} message {r.get('message_id')}")
+        _log(s, "whatsapp", f"sent {s.get('kind')} message {r.get('message_id')}", message_en=(chat_text or body))
         if btns is not None:
             _schedule_call(s, escalate_s if escalate_s is not None else escalate_after_s())
     else:

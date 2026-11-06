@@ -67,7 +67,7 @@ def test_tool_shapes():
     b = run(t.get_business("furry-paw"))
     assert b["name"].startswith("Furry Paw") and b["regular_hours"]["sun"] == "closed" and b["last_year_exceptions"][0]["hours"] == "9-13"
     assert b["upcoming_holidays"][0]["name_fi"] == "Isänpäivä" and b["upcoming_holidays"][0]["regular_hours_that_day"] == "closed"
-    assert {"type": "spotlight", "selector": '[data-pilot="business-card"]'} in b["_actions"]
+    assert {"type": "spotlight", "selector": '[data-pilot="suggestions"]'} in b["_actions"]
     s = run(t.get_suggestions("furry-paw"))
     assert s["suggestions"][0]["proposed_hours"] == "9-13" and s["suggestions"][0]["confidence"] == 0.92
     assert run(t.get_suggestions("nope"))["error"]
@@ -195,8 +195,8 @@ def test_every_page_has_orb_and_nav(client, monkeypatch):
     from kaiku import store
     monkeypatch.setattr(store, "get_business", lambda bid: None)
     html = client.get("/").text
-    assert 'id="kv-orb"' in html and "/static/voice.js" in html  # the owner's home has the orb but no nav: only the conversation
-    assert 'href="/map"' not in html
+    assert 'id="kv-orb"' in html and "/static/voice.js" in html  # the home has the orb and the nav
+    assert 'href="/map"' in html
     j = client.get("/judge", headers={"x-kaiku-key": "testkey"}).text
     assert 'id="kv-orb"' in j and 'href="/map"' in j and 'href="/room"' in j
     assert SECRET_A not in html and SECRET_E not in html
