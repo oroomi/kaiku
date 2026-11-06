@@ -4,7 +4,7 @@ Step 3 of the chain. The owner is reached without a login; the message explains 
 
 ## The ladder
 1. WhatsApp message with three reply buttons: **Hyväksy / Muokkaa / Ei kiitos** (kind `ask`: **Kerron aikani / Ei kiitos**; kind `no_change`: plain reassurance, no buttons).
-2. (Call lane: `kaiku/contact/call.py` is on main but the outbound call does not connect yet, SIP 488.) If there is no decision after `WA_ESCALATE_AFTER_S` (demo 120 s, production 24 h, the length of the WhatsApp window), `kaiku.contact.call.place_call(suggestion)` places a Finnish call. If the call lane is not configured the ladder logs `call lane not configured` in `channel_log`.
+2. (Call lane: `kaiku/contact/call.py` is on main and the outbound call connects over an ElevenLabs SIP trunk, proven 6 Nov 21:24Z with a 37 s call to the team's own phone and the post-call webhook reached; a call-approved Decision written to Yext is not yet exercised end to end.) If there is no decision after `WA_ESCALATE_AFTER_S` (default 120 s, demo config 600 s, production 24 h, the length of the WhatsApp window), `kaiku.contact.call.place_call(suggestion)` places a Finnish call. If the call lane is not configured the ladder logs `call lane not configured` in `channel_log`.
 3. No email, by decision.
 
 Entry point: `kaiku.contact.ladder.contact(suggestion)`, registered as `kaiku.chain.register("contact", contact)` when core exists. Every send appends to `suggestion["channel_log"]` and emits a `contact` event. Demo rule: the recipient is always `OWNER_WHATSAPP` from `.env` (Dayo's own phone).

@@ -66,7 +66,7 @@ Security: the public events feed and suggestion endpoints do not carry the owner
 | Map and room: 813 real OSM Turku businesses, QR join | `kaiku/map` | [docs/map.md](docs/map.md) |
 | Aura: Föli buses, AIS ships, Open-Meteo as Smart Data Models entities | `kaiku/aura` | [docs/aura.md](docs/aura.md) |
 | ngsi-ld-mcp: standalone MCP server, agents propose, humans approve | `ngsi-ld-mcp/` | [docs/mcp.md](docs/mcp.md) |
-| Call lane (ElevenLabs outbound Finnish call) | `kaiku/contact/call.py` | implemented but not working: the latest attempt (6 Nov 20:23Z) failed with SIP 488 Not Acceptable Here through the ElevenLabs SIP trunk to Zadarma. The WhatsApp step escalates to the call after `WA_ESCALATE_AFTER_S` seconds (default 120, the demo config sets 600). See DISCLOSURE.md |
+| Call lane (ElevenLabs outbound Finnish call) | `kaiku/contact/call.py` | working outbound: on 6 Nov 21:24Z an answered 37 s call to the team's own phone, the Finnish agent spoke its opening line and the post-call webhook reached `/webhooks/call` (HTTP 200); the earlier SIP 488 was the Zadarma trunk rejecting media encryption, fixed by setting it to disabled at about 21:21Z. Not yet exercised end to end: a call where the owner says "Hyväksyn" and the Decision (via "call") is applied to Yext. The WhatsApp step escalates to the call after `WA_ESCALATE_AFTER_S` seconds (default 120, the demo config sets 600). See DISCLOSURE.md |
 
 Submission texts: [docs/SUBMISSION.md](docs/SUBMISSION.md). Data sources: [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md). Cold start: [docs/COLD_START.md](docs/COLD_START.md). Final customer messages: [docs/final_messages.md](docs/final_messages.md). Deck text: [docs/DECK.md](docs/DECK.md).
 
