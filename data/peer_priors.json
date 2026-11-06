@@ -1,0 +1,109 @@
+{
+ "_label": "HAND-MADE PRIORS (author's judgement of typical Finnish practice, not measured data). To be replaced by Fonecta's dataset of real exception hours by category x holiday.",
+ "priors": {
+  "veterinary": {
+   "jouluaatto": "short:09:00-13:00",
+   "joulupäivä": "closed",
+   "tapaninpäivä": "closed",
+   "uudenvuodenaatto": "short:09:00-15:00",
+   "uudenvuodenpäivä": "closed",
+   "loppiainen": "closed",
+   "isänpäivä": "regular",
+   "vappu": "short:09:00-14:00",
+   "juhannusaatto": "closed",
+   "pyhäinpäivä": "regular",
+   "itsenäisyyspäivä": "closed"
+  },
+  "cafe": {
+   "jouluaatto": "short:09:00-14:00",
+   "joulupäivä": "closed",
+   "tapaninpäivä": "closed",
+   "uudenvuodenaatto": "short:09:00-15:00",
+   "uudenvuodenpäivä": "closed",
+   "loppiainen": "regular",
+   "isänpäivä": "regular",
+   "vappu": "regular",
+   "juhannusaatto": "closed",
+   "pyhäinpäivä": "regular",
+   "itsenäisyyspäivä": "short:10:00-16:00"
+  },
+  "restaurant": {
+   "jouluaatto": "short:11:00-15:00",
+   "joulupäivä": "closed",
+   "tapaninpäivä": "short:12:00-20:00",
+   "uudenvuodenaatto": "short:11:00-18:00",
+   "uudenvuodenpäivä": "closed",
+   "loppiainen": "regular",
+   "isänpäivä": "regular",
+   "vappu": "regular",
+   "juhannusaatto": "closed",
+   "pyhäinpäivä": "regular",
+   "itsenäisyyspäivä": "short:12:00-18:00"
+  },
+  "florist": {
+   "jouluaatto": "short:08:00-14:00",
+   "joulupäivä": "closed",
+   "tapaninpäivä": "closed",
+   "uudenvuodenaatto": "short:08:00-15:00",
+   "uudenvuodenpäivä": "closed",
+   "loppiainen": "closed",
+   "isänpäivä": "regular",
+   "vappu": "short:08:00-14:00",
+   "juhannusaatto": "short:08:00-14:00",
+   "pyhäinpäivä": "regular",
+   "itsenäisyyspäivä": "closed"
+  },
+  "hairdresser": {
+   "jouluaatto": "short:09:00-13:00",
+   "joulupäivä": "closed",
+   "tapaninpäivä": "closed",
+   "uudenvuodenaatto": "short:09:00-14:00",
+   "uudenvuodenpäivä": "closed",
+   "loppiainen": "closed",
+   "isänpäivä": "regular",
+   "vappu": "closed",
+   "juhannusaatto": "closed",
+   "pyhäinpäivä": "regular",
+   "itsenäisyyspäivä": "closed"
+  },
+  "car_repair": {
+   "jouluaatto": "short:08:00-12:00",
+   "joulupäivä": "closed",
+   "tapaninpäivä": "closed",
+   "uudenvuodenaatto": "short:08:00-14:00",
+   "uudenvuodenpäivä": "closed",
+   "loppiainen": "closed",
+   "isänpäivä": "regular",
+   "vappu": "closed",
+   "juhannusaatto": "closed",
+   "pyhäinpäivä": "regular",
+   "itsenäisyyspäivä": "closed"
+  },
+  "shop": {
+   "jouluaatto": "short:09:00-14:00",
+   "joulupäivä": "closed",
+   "tapaninpäivä": "closed",
+   "uudenvuodenaatto": "short:09:00-16:00",
+   "uudenvuodenpäivä": "closed",
+   "loppiainen": "short:12:00-18:00",
+   "isänpäivä": "regular",
+   "vappu": "short:10:00-16:00",
+   "juhannusaatto": "closed",
+   "pyhäinpäivä": "regular",
+   "itsenäisyyspäivä": "closed"
+  },
+  "pharmacy": {
+   "jouluaatto": "short:09:00-14:00",
+   "joulupäivä": "short:12:00-16:00",
+   "tapaninpäivä": "short:12:00-16:00",
+   "uudenvuodenaatto": "short:09:00-15:00",
+   "uudenvuodenpäivä": "short:12:00-16:00",
+   "loppiainen": "regular",
+   "isänpäivä": "regular",
+   "vappu": "short:10:00-16:00",
+   "juhannusaatto": "closed",
+   "pyhäinpäivä": "regular",
+   "itsenäisyyspäivä": "short:12:00-16:00"
+  }
+ }
+}
