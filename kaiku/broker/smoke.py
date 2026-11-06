@@ -39,7 +39,7 @@ def _wait(n, t=6.0):
     return len(RECV) >= n
 
 
-def run(label: str) -> bool:
+def run(label: str, keep: bool = False) -> bool:
     reset_broker()
     b = get_broker()
     print(f"\n=== {label}: broker.status() = {b.status()}")
@@ -82,7 +82,8 @@ def run(label: str) -> bool:
     ok = ok1 and ok2 and bool(fired1) and bool(fired2) and {"lastyear", "google", "proposed", "default"} <= set(inst)
     for sid in subs.values():
         b.delete_subscription(sid)
-    b.delete_entity(EID)
+    if not keep:
+        b.delete_entity(EID)
     print(f"RESULT {label}: {'PASS' if ok else 'FAIL'}")
     return ok
 
@@ -93,7 +94,8 @@ def main() -> int:
     print(f"temporary receiver on 127.0.0.1:{PORT} pid={os.getpid()} (in-process, stops with the script)")
     url = os.environ.get("KAIKU_BROKER_URL", "http://127.0.0.1:1026")
     results = {}
-    results["orion-ld"] = run(f"Orion-LD at {url}")
+    keep = "--keep" in sys.argv  # leave the entity in Orion-LD for the judge curl
+    results["orion-ld"] = run(f"Orion-LD at {url}", keep)
     os.environ["KAIKU_BROKER_URL"] = "http://127.0.0.1:1"   # dead port
     results["fallback"] = run("dead broker URL (http://127.0.0.1:1)")
     os.environ["KAIKU_BROKER_URL"] = url
