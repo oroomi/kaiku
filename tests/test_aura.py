@@ -3,6 +3,7 @@ import os
 import types
 from pathlib import Path
 
+import httpx
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -26,14 +27,14 @@ def test_parse_foli_and_bus_entity():
     assert e["id"].startswith("urn:ngsi-ld:Vehicle:foli:") and e["type"] == "Vehicle"
     assert e["location"]["type"] == "GeoProperty" and e["location"]["value"]["type"] == "Point"
     assert e["vehicleType"]["value"] == "bus" and "CC BY 4.0" in e["source"]["value"] and e["source"]["observedAt"]
-    assert e["heading"]["value"] == 90 and "@context" not in e
+    assert e["heading"]["value"] == 90 and e["@context"][0] == models.SDM_TRANSPORT
 
 
 def test_parse_ais_and_ship_entity():
     ships = models.parse_ais(load("aura_ais.json"), {})
     assert len(ships) == 5
     e = models.ship_entity(ships[0], "2026-11-06T19:00:00.000Z")
-    assert e["id"].startswith("urn:ngsi-ld:Vehicle:ais:") and e["vehicleType"]["value"] == "ship"
+    assert e["id"].startswith("urn:ngsi-ld:Vehicle:ais:") and e["vehicleType"]["value"] == "vessel"
     assert e["location"]["value"]["coordinates"][0] > 20
 
 
@@ -111,3 +112,90 @@ def test_notify_returns_204_and_queues(monkeypatch):
 def test_live_entities_from_broker():
     r = _app().get("/api/aura/entities?type=Vehicle")
     assert r.status_code == 200 and r.json()["source"] in ("broker", "fallback cache")
+
+
+SCHEMA_REQ = {"id", "type", "vehicleType", "category", "location"}
+CATEGORY = {"municipalServices", "nonTracked", "private", "public", "specialUsage", "tracked"}
+
+
+def _sdm_ok(e):
+    assert SCHEMA_REQ <= set(e)
+    assert set(e["category"]["value"]) <= CATEGORY
+    h, sp = e.get("heading", {}).get("value"), e["speed"]["value"]
+    assert sp == -1 or sp >= 0
+    if "heading" in e:
+        assert h == -1 or 0 <= h < 360
+    if sp == 0:
+        assert h == -1  # stationary vehicle: heading must be -1
+    assert e["speed"]["unitCode"] == "KMH"
+    ctx = e["@context"]
+    assert ctx[0] == models.SDM_TRANSPORT and {"lineRef", "mmsi"} <= set(ctx[1])
+
+
+def test_sdm_vehicle_conformance_bus_and_ship():
+    b = models.parse_foli(load("aura_foli.json"))[0]
+    moving, still = models.bus_entity(b, 90.4, "t", 36.0), models.bus_entity(b, 90.4, "t", 0.0)
+    _sdm_ok(moving); _sdm_ok(still)
+    assert moving["category"]["value"] == ["public", "tracked"] and moving["speed"]["value"] == 36.0 and moving["heading"]["value"] == 90
+    assert still["heading"]["value"] == -1
+    unk = models.bus_entity(b, None, "t", None)
+    assert unk["speed"]["value"] == -1 and "heading" not in unk
+    sh = models.parse_ais(load("aura_ais.json"), {})
+    for s in sh:
+        e = models.ship_entity(s, "t"); _sdm_ok(e)
+        assert e["vehicleType"]["value"] == "vessel"
+        if s["sog"]:
+            assert e["speed"]["value"] == round(s["sog"] * 1.852, 1)
+        if s["sog"] == 0:
+            assert e["heading"]["value"] == -1
+    assert models.compact(models.ship_entity(sh[0], "t"))["kind"] == "ship"
+    assert models.subscription_body({"id": "a", "entity_type": "ship", "geo_center": [22, 60], "geo_radius_m": 500}, "u")["q"] == 'vehicleType=="vessel"'
+
+
+def _langs(fi_en_pairs, tool_in):
+    """Fake client whose tool call returns given (fi, en) and whose translate call answers by target language."""
+    def create(**kw):
+        if kw.get("tools"):
+            ti = {**tool_in, "description_fi": fi_en_pairs[0], "description_en": fi_en_pairs[1]}
+            return types.SimpleNamespace(stop_reason="tool_use", content=[types.SimpleNamespace(type="tool_use", name="propose_subscription", input=ti)])
+        to_fi = "Finnish" in kw["system"]
+        out = "Ilmoita, kun bussi on alle 300 m Kauppatorista." if to_fi else "Tell me when a bus is within 300 m of Kauppatori."
+        return types.SimpleNamespace(stop_reason="end_turn", content=[types.SimpleNamespace(type="text", text=out)])
+    return types.SimpleNamespace(messages=types.SimpleNamespace(create=create))
+
+
+def test_explanations_always_fi_and_en():
+    en_only = "Tell me when a bus is within 300 m of Kauppatori."
+    fi_only = "Ilmoita kun bussi on alle 300 m Kauppatorista."
+    r = agent.ask("tell me when a bus is within 300 m of Kauppatori", client=_langs((en_only, en_only), TOOL_IN))  # fi field in English
+    assert agent.lang_of(r["explanation_fi"]) == "fi" and agent.lang_of(r["explanation_en"]) == "en"
+    r = agent.ask("kerro kun bussi", client=_langs((fi_only, fi_only), TOOL_IN))  # en field in Finnish
+    assert agent.lang_of(r["explanation_fi"]) == "fi" and agent.lang_of(r["explanation_en"]) == "en"
+    assert subs.get_proposal(r["proposal"]["id"])["description_en"] == r["explanation_en"]
+    r = agent.ask("x", client=_langs((fi_only, en_only), TOOL_IN))  # swapped
+    assert r["explanation_fi"] == fi_only or agent.lang_of(r["explanation_fi"]) == "fi"
+
+
+def test_explanation_template_when_translation_fails():
+    c = _langs(("Tell me when a bus is near.", "Tell me when a bus is near."), TOOL_IN)
+    orig = c.messages.create
+    def create(**kw):
+        if kw.get("tools"):
+            return orig(**kw)
+        raise RuntimeError("down")
+    c.messages.create = create
+    r = agent.ask("x", client=c)
+    assert r["explanation_fi"].startswith("Ilmoitan") and "300 m" in r["explanation_fi"] and agent.lang_of(r["explanation_en"]) == "en"
+
+
+def test_text_only_answer_gets_both_languages():
+    r = agent.ask("moi", client=_fake(text="Voin auttaa vain bussi- ja laivatilauksissa."))
+    assert agent.lang_of(r["explanation_fi"]) == "fi" and agent.lang_of(r["explanation_en"]) == "en"
+
+
+def test_judge_endpoint_has_link_header_curl(monkeypatch):
+    class Boom:
+        def __init__(self, *a, **k): raise httpx.ConnectError("x")
+    monkeypatch.setattr(aura_router.httpx, "AsyncClient", Boom)
+    j = _app().get("/api/aura/judge").json()
+    assert "Link: <" + models.SDM_TRANSPORT in j["curl"] and "Accept: application/ld+json" in j["curl"] and j["entity"] is None

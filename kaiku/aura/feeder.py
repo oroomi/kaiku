@@ -27,7 +27,10 @@ state = {"mode": None, "last": {}, "ms": {}, "counts": {}, "seen": {}, "headings
 async def upsert(http: httpx.AsyncClient, entities: list[dict], ctx: str) -> str:
     """Batch upsert without datasetId. Preferred: entityOperations/upsert?options=update.
     If this build rejects it: POST /entities for new ids, PATCH /entities/{id}/attrs for existing."""
-    h = {"Content-Type": "application/json", "Link": models.link(ctx)}
+    if any("@context" in e for e in entities):  # context travels inside each entity (SDM + small Aura vocabulary)
+        h = {"Content-Type": "application/ld+json"}
+    else:
+        h = {"Content-Type": "application/json", "Link": models.link(ctx)}
     if state["mode"] != "fallback":
         r = await http.post(f"{NG}/entityOperations/upsert?options=update", json=entities, headers=h)
         if r.status_code in (200, 201, 204):
@@ -54,15 +57,21 @@ def save_cache() -> None:
 
 
 async def cleanup(http: httpx.AsyncClient) -> int:
-    now = time.time()
-    gone = [i for i, t in state["seen"].items() if now - t > STALE_DELETE_S]
-    if gone:
-        try:
+    """Delete OUR entities (id prefix foli: / ais:) whose location.observedAt is older than STALE_DELETE_S.
+    Stateless on purpose: it also removes orphans left by an earlier feeder run. Checked at most once a minute."""
+    if time.time() - state.get("swept", 0) < 60:
+        return 0
+    state["swept"] = time.time()
+    try:
+        r = await http.get(f"{NG}/entities", params={"type": "Vehicle", "attrs": "location", "limit": 1000,
+                                                     "idPattern": "^urn:ngsi-ld:Vehicle:(foli|ais):"},
+                           headers={"Accept": "application/json", "Link": models.link(models.SDM_TRANSPORT)})
+        r.raise_for_status()
+        gone = [e["id"] for e in r.json() if models.age_s((e.get("location") or {}).get("observedAt")) > STALE_DELETE_S]
+        if gone:
             await http.post(f"{NG}/entityOperations/delete", json=gone, headers={"Content-Type": "application/json"})
-        except httpx.HTTPError:
-            return 0
-        for i in gone:
-            state["seen"].pop(i, None)
+    except (httpx.HTTPError, ValueError):
+        return 0
     return len(gone)
 
 
@@ -74,14 +83,20 @@ async def cycle(http: httpx.AsyncClient, kind: str) -> None:
             recs = await feeds.fetch_foli(http)
             ents = []
             for b in recs:
-                prev = state["headings"].get(b["ref"])
-                hd = b.get("bearing") if isinstance(b.get("bearing"), (int, float)) else None
-                if hd is None:
-                    hd = prev[2] if prev else None
-                    if prev and models.haversine_m(prev[0], prev[1], b["lon"], b["lat"]) > 8:
+                # Föli gives neither heading nor speed: both come from two consecutive positions (speed in km/h)
+                prev = state["headings"].get(b["ref"])  # (lon, lat, heading, ts, speed_kmh)
+                hd = b.get("bearing") if isinstance(b.get("bearing"), (int, float)) else (prev[2] if prev else None)
+                speed = prev[4] if prev else None
+                ts = b.get("ts") or time.time()
+                if prev and ts > prev[3]:
+                    d = models.haversine_m(prev[0], prev[1], b["lon"], b["lat"])
+                    speed = 0.0 if d <= 8 else d / (ts - prev[3]) * 3.6  # <= 8 m is GPS noise: stationary
+                    if d > 8 and not isinstance(b.get("bearing"), (int, float)):
                         hd = models.bearing(prev[0], prev[1], b["lon"], b["lat"])
-                state["headings"][b["ref"]] = (b["lon"], b["lat"], hd)
-                ents.append(models.bus_entity(b, hd, now))
+                    state["headings"][b["ref"]] = (b["lon"], b["lat"], hd, ts, speed)
+                elif not prev:
+                    state["headings"][b["ref"]] = (b["lon"], b["lat"], hd, ts, None)
+                ents.append(models.bus_entity(b, hd, now, speed))
             ctx = models.SDM_TRANSPORT
         elif kind == "ships":
             recs = await feeds.fetch_ais(http)
@@ -100,8 +115,6 @@ async def cycle(http: httpx.AsyncClient, kind: str) -> None:
             log.warning("broker unreachable: %s", e)
             way = "broker-down"
         comp = [c for c in (models.compact(e) for e in ents) if c]
-        for e in ents:
-            state["seen"][e["id"]] = time.time()
         state["cache"][kind if kind != "weather" else "weather"] = comp[0] if kind == "weather" and comp else (comp if kind != "weather" else None)
         state["last"][kind] = now
         state["counts"][kind] = len(ents)
