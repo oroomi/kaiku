@@ -1,0 +1,26 @@
+# Orion-LD runs on the host network bound to 127.0.0.1 so that its notifications can reach
+# our app on 127.0.0.1:8210 (the host firewall drops container -> host traffic).
+# MongoDB has no published port; the host reaches it over the private bridge at 172.28.77.2.
+services:
+  mongo:
+    image: mongo:4.4
+    restart: unless-stopped
+    command: --nojournal
+    volumes:
+      - kaiku-mongo:/data/db
+    networks:
+      kaiku:
+        ipv4_address: 172.28.77.2
+  orion-ld:
+    image: fiware/orion-ld:latest
+    restart: unless-stopped
+    depends_on: [mongo]
+    network_mode: host
+    command: -dbhost 172.28.77.2 -logLevel WARN -forwarding -experimental -ipv4 -localIp 127.0.0.1 -port 1026
+networks:
+  kaiku:
+    ipam:
+      config:
+        - subnet: 172.28.77.0/24
+volumes:
+  kaiku-mongo:
