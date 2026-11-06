@@ -3,14 +3,14 @@
 {% block content %}
 <div class="home">
   <div class="statusbar mono" id="statusbar" data-pilot="status" aria-live="polite">
-    <button type="button" class="st-toggle" id="st-toggle" aria-expanded="false" aria-controls="statusbar" aria-label="Tila / Status info" title="Tila / Status info">i</button>
+    <button type="button" class="st-toggle" id="st-toggle" aria-expanded="false" aria-controls="statusbar" aria-label="Status info" title="Status info">i</button>
     <span class="chip" id="st-broker" title="FIWARE NGSI-LD context broker: Orion-LD (live) or the in-memory fallback">BROKER: <b>...</b></span>
     <span class="chip" id="st-wa" title="WhatsApp: not in use yet means the decision link is shown instead of a message">WhatsApp: <b>...</b></span>
     <span class="chip" id="st-yext" title="Yext sandbox entity that receives the holiday hours">YEXT: <b>SinceAI07</b></span>
   </div>
   <section class="hero glass" data-pilot="hero" id="hero" aria-live="polite">
     <h1 class="headline" id="headline">Furry Paw Vet Clinic: checking Christmas Eve.</h1>
-    <p class="fi-line" id="fi-line" lang="fi">Tarkistetaan jouluaaton aukioloajat.</p>
+    <p class="fi-line" id="fi-line" lang="en" hidden></p>
     <div class="arc-wrap">
       <svg class="arc" viewBox="0 0 440 250" role="img" aria-label="Chain progress arc">
         <defs>
@@ -31,24 +31,24 @@
     <div class="actions">
       <label class="pick"><span class="mono">HOLIDAY</span>
         <select id="date" aria-label="Holiday date" autocomplete="off">
-          <option value="2026-12-24">24.12.2026 Jouluaatto</option>
-          <option value="2026-11-08">8.11.2026 Isänpäivä (ei vapaapäivä)</option>
+          <option value="2026-12-24">24.12.2026 Christmas Eve</option>
+          <option value="2026-11-08">8.11.2026 Father's Day (not a public holiday)</option>
         </select>
       </label>
       <button class="primary" id="run" data-pilot="run-chain" type="button">Run the chain</button>
     </div>
     <div class="tt-row">
-      <label class="tt"><span class="mono">Tänään (aikamatka) / Today (time travel)</span>
-        <input type="date" id="tt-date" autocomplete="off" aria-label="Tänään (aikamatka) / Today (time travel)" min="2026-01-01" max="2027-12-31">
+      <label class="tt"><span class="mono">Today (time travel)</span>
+        <input type="date" id="tt-date" autocomplete="off" aria-label="Today (time travel)" min="2026-01-01" max="2027-12-31">
       </label>
       <span class="mono tt-note" id="tt-note" aria-live="polite"></span>
     </div>
     <div class="decide-row" id="decide-row" hidden>
-      <a class="primary link" id="decide-go" href="#" target="_blank" rel="noopener" data-pilot="decide-link">Avaa omistajan päätös <small>Open the owner's decision</small></a>
+      <a class="primary link" id="decide-go" href="#" target="_blank" rel="noopener" data-pilot="decide-link">Open the owner's decision</a>
     </div>
-    <details class="msg"><summary class="mono">Viesti omistajalle <span>Message to the owner</span></summary>
-      <p class="sentence" id="sentence" lang="fi">Käynnistä ketju, niin näet viestin.</p>
-      <p class="gloss" id="gloss" lang="en">Run the chain to see the message.</p>
+    <details class="msg"><summary class="mono">Message to the owner</summary>
+      <p class="sentence" id="sentence" lang="en">Run the chain to see the message.</p>
+      <p class="gloss" id="gloss" lang="en" hidden></p>
     </details>
   </section>
 
@@ -66,7 +66,7 @@
     <p class="note" id="b-note">{{ business.note if business and business.note else "" }}</p>
   </section>
   <footer class="foot" data-pilot="reset">
-    <button class="ghost" id="reset" type="button" title="Reset demo: removes the holiday hours from the Yext sandbox, clears runs and events, sets the date to 17.12.2026">Nollaa demo <small>Reset demo</small></button>
+    <button class="ghost" id="reset" type="button" title="Reset demo: removes the holiday hours from the Yext sandbox, clears runs and events, sets the date to 17.12.2026">Reset demo</button>
     <span class="mono soft" id="reset-msg" aria-live="polite"></span>
   </footer>
 </div>

@@ -106,17 +106,17 @@
       body: JSON.stringify({ text: text, page: location.pathname, lang: "auto", history: hist().slice(0, -1) }) })
       .then(function (r) { if (!r.ok) throw new Error("ask " + r.status); return r.json(); })
       .then(function (j) { if (gen !== st.gen) return; pushHist("assistant", j.text); deliver(j.text, j.actions, text); })
-      .catch(function () { setState("error"); show(text, "En saanut yhteyttä. Could not reach Kaiku.", false); setTimeout(function () { setState("idle"); }, 2500); });
+      .catch(function () { setState("error"); show(text, "Could not reach Kaiku.", false); setTimeout(function () { setState("idle"); }, 2500); });
   }
   function transcribe(blob) {
     setState("thinking"); show("", "", true); $("kv-you-l").hidden = false; $("kv-you").hidden = false; cap.hidden = false; $("kv-you").textContent = "Kuuntelen…";
     return fetch("/api/voice/stt", { method: "POST", headers: { "content-type": blob.type || "audio/webm" }, body: blob })
       .then(function (r) { if (!r.ok) throw new Error("stt " + r.status); return r.json(); })
       .then(function (j) {
-        if (!j.text) { setState("idle"); show("", "En kuullut mitään. I heard nothing.", false); return; }
+        if (!j.text) { setState("idle"); show("", "I heard nothing.", false); return; }
         return ask(j.text);
       })
-      .catch(function () { setState("error"); show("", "En saanut puheesta selvää. I could not transcribe that.", false); setTimeout(function () { setState("idle"); }, 2500); });
+      .catch(function () { setState("error"); show("", "I could not transcribe that.", false); setTimeout(function () { setState("idle"); }, 2500); });
   }
 
   /* ---------- push to talk ---------- */
@@ -156,12 +156,12 @@
         cancelAnimationFrame(st.raf); root.style.setProperty("--lvl", "0");
         var dur = Date.now() - st.t0, blob = new Blob(st.chunks, { type: (st.rec && st.rec.mimeType) || mt || "audio/webm" });
         releaseMicLater();
-        if (dur < 400 || blob.size < 800) { setState("idle"); show("", "Pidä pohjassa ja puhu. Hold and speak.", false); return; }
+        if (dur < 400 || blob.size < 800) { setState("idle"); show("", "Hold and speak.", false); return; }
         transcribe(blob);
       };
       st.t0 = Date.now(); st.rec.start(); setState("listening"); show("", "", true); cap.hidden = false; $("kv-you-l").hidden = false; $("kv-you").hidden = false; $("kv-you").textContent = "Kuuntelen…"; meter(stream);
     }).catch(function () {
-      holding = false; setState("error"); show("", "Mikrofoni ei ole käytössä. Microphone is not available.", false); setTimeout(function () { setState("idle"); }, 2500);
+      holding = false; setState("error"); show("", "Microphone is not available.", false); setTimeout(function () { setState("idle"); }, 2500);
     });
   }
   function stop() {

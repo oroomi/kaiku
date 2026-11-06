@@ -57,7 +57,7 @@ def test_build_cache_falls_back_offline(tmp_path):
 
 def test_join_sets_cookie_and_round_robin(client):
     r1 = client.get("/join")
-    assert r1.status_code == 200 and "kaiku_room" in r1.cookies and "Olet nyt:" in r1.text
+    assert r1.status_code == 200 and "kaiku_room" in r1.cookies and "You are now:" in r1.text
     c2 = TestClient(app)
     r2 = c2.get("/join")
     n1 = room.assign(r1.cookies["kaiku_room"])["name"]
@@ -112,7 +112,7 @@ def test_pages_render(client):
     m = client.get("/map")
     assert m.status_code == 200 and "OpenStreetMap (real)" in m.text and "map.js" in m.text
     r = client.get("/room")
-    assert r.status_code == 200 and "Skannaa ja ota yritys haltuun" in r.text and "Scan, become a Turku business owner" in r.text
+    assert r.status_code == 200 and "Scan to take over a business" in r.text and "Become a Turku business owner" in r.text
     q = client.get("/api/room/qr.svg")
     assert q.status_code == 200 and "<svg" in q.text
     for t in (m.text, r.text, client.get("/join").text):

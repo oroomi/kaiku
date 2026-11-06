@@ -5,15 +5,14 @@
 <div class="roomgrid" data-pilot="room">
   <section class="roomcta glass">
     <div class="mono mcap">LIVE ROOM</div>
-    <h1 lang="fi">Skannaa ja ota yritys haltuun</h1>
-    <p class="men big">Scan, become a Turku business owner for a minute</p>
+    <h1>Scan to take over a business</h1>
+    <p class="men big">Become a Turku business owner for a minute</p>
     <div class="qrbox"><img src="/api/room/qr.svg" alt="QR code to {{ join_url }}" width="320" height="320"></div>
     <p class="mono url">{{ join_url }}</p>
-    <p class="mfi" lang="fi">Vastaa yhteen kysymykseen: oletko auki jouluaattona? Pisteesi vaihtuu vihreäksi.</p>
     <p class="men">Answer one question: are you open on Christmas Eve? Your dot turns green.</p>
     <p class="men">Businesses: OpenStreetMap (real). Holiday hours: unknown in public data. Answers: from the room (demo).</p>
     <div class="mono live" id="rcount"><b id="r-answered">0</b> answered / <b id="r-total">0</b> businesses</div>
-    <a class="mono rreset" href="#" id="room-reset">Nollaa huone <small>(reset room)</small></a>
+    <a class="mono rreset" href="#" id="room-reset">Reset room</a>
   </section>
   <iframe class="roommap" src="/map?embed=1" title="Live map of Turku businesses" loading="eager"></iframe>
 </div>
@@ -22,9 +21,9 @@
 <script>
 document.getElementById("room-reset").addEventListener("click", function (ev) {
   ev.preventDefault();
-  if (!confirm("Nollaa huone? / Reset the room?")) return;
+  if (!confirm("Reset the room?")) return;
   var k = ""; try { k = new URLSearchParams(location.search).get("key") || sessionStorage.getItem("kaikuKey") || ""; } catch (x) {}
-  fetch("/api/room/reset", { headers: k ? { "X-Kaiku-Key": k } : {} }).then(function (r) { if (r.status === 403) alert("Avain puuttuu / key needed"); else location.reload(); });
+  fetch("/api/room/reset", { headers: k ? { "X-Kaiku-Key": k } : {} }).then(function (r) { if (r.status === 403) alert("Key needed"); else location.reload(); });
 });
 
 (function(){var a=document.getElementById('r-answered'),t=document.getElementById('r-total');

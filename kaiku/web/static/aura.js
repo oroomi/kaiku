@@ -9,7 +9,7 @@
   var jpost = function (u, b) { return fetch(u, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b || {}) }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.detail || r.status); return j; }); }); };
   var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  if (typeof maplibregl === "undefined") { $("map").innerHTML = '<p style="padding:90px 20px">Karttaa ei voitu ladata. <span class="en">The map library did not load.</span></p>'; return; }
+  if (typeof maplibregl === "undefined") { $("map").innerHTML = '<p style="padding:90px 20px">The map library did not load.</p>'; return; }
 
   var map = new maplibregl.Map({ container: "map", style: "https://tiles.openfreemap.org/styles/dark", center: [22.2666, 60.4518], zoom: window.innerWidth < 700 ? 11.6 : 12.4, attributionControl: false });
   map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: "Föli, Fintraffic, Open-Meteo CC BY 4.0" }), "bottom-left");
@@ -66,7 +66,7 @@
       from[k] = {}; to[k] = {};
       Object.keys(cur[k]).forEach(function (id) { from[k][id] = cur[k][id]; });
       (b[k] || []).forEach(function (r) {
-        var meta = k === "buses" ? { t: "Linja " + r[4], d: "Päämäärä " + (r[5] || "-") + (r[6] != null ? ", myöhässä " + Math.round(r[6] / 60) + " min" : "") + " (destination)" } : { t: r[4] || "Alus", d: "AIS, " + r[0].split(":").pop() };
+        var meta = k === "buses" ? { t: "Line " + r[4], d: "Destination " + (r[5] || "-") + (r[6] != null ? ", " + Math.round(r[6] / 60) + " min late" : "") } : { t: r[4] || "Ship", d: "AIS, " + r[0].split(":").pop() };
         to[k][r[0]] = { lon: r[1], lat: r[2], h: r[3] == null ? 0 : r[3], t: meta.t, d: meta.d };
         if (!from[k][r[0]]) from[k][r[0]] = to[k][r[0]];
       });
@@ -96,19 +96,18 @@
   function renderStats(b) {
     var c = b.counts || {}, w = b.weather;
     $("n-ent").textContent = c.entities != null ? c.entities : 0;
-    $("l-bus").innerHTML = "Linja-autoja <b>" + (c.buses || 0) + "</b>";
-    $("l-ship").innerHTML = "laivoja <b>" + (c.ships || 0) + "</b>";
+    $("l-bus").innerHTML = "Buses <b>" + (c.buses || 0) + "</b>";
+    $("l-ship").innerHTML = "ships <b>" + (c.ships || 0) + "</b>";
     var wf = "Turku <b>no data</b>", we = "Turku no data";
     if (w && w.temp != null) {
-      var t = String(w.temp.toFixed ? w.temp.toFixed(1) : w.temp).replace(".", ","), ms = w.wind_ms != null ? Math.round(w.wind_ms) : null;
-      wf = "Turku <b>" + t + " °C</b>" + (ms != null ? ", tuuli <b>" + ms + " m/s</b>" : "");
+      var t = String(w.temp.toFixed ? w.temp.toFixed(1) : w.temp), ms = w.wind_ms != null ? Math.round(w.wind_ms) : null;
+      wf = "Turku <b>" + t + " °C</b>" + (ms != null ? ", wind <b>" + ms + " m/s</b>" : "");
       we = "Turku " + String(w.temp) + " °C" + (ms != null ? ", wind " + ms + " m/s" : "") + (w.wtype ? ", " + w.wtype : "");
     }
     $("l-wx").innerHTML = wf;
-    $("l-en").textContent = "Buses " + (c.buses || 0) + ", ships " + (c.ships || 0) + ", " + we;
     var fb = b.source !== "broker";
     $("src-mode").className = "src mono " + (fb ? "off" : "on");
-    $("src-mode").textContent = fb ? "Varavälimuisti / fallback cache, broker ei vastaa" : "Luettu Orion-LD:stä / read from the Orion-LD broker";
+    $("src-mode").textContent = fb ? "Fallback cache, broker not answering" : "Read from the Orion-LD broker";
   }
 
   /* ---------- SSE ---------- */
@@ -117,7 +116,7 @@
     es.addEventListener("hello", function (m) { JSON.parse(m.data).recent.forEach(function (n) { addNote(n, false); }); });
     es.addEventListener("positions", function (m) { var b = JSON.parse(m.data); if (ready) applyBrief(b); else { pendingBrief = b; renderStats(b); } });
     es.addEventListener("notification", function (m) { addNote(JSON.parse(m.data), true); loadSubs(); });
-    es.onerror = function () { $("src-mode").className = "src mono off"; $("src-mode").textContent = "Yhteys katkesi, yritetään uudelleen / reconnecting"; };
+    es.onerror = function () { $("src-mode").className = "src mono off"; $("src-mode").textContent = "Connection lost, reconnecting"; };
   }
   connect();
 
@@ -125,7 +124,7 @@
   function addNote(n, fresh) {
     var ul = $("feed"); var e = ul.querySelector(".empty"); if (e) e.remove();
     var li = document.createElement("li"); if (fresh) li.className = "new";
-    li.innerHTML = '<time>' + hhmmss(n.ts) + "</time>" + esc(n.title_fi) + '<span class="en">' + esc(n.title_en) + (n.others ? " (+" + n.others + ")" : "") + "</span>";
+    li.innerHTML = '<time>' + hhmmss(n.ts) + "</time>" + esc(n.title_en) + (n.others ? " (+" + n.others + ")" : "");
     ul.insertBefore(li, ul.firstChild);
     while (ul.children.length > 12) ul.lastChild.remove();
     if (fresh) setTimeout(function () { li.classList.remove("new"); }, 6000);
@@ -149,7 +148,7 @@
     jget("/api/aura/subscriptions").then(function (r) {
       active = r.items; $("sub-count").textContent = active.length;
       $("subs").innerHTML = active.map(function (s) {
-        return '<li><span>' + esc(s.description_fi) + '<small>' + esc(s.description_en) + " · lähetetty / sent " + (s.times_sent || 0) + '</small></span><button data-del="' + esc(s.subscription_id) + '" type="button">Poista</button></li>';
+        return '<li><span>' + esc(s.description_en) + '<small>sent ' + (s.times_sent || 0) + '</small></span><button data-del="' + esc(s.subscription_id) + '" type="button">Delete</button></li>';
       }).join("");
       geofences = active.slice(); if (proposal) geofences.push(Object.assign({ _pending: true }, proposal)); drawFences();
     }).catch(function () {});
@@ -164,7 +163,7 @@
     proposal = p;
     $("proposal").hidden = !p;
     if (!p) { $("ask-gloss").textContent = en || ""; $("ask-gloss").style.color = ""; $("ask-text").placeholder = fi || ""; return; }
-    $("prop-fi").textContent = fi; $("prop-en").textContent = en;
+    $("prop-en").textContent = en;
     $("prop-tech").textContent = "Subscription · Vehicle[" + p.entity_type + "] · geoQ near;maxDistance==" + p.geo_radius_m + " · watchedAttributes location";
     map.flyTo({ center: p.geo_center, zoom: p.geo_radius_m > 1000 ? 12.6 : 14.2, duration: reduce ? 0 : 1200 });
     loadSubs();
@@ -172,19 +171,19 @@
   $("ask").addEventListener("submit", function (e) {
     e.preventDefault();
     var t = $("ask-text").value.trim(); if (!t) return;
-    $("ask-go").disabled = true; $("ask-gloss").textContent = "Aura miettii... (thinking)";
+    $("ask-go").disabled = true; $("ask-gloss").textContent = "Aura is thinking...";
     jpost("/api/aura/ask", { text: t }).then(function (r) {
-      $("ask-gloss").textContent = r.proposal ? "Aura ehdottaa, sinä päätät. (Aura proposes, you decide.)" : (r.explanation_fi + " / " + r.explanation_en);
-      showProposal(r.proposal, r.explanation_fi, r.explanation_en);
-    }).catch(function (err) { $("ask-gloss").textContent = "Avustaja ei vastannut. (The assistant did not answer.)"; })
+      $("ask-gloss").textContent = r.proposal ? "Aura proposes, you decide." : r.explanation_en;
+      showProposal(r.proposal, r.explanation_en, r.explanation_en);
+    }).catch(function (err) { $("ask-gloss").textContent = "The assistant did not answer."; })
       .then(function () { $("ask-go").disabled = false; });
   });
   $("prop-ok").addEventListener("click", function () {
     if (!proposal) return; $("prop-ok").disabled = true;
     jpost("/api/aura/subscriptions/" + proposal.id + "/approve").then(function () {
       proposal = null; $("proposal").hidden = true; $("ask-text").value = "";
-      $("ask-gloss").textContent = "Tilaus luotu Orion-LD:hen. Ilmoitukset tulevat alle. (Subscription created in the broker.)"; loadSubs();
-    }).catch(function () { $("ask-gloss").textContent = "Tilauksen luonti epäonnistui. (Could not create the subscription.)"; })
+      $("ask-gloss").textContent = "Subscription created in the broker. Notifications appear below."; loadSubs();
+    }).catch(function () { $("ask-gloss").textContent = "Could not create the subscription."; })
       .then(function () { $("prop-ok").disabled = false; });
   });
   $("prop-no").addEventListener("click", function () {

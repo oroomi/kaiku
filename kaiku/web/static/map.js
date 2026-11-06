@@ -94,7 +94,7 @@
   function pushLatest(name, ans) {
     if (!elL) return;
     var li = document.createElement('li');
-    li.innerHTML = '<span class="nm">' + esc(name) + '</span><span class="an">' + esc('jouluaatto ' + ans) + '</span>';
+    li.innerHTML = '<span class="nm">' + esc(name) + '</span><span class="an">' + esc('Christmas Eve: ' + ({ suljettu: 'closed', normaalisti: 'as usual' }[ans] || ans)) + '</span>';
     elL.insertBefore(li, elL.firstChild);
     while (elL.children.length > 6) elL.removeChild(elL.lastChild);
   }
