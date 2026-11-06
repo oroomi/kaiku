@@ -69,3 +69,10 @@ main:has(.mapwrap){max-width:none;padding:0}
   .mpanel{min-width:0;padding:10px 12px}.mcounts b{font-size:32px}.mfi,.mpanel .men{display:none}
   .mqr{display:none}.mlatest{display:none}
 }
+/* orb space on small screens: legend and attribution stay clear of the dock */
+@media (max-width:820px){
+  .mlegend{bottom:var(--orb-space);max-width:calc(100vw - 28px)}
+  #legend-src{display:none}
+  .mattr{padding-right:150px}
+}
+.is-embed .mattr{padding-right:14px}

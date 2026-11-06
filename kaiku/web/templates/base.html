@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="/static/horizon.css?v={{ asset_v() }}">
 {% block head %}{% endblock %}
 </head>
-<body>
+<body{% if is_embed %} class="is-embed"{% endif %}>
 <div class="stage" aria-hidden="true"><i class="glow g1"></i><i class="glow g2"></i></div>
 <header class="top">
   <a class="brand" href="/" aria-label="Kaiku"><svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><path d="M5 23a11 11 0 0 1 22 0" fill="none" stroke="#8fd3e8" stroke-width="2.4" stroke-linecap="round"/><circle cx="21.5" cy="12.5" r="2.7" fill="#fff"/></svg><span>Kaiku</span></a>
@@ -26,6 +26,6 @@
 </main>
 <script src="/static/app.js?v={{ asset_v() }}" defer></script>
 {% block scripts %}{% endblock %}
-{% include "_voice.html" %}
+{% if not is_embed %}{% include "_voice.html" %}{% endif %}
 </body>
 </html>

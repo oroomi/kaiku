@@ -69,7 +69,8 @@ def _question(biz: dict) -> dict:
 
 @router.get("/map", response_class=HTMLResponse)
 def map_page(request: Request):
-    return _render(request, "map.html", join_url=_public(request) + "/join", embed=False)
+    return _render(request, "map.html", join_url=_public(request) + "/join", embed=False,
+                   is_embed=request.query_params.get("embed") == "1")
 
 
 @router.get("/room", response_class=HTMLResponse)

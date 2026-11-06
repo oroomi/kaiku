@@ -577,7 +577,7 @@ async def run_chain(business_id: str, holiday_date: str, now: Optional[datetime]
                 (f"Aukioloajat päivitetty ({day})" if ok else "Yext-kirjoitus epäonnistui"),
                 f"Hours saved to Yext ({day}), read back and verified" if ok and verified else
                 (f"Hours applied ({day})" if ok else "Yext write failed"),
-                yext_status=res.yext_status, verified=verified, entity=out.get("entity_id"), written=out.get("written"),
+                yext_status=res.yext_status, verified=verified, hours=out.get("hours"), entity=out.get("entity_id"), written=out.get("written"),
                 entity_version=out.get("entity_version"), environment=out.get("environment"), publishers=res.publishers,
                 where_it_shows=out.get("where_it_shows", []), broker_updated=res.broker_updated, error=(res.yext_status if not ok else None))
             if ok and whatsapp_configured():

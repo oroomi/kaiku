@@ -21,8 +21,10 @@
   function hhmmss(ts) { var d = new Date(ts); if (isNaN(d)) return ""; var p = function (n) { return (n < 10 ? "0" : "") + n; }; return p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds()); }
 
   /* ---------- business card ---------- */
+  var biz = null;
   function renderBusiness(b) {
     if (!b) return;
+    biz = b; paint();
     $("b-name").textContent = b.name; $("b-addr").textContent = b.address; $("b-note").textContent = b.note || "";
     $("b-hours").innerHTML = DAYS.map(function (d) { return "<dt>" + d[1] + "</dt><dd>" + esc(span(b.regular_hours[d[0]] || [])) + "</dd>"; }).join("");
   }
@@ -49,8 +51,66 @@
       place(arc.t);
     }
   }
-  function setBig(html, cap) { $("big").innerHTML = html; $("big-cap").textContent = cap; }
   function stepsDone() { return Object.keys(seenSteps).filter(function (s) { return seenSteps[s] && ORDER.indexOf(s) >= 0; }).length; }
+
+  /* ---------- before / after hero: one plain English headline, the Finnish line under it ---------- */
+  var HOL = { "12-24": ["jouluaattona", "Christmas Eve"], "12-25": ["joulupäivänä", "Christmas Day"], "12-26": ["tapaninpäivänä", "Boxing Day"],
+              "12-31": ["uudenvuodenaattona", "New Year's Eve"], "01-01": ["uudenvuodenpäivänä", "New Year's Day"], "11-08": ["isänpäivänä", "Father's Day"] };
+  function dayInfo(date) {
+    var h = HOL[date.slice(5)], d = parseInt(date.slice(8), 10) + "." + parseInt(date.slice(5, 7), 10) + ".";
+    return { fi: h ? h[0] : d, en: h ? h[1] : d, d: d };
+  }
+  function spanEn(h) { return h.length ? span(h) : "closed"; }
+  function regularFor(date) {
+    if (!biz) return null;
+    var wd = (new Date(date + "T12:00:00Z").getUTCDay() + 6) % 7;
+    return biz.regular_hours[DAYS[wd][0]] || [];
+  }
+  function lastYearFor(date) {
+    if (!biz) return null;
+    var e = (biz.last_year_exceptions || []).filter(function (x) { return x.date.slice(5) === date.slice(5) && x.date.slice(0, 4) < date.slice(0, 4); })[0];
+    return e ? (e.hours === "closed" ? [] : e.hours) : null;
+  }
+  var appliedFor = null;
+  var applied = null;   // hours the owner approved (from the apply event), overrides the proposal
+  function caps(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  function paint() {
+    var date = (current && current.holiday_date) || $("date").value, di = dayInfo(date), reg = regularFor(date);
+    var name = (biz && biz.name) || "Furry Paw Vet Clinic";
+    var kind = current ? current.kind : null, hrs = null, finished = false, isDone = false;
+    if (current) {
+      hrs = (applied && appliedFor === current.id ? applied : null) || (current.kind === "closed" ? [] : current.proposed);
+      isDone = current.status === "approved" || current.status === "edited" || current.status === "applied";
+      finished = isDone || current.status === "declined";
+    } else {
+      hrs = lastYearFor(date);
+    }
+    var oldV = reg ? spanEn(reg) : "–", newEl = $("ba-new"), oldEl = $("ba-old");
+    $("ba-old-v").textContent = oldV; oldEl.className = "ba-old" + (isDone ? " struck" : ""); oldEl.hidden = kind === "no_change";
+    var en, fi, nv;
+    if (kind === "no_change") {
+      nv = "no change"; en = name + " keeps its regular hours on " + di.en + ". Nothing to change.";
+      fi = caps(di.fi) + " " + name + " noudattaa tavallisia aukioloaikoja. Ei muutosta.";
+    } else if (hrs) {
+      nv = hrs.length ? span(hrs) : "closed";
+      var verbEn = hrs.length ? "open " + span(hrs) : "closed", verbFi = hrs.length ? "auki klo " + span(hrs) : "suljettu";
+      if (isDone) {
+        en = name + " is " + verbEn + " on " + di.en + ". Saved to Connect, owner approved.";
+        fi = caps(di.fi) + " " + name + " on " + verbFi + ". Tallennettu Connectiin, omistaja hyväksyi.";
+      } else {
+        en = name + " is " + (current ? "" : "likely ") + verbEn + " on " + di.en + ". Google still says " + oldV + ".";
+        fi = caps(di.fi) + " " + name + " on " + (current ? "" : "todennäköisesti ") + verbFi + ". Google näyttää yhä " + (reg && reg.length ? span(reg) : "suljettu") + ".";
+      }
+    } else {
+      nv = "ready"; en = "Run the chain to see what Kaiku proposes for " + di.en + " (" + di.d + ")."; fi = "Käynnistä ketju: Kaiku ehdottaa aukioloajat " + di.fi + " (" + di.d + ").";
+    }
+    var nb = function (t) { return t.replace(/(\d)-(\d)/g, "$1\u2060-\u2060$2"); };
+    $("headline").textContent = nb(en); $("fi-line").textContent = nb(fi);
+    $("ba-new-v").textContent = nv; newEl.className = "ba-new" + (current ? " live" : " idle");
+    var du = current && current.decide_url, row = $("decide-row");
+    row.hidden = !(du && !finished); if (du) $("decide-go").href = du;
+  }
+  function setCap(t) { $("big-cap").textContent = t; }
 
   var current = null;   // latest suggestion
   var seenSteps = {};
@@ -60,18 +120,17 @@
     $("sentence").textContent = s.message_fi || "";
     $("gloss").textContent = s.message_en || "";
     var pct = Math.round(s.confidence * 100);
+    paint();
     if (finished) {
-      setBig("5/5<small>steps</small>", pct + " % CONFIDENCE");
-      var n = stepsDone();
-      if (n >= 6) setBig(pct + "<small>%</small>", "CONFIDENCE, 6/6 STEPS");
+      setCap(pct + " % sure \u00b7 " + pct + " % varma");
       arc.running = false; arc.target = s.confidence;
     } else {
-      setBig(pct + "<small>%</small>", "CONFIDENCE, " + stepsDone() + "/6 STEPS");
+      setCap(pct + " % sure \u00b7 " + stepsDone() + "/6 steps");
     }
   }
   function resetRun() {
-    seenSteps = {}; current = null; rows.innerHTML = ""; $("rows-empty").hidden = false;
-    setBig("&hellip;", "SCANNING, 0/6 STEPS");
+    seenSteps = {}; current = null; applied = null; rows.innerHTML = ""; $("rows-empty").hidden = false;
+    paint(); setCap("Scanning \u00b7 0/6 steps");
     $("sentence").textContent = "Kaiku tarkistaa aukioloajat."; $("gloss").textContent = "Kaiku is checking the opening hours.";
   }
   function setRunning(on) {
@@ -96,24 +155,27 @@
     return h;
   }
   function addEvent(e, live) {
-    if (live && e.step === "detect" && !arc.running) { setRunning(true); }
+    if (live && !arc.running && (e.step === "detect" || (e.step === "broker" && e.detail && e.detail.kind === "missing"))) { setRunning(true); }
     $("rows-empty").hidden = true;
     var err = e.detail && e.detail.error;
     markDone();
     var li = document.createElement("li");
     li.className = "row" + (err ? " err" : "") + (live && !err && e.step !== "learn" ? " cur" : "");
     li.setAttribute("data-step", e.step);
-    li.innerHTML = '<span class="dot"></span><span class="lab">' + (LABEL[e.step] || e.step) + '</span><span class="ttl">' + esc(e.title_fi) +
-      '<small>' + esc(e.title_en) + '</small>' + extra(e) + '</span><time>' + hhmmss(e.ts) + '</time>';
+    li.innerHTML = '<span class="dot"></span><span class="lab">' + (LABEL[e.step] || e.step) + '</span><span class="ttl">' + esc(e.title_en) +
+      '<small lang="fi">' + esc(e.title_fi) + '</small>' + extra(e) + '</span><time>' + hhmmss(e.ts) + '</time>';
     rows.appendChild(li);
-    rows.scrollTop = rows.scrollHeight;
+    if (e.step === "apply" && e.detail && e.detail.hours) { applied = e.detail.hours === "closed" ? [] : e.detail.hours; appliedFor = e.suggestion_id; if (current) paint(); }
     if (!live) return;
     seenSteps[e.step] = true;
     if (e.suggestion_id && (e.step === "suggest")) {
       jget("/api/suggestions/" + e.suggestion_id).then(function (s) { showSuggestion(s, false); }).catch(function () {});
     }
-    if (e.step === "decide" && e.detail && e.detail.phase === "waiting") { delete seenSteps.decide; }
-    if (arc.running) $("big-cap").textContent = (current ? Math.round(current.confidence * 100) + " % CONFIDENCE, " : "") + stepsDone() + "/6 STEPS";
+    if (e.step === "decide" && e.detail && e.detail.phase === "waiting") { delete seenSteps.decide; $("run").textContent = "Waiting for the owner"; }
+    if (e.step === "apply" || (e.step === "decide" && e.detail && e.detail.phase === "decided")) {
+      if (e.suggestion_id) jget("/api/suggestions/" + e.suggestion_id).then(function (s) { showSuggestion(s, !arc.running); }).catch(function () {});
+    }
+    if (arc.running) setCap((current ? Math.round(current.confidence * 100) + " % sure \u00b7 " : "") + stepsDone() + "/6 steps");
     if (err || e.step === "learn") {
       setRunning(false);
       if (e.suggestion_id) jget("/api/suggestions/" + e.suggestion_id).then(function (s) { showSuggestion(s, !err); }).catch(function () {});
@@ -132,6 +194,10 @@
   $("conn").innerHTML = "<i></i><span>connecting</span>";
 
   /* ---------- run ---------- */
+  $("date").addEventListener("change", function () { if (!arc.running) { current = null; applied = null; paint(); setCap("Ready"); arc.target = 0; } });
+  $("st-toggle").addEventListener("click", function () {
+    var o = $("statusbar").classList.toggle("open"); $("st-toggle").setAttribute("aria-expanded", o ? "true" : "false");
+  });
   $("run").addEventListener("click", function () {
     var date = $("date").value;
     setRunning(true);
@@ -172,7 +238,11 @@
   $("rows-empty").hidden = false;
   jget("/api/business/furry-paw").then(renderBusiness).catch(function () {});
   jget("/api/suggestions?business=furry-paw&limit=1").then(function (l) {
-    if (l.length) { seenSteps = { detect: 1, suggest: 1, contact: 1, decide: 1, apply: 1, learn: 1 }; showSuggestion(l[0], l[0].status === "applied" || l[0].status === "declined"); }
+    if (l.length) {
+      var fin = ["applied", "declined", "expired"].indexOf(l[0].status) >= 0;
+      seenSteps = fin ? { detect: 1, suggest: 1, contact: 1, decide: 1, apply: 1, learn: 1 } : { detect: 1, suggest: 1, contact: 1 };
+      showSuggestion(l[0], l[0].status === "applied" || l[0].status === "declined");
+    }
   }).catch(function () {});
   place(0);
   arc.raf = requestAnimationFrame(loop);

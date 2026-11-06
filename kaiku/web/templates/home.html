@@ -3,11 +3,14 @@
 {% block content %}
 <div class="home">
   <div class="statusbar mono" id="statusbar" data-pilot="status" aria-live="polite">
+    <button type="button" class="st-toggle" id="st-toggle" aria-expanded="false" aria-controls="statusbar" aria-label="Tila / Status info" title="Tila / Status info">i</button>
     <span class="chip" id="st-broker" title="FIWARE NGSI-LD context broker: Orion-LD (live) or the in-memory fallback">BROKER: <b>...</b></span>
     <span class="chip" id="st-wa" title="WhatsApp: not in use yet means the decision link is shown instead of a message">WhatsApp: <b>...</b></span>
     <span class="chip" id="st-yext" title="Yext sandbox entity that receives the holiday hours">YEXT: <b>SinceAI07</b></span>
   </div>
   <section class="hero glass" data-pilot="hero" id="hero" aria-live="polite">
+    <h1 class="headline" id="headline">Furry Paw Vet Clinic: checking Christmas Eve.</h1>
+    <p class="fi-line" id="fi-line" lang="fi">Tarkistetaan jouluaaton aukioloajat.</p>
     <div class="arc-wrap">
       <svg class="arc" viewBox="0 0 440 250" role="img" aria-label="Chain progress arc">
         <defs>
@@ -20,12 +23,11 @@
         <circle id="dot" r="6.5" fill="#fff" cx="30" cy="230"/>
       </svg>
       <div class="figure">
-        <div class="big" id="big">&ndash;</div>
+        <div class="ba-old" id="ba-old" title="Regular hours as Connect publishes them today (not checked live on Google)"><span class="mono">Google</span> <s id="ba-old-v">&ndash;</s></div>
+        <div class="ba-new" id="ba-new"><span class="mono">Kaiku</span> <b id="ba-new-v">&ndash;</b></div>
         <div class="mono cap" id="big-cap">READY</div>
       </div>
     </div>
-    <p class="sentence" id="sentence" lang="fi">Käynnistä ketju, niin näet ehdotuksen.</p>
-    <p class="gloss" id="gloss" lang="en">Run the chain to see a suggestion.</p>
     <div class="actions">
       <label class="pick"><span class="mono">HOLIDAY</span>
         <select id="date" aria-label="Holiday date">
@@ -35,6 +37,13 @@
       </label>
       <button class="primary" id="run" data-pilot="run-chain" type="button">Run the chain</button>
     </div>
+    <div class="decide-row" id="decide-row" hidden>
+      <a class="primary link" id="decide-go" href="#" target="_blank" rel="noopener" data-pilot="decide-link">Avaa omistajan päätös <small>Open the owner's decision</small></a>
+    </div>
+    <details class="msg"><summary class="mono">Viesti omistajalle <span>Message to the owner</span></summary>
+      <p class="sentence" id="sentence" lang="fi">Käynnistä ketju, niin näet viestin.</p>
+      <p class="gloss" id="gloss" lang="en">Run the chain to see the message.</p>
+    </details>
   </section>
 
   <section class="strip glass" data-pilot="event-strip" id="strip" aria-label="Live events">

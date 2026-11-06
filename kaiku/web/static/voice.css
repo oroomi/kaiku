@@ -47,3 +47,10 @@ body{padding-bottom:calc(110px + env(safe-area-inset-bottom))}
 @media (max-width:560px){.nav{order:3;width:100%;margin:0;justify-content:flex-start}.nav a{padding:8px 12px}}
 .kv-cap .kv-ai{margin-top:14px}
 @media (min-width:900px){.kv-cap{align-self:flex-end;width:min(520px,100%)}}
+
+/* orb space: content never sits under the dock (orb 64 px + 16 px gutter + 8 px) */
+:root{--orb-space:calc(88px + env(safe-area-inset-bottom))}
+main{padding-bottom:calc(var(--orb-space) + 24px)}
+.is-embed .top{display:none}
+@media (max-width:700px){.kv{padding:0 12px calc(12px + env(safe-area-inset-bottom))}.kv-dock{gap:8px}}
+.kv-hint{background:rgba(9,14,18,.72);padding:5px 10px;border-radius:99px;border:1px solid rgba(255,255,255,.1)}

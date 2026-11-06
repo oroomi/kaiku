@@ -59,10 +59,10 @@ button.primary[disabled]{opacity:.55;cursor:progress}
 .row.err .dot{background:var(--red)}
 .row .lab{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--ink2);padding-top:3px}
 .row.cur .lab{color:var(--cyan)}
-.row .ttl{font-size:14.5px;line-height:1.35}
-.row .ttl small{display:block;color:var(--ink3);font-size:12.5px;margin-top:2px}
+.row .ttl{font-size:15px;line-height:1.35}
+.row .ttl small{display:block;color:var(--ink2);font-size:14px;margin-top:2px}
 .row time{font-family:var(--mono);font-size:11px;color:var(--ink3);padding-top:3px}
-.empty{color:var(--ink3);font-size:13.5px;margin:6px 0 2px}
+.empty{color:var(--ink3);font-size:14px;margin:6px 0 2px}
 @keyframes in{from{opacity:0;transform:translateY(6px)}}
 @keyframes pulse{70%{box-shadow:0 0 0 9px rgba(143,211,232,0)}100%{box-shadow:0 0 0 0 rgba(143,211,232,0)}}
 
@@ -81,8 +81,8 @@ button.primary[disabled]{opacity:.55;cursor:progress}
   main{padding-top:24px}
   .home{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);grid-template-areas:"hero strip" "card strip";align-items:start;gap:18px}
   .hero{grid-area:hero;padding:30px 28px 28px}
-  .strip{grid-area:strip;position:sticky;top:16px}
-  .rows{max-height:640px}
+  .strip{grid-area:strip}
+  .rows{max-height:none}
   .card{grid-area:card}
   .sentence{font-size:38px}
   .g1{width:640px;height:640px}
@@ -100,3 +100,51 @@ button.primary[disabled]{opacity:.55;cursor:progress}
 .soft{color:var(--ink3);font-size:11px}
 .row .ttl a{color:var(--cyan);word-break:break-all}
 @media (min-width:900px){.statusbar{grid-column:1/-1}.foot{grid-column:1/-1}}
+
+/* ---- home first screen: plain English headline, Finnish gloss, before/after, action above the fold ---- */
+.hero{padding:16px 16px 18px}
+.headline{font:300 clamp(25px,6.6vw,34px)/1.16 var(--serif);margin:4px auto 0;max-width:24ch;letter-spacing:-.005em;text-wrap:balance}
+.fi-line{margin:8px auto 0;color:var(--ink2);font:400 14.5px/1.4 var(--sans);max-width:44ch}
+.arc-wrap{max-width:290px;margin:10px auto 0}
+.figure{bottom:0}
+.ba-old{font:400 15px/1.2 var(--sans);color:var(--ink2);display:flex;gap:8px;align-items:baseline}
+.ba-old .mono{font-size:10px;color:var(--ink3)}
+.ba-old s{text-decoration:none;color:var(--ink2)}
+.ba-old.struck s{text-decoration:line-through;text-decoration-thickness:1.5px;text-decoration-color:var(--red);color:var(--ink3)}
+.ba-new{display:flex;gap:8px;align-items:baseline;margin-top:2px}
+.ba-new .mono{font-size:10px;color:var(--cyan)}
+.ba-new b{font:300 clamp(32px,10vw,44px)/1.05 var(--sans);letter-spacing:-.02em}
+.ba-new.idle b{color:var(--ink3);font-size:26px}
+.figure .cap{font-size:10px;margin-top:4px}
+.actions{margin-top:14px}
+.decide-row{margin-top:10px;display:flex;justify-content:center}
+a.primary.link{display:inline-flex;align-items:center;gap:8px;text-decoration:none;background:var(--cyan);color:#06222c;border-radius:14px;padding:0 22px;min-height:46px;font:500 15px var(--sans);box-shadow:0 0 28px rgba(143,211,232,.35)}
+a.primary.link small{font:400 12px var(--sans);opacity:.7}
+.msg{margin:12px auto 0;max-width:46ch;text-align:left;color:var(--ink3)}
+.msg summary{cursor:pointer;color:var(--ink3);font-size:10px;list-style:none;text-align:center}
+.msg summary span{text-transform:none;letter-spacing:.02em}
+.msg .sentence{font:300 17px/1.35 var(--serif);margin:8px 0 0;max-width:none;color:var(--ink)}
+.msg .gloss{font-size:13px;margin:6px 0 0;max-width:none}
+.st-toggle{display:none;width:30px;height:30px;border-radius:50%;border:1px solid var(--edge);background:var(--glass2);color:var(--ink2);font:500 13px var(--mono);cursor:pointer;padding:0}
+@media (min-width:900px){
+  .hero{padding:26px 28px 24px}
+  .headline{font-size:36px;max-width:26ch}
+  .arc-wrap{max-width:360px}
+  .sentence{font-size:inherit}
+  .msg .sentence{font-size:18px}
+}
+@media (max-width:700px){
+  .home{gap:12px}
+  .statusbar{gap:6px;align-items:center}
+  .st-toggle{display:inline-grid;place-items:center}
+  .statusbar .chip{display:none}
+  .statusbar.open .chip{display:inline-block}
+  main{padding-top:6px}
+  .hero{padding:14px 14px 16px}
+  .rows{max-height:none}
+  .row{grid-template-columns:12px 64px 1fr;gap:8px}
+  .row time{display:none}
+}
+[hidden]{display:none!important}
+a.primary.link{flex-direction:column;gap:0;padding:7px 22px;justify-content:center;text-align:center;line-height:1.25}
+@media (min-width:900px){.ba-new b{font-size:56px}.ba-old{font-size:17px}}

@@ -55,3 +55,11 @@ button.ghost{background:transparent;border:1px solid var(--edge);color:var(--ink
 }
 .maplibregl-ctrl-top-right{top:44px}
 @media (max-width:700px){.maplibregl-ctrl-top-right{display:none}.clock{display:none}}
+/* orb space: tray and panel stay clear of the voice dock and the wrapped nav */
+.tray{bottom:calc(var(--orb-space) + 4px);max-height:calc(100vh - var(--orb-space) - 90px)}
+@media (max-width:700px){
+  .panel{top:96px}
+  .tray{bottom:var(--orb-space);max-height:34vh}
+  .top{background:linear-gradient(180deg,rgba(9,11,13,.7),rgba(9,11,13,0))}
+}
+@media (max-width:700px){.maplibregl-ctrl-bottom-left{max-width:calc(100vw - 150px)}.maplibregl-ctrl-attrib{max-width:100%}}
