@@ -15,6 +15,7 @@ SUG = {"id": "sg1", "business_id": "SinceAI07", "business_name": "Furry Paw Vet 
        "holiday_name_fi": "Jouluaatto", "holiday_name_en": "Christmas Eve", "kind": "hours",
        "proposed": [{"start": "09:00", "end": "13:00"}], "last_year_hours": [{"start": "09:00", "end": "13:00"}],
        "google_now": [{"start": "09:00", "end": "17:00"}], "channel_log": []}
+SUG_FI = dict(SUG, owner_language="fi")
 PHONE = "358401234567"
 
 
@@ -49,13 +50,13 @@ def client(fake):
 
 # ---------------------------------------------------------------- messages
 
-ENGINE = {**SUG, "message_fi": "Hei Furry Paw Vet Clinic! Jouluaatto on torstaina 24.12. Viime vuonna olitte auki 9-13. Ehdotus: to 24.12. klo 9-13.",
+ENGINE = {**SUG_FI, "message_fi": "Hei Furry Paw Vet Clinic! Jouluaatto on torstaina 24.12. Viime vuonna olitte auki 9-13. Ehdotus: to 24.12. klo 9-13.",
           "message_en": "Hi Furry Paw Vet Clinic! Christmas Eve is on Thursday 24.12. Last year you were open 09:00-13:00. We suggest: Thu 24.12. 09:00-13:00.",
           "decide_url": None}
 
 
 def test_suggestion_snapshot_fallback():
-    assert M.suggestion_text(SUG) == (
+    assert M.suggestion_text(SUG_FI) == (
         "Hei, Furry Paw Vet Clinic!\n\n"
         "Jouluaatto on torstaina 24.12.\n"
         "Viime vuonna aukioloaikanne tuona päivänä oli 9-13.\n"
@@ -78,17 +79,17 @@ def test_engine_message_used_verbatim_and_url_line():
 
 def test_fallback_never_claims_missing_facts():
     bare = {"id": "s", "kind": "hours", "holiday_date": "2026-12-24", "proposed": [{"start": "09:00", "end": "13:00"}]}
-    t = M.suggestion_text(bare)
+    t = M.suggestion_text(dict(bare, owner_language="fi"))
     assert "Viime vuonna" not in t and "Googlessa" not in t and "Hakukoneissa" not in t and "Pyhäpäivä" not in t
     assert "24.12." in t
-    assert "Viime vuonna" not in M.suggestion_text(dict(SUG, last_year_hours=None))
+    assert "Viime vuonna" not in M.suggestion_text(dict(SUG_FI, last_year_hours=None))
 
 
 def test_register_is_polite_plural():
-    ask = dict(SUG, kind="ask", proposed=None)
-    closed = dict(SUG, kind="closed", proposed=None)
-    for t in (M.suggestion_text(SUG), M.suggestion_text(closed), M.ask_text(ask), M.edit_prompt_text(),
-              M.decline_thanks_text(), M.unknown_reply_text()):
+    ask = dict(SUG_FI, kind="ask", proposed=None)
+    closed = dict(SUG_FI, kind="closed", proposed=None)
+    for t in (M.suggestion_text(SUG_FI), M.suggestion_text(closed), M.ask_text(ask), M.edit_prompt_text("fi"),
+              M.decline_thanks_text("fi"), M.unknown_reply_text("fi")):
         for bad in (" sinun", " sinä", "Voit ", "olet ", "Kirjoita ", "Kerro "):
             assert bad not in t, (bad, t)
 
@@ -96,20 +97,20 @@ def test_register_is_polite_plural():
 def test_receipt_snapshot():
     r = {"holiday_name_fi": "Jouluaatto", "hours": [{"start": "09:00", "end": "13:00"}],
          "publishers": ["Google", "Apple Maps"]}
-    assert M.receipt_text(r) == ("Kiitos! Jouluaaton aukioloajat 9-13 on nyt tallennettu. "
+    assert M.receipt_text(dict(r, owner_language="fi")) == ("Kiitos! Jouluaaton aukioloajat 9-13 on nyt tallennettu. "
                                  "Ne näkyvät Googlessa, Apple Mapsissa ja Fonectan palveluissa.")
-    c = M.receipt_text({"holiday_name_fi": "Joulupäivä", "hours": "closed", "publishers": ["Google"]})
+    c = M.receipt_text({"holiday_name_fi": "Joulupäivä", "hours": "closed", "publishers": ["Google"], "owner_language": "fi"})
     assert "Se näkyy" in c and "Ne näkyvät" not in c
 
 
 def test_other_messages_and_no_em_dash():
-    ask = dict(SUG, kind="ask", proposed=None)
-    nc = dict(SUG, kind="no_change")
-    closed = dict(SUG, kind="closed", proposed=None)
+    ask = dict(SUG_FI, kind="ask", proposed=None)
+    nc = dict(SUG_FI, kind="no_change")
+    closed = dict(SUG_FI, kind="closed", proposed=None)
     assert "esimerkiksi \"9-13\"" in M.ask_text(ask)
     assert "Mitään ei tarvitse tehdä" in M.no_change_text(nc)
     assert "olette suljettuna." in M.suggestion_text(closed) and "olette suljettu." not in M.suggestion_text(closed)
-    for t in (M.edit_prompt_text(), M.decline_thanks_text(), M.unknown_reply_text(), M.suggestion_text_en(SUG),
+    for t in (M.edit_prompt_text("fi"), M.decline_thanks_text("fi"), M.unknown_reply_text("fi"), M.suggestion_text_en(SUG),
               M.ask_text_en(ask), M.no_change_text_en(nc), M.receipt_text_en({"hours": "closed"})):
         assert "\u2014" not in t and "\u2013" not in t
     assert M.essive("Loppiainen") == "loppiaisena" and M.essive("Isänpäivä") == "isänpäivänä"
@@ -118,7 +119,66 @@ def test_other_messages_and_no_em_dash():
 
 def test_final_messages_export(tmp_path):
     md = M.all_final_messages(tmp_path / "f.md")
-    assert (tmp_path / "f.md").exists() and "Kiitos! Jouluaaton aukioloajat 9-13" in md and "olette suljettu." not in md and "Pyhäpäivä" not in md and "\u2014" not in md
+    assert (tmp_path / "f.md").exists() and "Kiitos! Jouluaaton aukioloajat 9-13" in md and "Done. Christmas Eve" in md and "olette suljettu." not in md and "Pyhäpäivä" not in md and "\u2014" not in md
+
+
+# ---------------------------------------------------------------- English (the default)
+
+def test_owner_lang_default_and_fi():
+    assert M.owner_lang(None) == "en" and M.owner_lang({}) == "en" and M.owner_lang(SUG) == "en"
+    assert M.owner_lang({"owner_language": "fi"}) == "fi" and M.owner_lang({"business": {"owner_language": "fi"}}) == "fi"
+    assert M.owner_lang({"owner_language": "xx"}) == "en"
+
+
+def test_english_messages_default():
+    t = M.suggestion_text(SUG)
+    assert t.startswith("Hi, Furry Paw Vet Clinic!") and "Christmas Eve falls on Thursday 24.12." in t
+    assert "your hours are 9 to 13" in t or "9 to 13" in t
+    ask = dict(SUG, kind="ask", proposed=None)
+    assert "Reply to this message" in M.ask_text(ask) and "9-13" in M.ask_text(ask)
+    assert "regular hours apply" in M.no_change_text(dict(SUG, kind="no_change"))
+    assert M.edit_prompt_text() == "Reply with the new hours, like 9-13, or 'closed'."
+    assert M.receipt_text({"holiday_name_en": "Christmas Eve", "holiday_date": "2026-12-24", "hours": [{"start": "09:00", "end": "13:00"}]}) == (
+        "Done. Christmas Eve 24.12. hours 9-13 are saved and will show on Google, Fonecta Finder, 020202 and the other channels Connect publishes to.")
+    assert M.receipt_text({"holiday_name_en": "Christmas Day", "hours": "closed"}).startswith("Done. Christmas Day closure is saved")
+    for fn in (M.decline_thanks_text, M.unknown_reply_text, M.unknown_suggestion_text):
+        out = fn()
+        assert "ä" not in out and "\u2014" not in out
+    assert M.button_titles(SUG) == [("approve", "Approve"), ("edit", "Edit"), ("decline", "No thanks")]
+    assert M.button_titles(SUG_FI)[0] == ("approve", "Hyväksy")
+
+
+@pytest.mark.parametrize("text,expected", [
+    ("yes", {"action": "approve"}), ("Approve", {"action": "approve"}), ("ok", {"action": "approve"}),
+    ("Sure!", {"action": "approve"}), ("yeah", {"action": "approve"}),
+    ("no", {"action": "decline"}), ("No thanks", {"action": "decline"}), ("decline", {"action": "decline"}),
+    ("closed", {"action": "edit", "edited": "closed"}), ("We're closed", {"action": "edit", "edited": "closed"}),
+    ("9-13", {"action": "edit", "edited": [{"start": "09:00", "end": "13:00"}]}),
+    ("9am-1pm", {"action": "edit", "edited": [{"start": "09:00", "end": "13:00"}]}),
+    ("9 am - 1 pm", {"action": "edit", "edited": [{"start": "09:00", "end": "13:00"}]}),
+    ("10:30 to 14", {"action": "edit", "edited": [{"start": "10:30", "end": "14:00"}]}),
+    ("nine to one", {"action": "edit", "edited": [{"start": "09:00", "end": "13:00"}]}),
+    ("13-9", None), ("maybe later", None),
+])
+def test_free_text_english(text, expected):
+    assert R.parse_free_text(text) == expected
+
+
+def test_english_webhook_flow_replies_in_english():
+    f = Fake()
+    R.register_sent(PHONE, "sg1", "wamid.CTX", None, "en")
+    run(R.handle_payload(button_payload("edit"), client(f)))
+    r = run(R.handle_payload(text_payload("sorry what"), client(f)))
+    assert r["decisions"] == [] and any("Sorry, I did not understand" in str(c[3]) for c in f.calls)
+    r = run(R.handle_payload(text_payload("9am-1pm", mid="wamid.IN9"), client(f)))
+    assert r["decisions"][0]["edited"] == [{"start": "09:00", "end": "13:00"}]
+
+
+def test_finnish_owner_still_gets_finnish_replies():
+    f = Fake()
+    R.register_sent(PHONE, "sg1", "wamid.CTX", None, "fi")
+    run(R.handle_payload(button_payload("edit"), client(f)))
+    assert any("Kirjoittakaa uusi aukioloaika" in str(c[3]) for c in f.calls)
 
 
 # ---------------------------------------------------------------- payloads and errors
@@ -127,7 +187,8 @@ def test_button_payload():
     p = W.WhatsAppClient.buttons_payload("+358 40 123 4567", "body")
     assert p["to"] == "358401234567" and p["type"] == "interactive"
     btns = p["interactive"]["action"]["buttons"]
-    assert [b["reply"]["title"] for b in btns] == ["Hyväksy", "Muokkaa", "Ei kiitos"]
+    assert [b["reply"]["title"] for b in btns] == ["Approve", "Edit", "No thanks"]
+    assert [t for _, t in W.FI_BUTTONS] == ["Hyväksy", "Muokkaa", "Ei kiitos"]
     assert all(len(b["reply"]["title"]) <= 20 for b in btns)
     with pytest.raises(ValueError):
         W.WhatsAppClient.buttons_payload(PHONE, "b", [("a", "x")] * 4)
@@ -242,7 +303,7 @@ def test_button_unknown_suggestion_replies_no_decision(monkeypatch):
     f = Fake()
     res = run(R.handle_payload(button_payload("approve:nonexistent"), client(f)))
     assert res["decisions"] == [] and got == [] and res["unknown"] == ["nonexistent"]
-    assert any("En löytänyt ehdotusta, johon tämä vastaus liittyy." in str(c[3]) for c in f.calls)
+    assert any("I could not find the suggestion this reply belongs to." in str(c[3]) for c in f.calls)
     assert not R.is_decided("nonexistent")
 
 
@@ -251,7 +312,7 @@ def test_edit_flow_then_free_text():
     R.register_sent(PHONE, "sg1", "wamid.CTX")
     r1 = run(R.handle_payload(button_payload("edit"), client(f)))
     assert r1["decisions"] == [] and r1["edit_requested"] == ["sg1"]
-    assert any("Kirjoittakaa uusi aukioloaika" in str(c[3]) for c in f.calls)
+    assert any("Reply with the new hours, like 9-13, or 'closed'." in str(c[3]) for c in f.calls)
     r2 = run(R.handle_payload(text_payload("klo 10-15"), client(f)))
     assert r2["decisions"][0]["action"] == "edit" and r2["decisions"][0]["edited"] == [{"start": "10:00", "end": "15:00"}]
 
@@ -272,7 +333,7 @@ def test_text_closed_and_decline_sends_thanks():
     R.register_sent(PHONE, "sg2", "wamid.C2")
     r = run(R.handle_payload(text_payload("ei", mid="wamid.IN3"), client(f)))
     assert r["decisions"][0]["action"] == "decline"
-    assert any("Kiitos vastauksesta" in str(c[3]) for c in f.calls)
+    assert any("Thanks for replying" in str(c[3]) for c in f.calls)
 
 
 def test_status_callback_no_decision():
@@ -389,12 +450,32 @@ def test_ladder_template_switch(monkeypatch):
     monkeypatch.setenv("KAIKU_ENV", "/nonexistent/.env")
     monkeypatch.setenv("WA_TEMPLATE_NAME", "kaiku_hours_fi")
     f = Fake([(200, {"messages": [{"id": "wamid.T"}]})])
-    s = L.contact(dict(SUG, id="sgt", channel_log=[]), client=client(f), escalate_s=10**6)
+    s = L.contact(dict(SUG_FI, id="sgt", channel_log=[]), client=client(f), escalate_s=10**6)
     p = f.calls[0][3]
     assert p["type"] == "template" and p["template"]["name"] == "kaiku_hours_fi"
     assert p["template"]["components"][0]["parameters"][1]["text"] == "24.12."
     assert p["template"]["components"][1]["parameters"][0]["payload"] == "approve:sgt"
     assert s["status"] == "sent" and len(f.calls) == 1
+
+
+def test_ladder_english_ignores_finnish_template(monkeypatch):
+    monkeypatch.setenv("KAIKU_ENV", "/nonexistent/.env")
+    monkeypatch.setenv("WA_TEMPLATE_NAME", "kaiku_hours_fi")
+    monkeypatch.delenv("WA_TEMPLATE_NAME_EN", raising=False)
+    f = Fake([(200, {"messages": [{"id": "wamid.E"}]})])
+    L.contact(dict(SUG, id="sge", channel_log=[]), client=client(f), escalate_s=10**6)
+    p = f.calls[0][3]
+    assert p["type"] == "interactive"
+    assert [b["reply"]["title"] for b in p["interactive"]["action"]["buttons"]] == ["Approve", "Edit", "No thanks"]
+    assert [b["reply"]["id"] for b in p["interactive"]["action"]["buttons"]] == ["approve:sge", "edit:sge", "decline:sge"]
+    assert p["interactive"]["body"]["text"].startswith("Hi, Furry Paw Vet Clinic!")
+    monkeypatch.setenv("WA_TEMPLATE_NAME_EN", "kaiku_hours_en")
+    f2 = Fake([(200, {"messages": [{"id": "wamid.E2"}]})])
+    L.contact(dict(SUG, id="sge2", channel_log=[], reasons=[{"text_en": "Last Christmas Eve you were open 9-13."}]), client=client(f2), escalate_s=10**6)
+    tp = f2.calls[0][3]["template"]
+    assert tp["name"] == "kaiku_hours_en" and tp["language"]["code"] == "en"
+    assert [x["text"] for x in tp["components"][0]["parameters"]] == [
+        "Furry Paw Vet Clinic", "24.12.", "9-13", "Last Christmas Eve you were open 9-13"]
 
 
 def test_ladder_default_stays_interactive(monkeypatch):

@@ -1,4 +1,5 @@
-"""Contact ladder: step 1 WhatsApp (buttons), step 2 a phone call by Kaiku if no decision. No email, ever."""
+"""Contact ladder: step 1 WhatsApp (buttons), step 2 a phone call by Kaiku if no decision. No email, ever.
+Language per owner (owner_language): English by default, Finnish when "fi"."""
 from __future__ import annotations
 
 import os
@@ -35,35 +36,43 @@ def owner_phone(s: dict) -> str:
 
 
 def buttons_for(s: dict):
+    fi = M.owner_lang(s) == "fi"
     if s.get("kind") == "ask":
-        return [("edit", "Kerron aikani"), ("decline", "Ei kiitos")]
+        return [("edit", "Kerron aikani"), ("decline", "Ei kiitos")] if fi else [("edit", "Tell my hours"), ("decline", "No thanks")]
     if s.get("kind") == "no_change":
         return None  # informational only
-    return [(f"{a}:{s['id']}", t) for a, t in W.DEFAULT_BUTTONS]
+    return [(f"{a}:{s['id']}", t) for a, t in W.buttons_for_lang(M.owner_lang(s))]
 
 
 def body_for(s: dict) -> str:
     return M.suggestion_text(s)
 
 
-def template_name() -> str:
-    """WA_TEMPLATE_NAME (e.g. kaiku_hours_fi) switches step 1 to the approved template. Unset = interactive buttons."""
+def template_name(lang: str = "fi") -> str:
+    """WA_TEMPLATE_NAME (e.g. kaiku_hours_fi) switches step 1 to the approved template. Unset = interactive buttons.
+    Finnish owners use WA_TEMPLATE_NAME; English owners only use a template when WA_TEMPLATE_NAME_EN (an approved
+    English template with the same parameters) is set, otherwise the English interactive buttons go out."""
     W.load_env()
+    if lang == "en":
+        return (os.environ.get("WA_TEMPLATE_NAME_EN") or "").strip()
     return (os.environ.get("WA_TEMPLATE_NAME") or "").strip()
 
 
 
 def _template_reason(s: dict) -> str:
-    """Template param {{4}} (Peruste): the first reason in Finnish, else the holiday name."""
+    """Template param {{4}} (Peruste): the first reason in the owner's language, else the holiday name."""
+    en = M.owner_lang(s) == "en"
     for r in s.get("reasons") or []:
-        t = (r or {}).get("text_fi") or ""
+        t = (r or {}).get("text_en" if en else "text_fi") or ""
         if t.strip():
             return t.strip().rstrip(".")[:200]
-    return M.holiday_name(s).lower()
+    return (s.get("holiday_name_en") or "that day") if en else M.holiday_name(s).lower()
 
 def _send_hours_template(client: W.WhatsAppClient, phone: str, s: dict, name: str) -> dict:
-    return client.send_template_hours(phone, M.business_name(s), M.fi_date(s["holiday_date"]), M.fi_hours(s.get("proposed")),
-                                      _template_reason(s), s["id"], name)
+    lang = M.owner_lang(s)
+    hrs = M.en_hours(s.get("proposed")).replace(" to ", "-") if lang == "en" else M.fi_hours(s.get("proposed"))
+    return client.send_template_hours(phone, M.business_name(s), M.fi_date(s["holiday_date"]), hrs,
+                                      _template_reason(s), s["id"], name, lang)
 
 
 def _log(s: dict, channel: str, detail: str) -> None:
@@ -87,12 +96,12 @@ def contact(suggestion: dict, client: W.WhatsAppClient | None = None, escalate_s
         return s
     body = body_for(s)
     btns = buttons_for(s)
-    R.register_sent(phone, s["id"], None, s.get("business_id"))
+    R.register_sent(phone, s["id"], None, s.get("business_id"), M.owner_lang(s))
 
     if btns is None:
         r = client.send_text(phone, body)
-    elif template_name() and s.get("kind") not in ("ask", "no_change"):
-        r = _send_hours_template(client, phone, s, template_name())  # works outside the 24 h window too
+    elif template_name(M.owner_lang(s)) and s.get("kind") not in ("ask", "no_change"):
+        r = _send_hours_template(client, phone, s, template_name(M.owner_lang(s)))  # works outside the 24 h window too
     else:
         r = client.send_buttons(phone, body, btns)
         if r.get("needs_template"):
@@ -100,7 +109,7 @@ def contact(suggestion: dict, client: W.WhatsAppClient | None = None, escalate_s
             R.set_pending_buttons(phone, s["id"], body, btns)
             r = client.send_template(phone)
     if r.get("ok"):
-        R.register_sent(phone, s["id"], r.get("message_id"), s.get("business_id"))
+        R.register_sent(phone, s["id"], r.get("message_id"), s.get("business_id"), M.owner_lang(s))
         s["status"] = "sent"
         _log(s, "whatsapp", f"sent {s.get('kind')} message {r.get('message_id')}")
         if btns is not None:

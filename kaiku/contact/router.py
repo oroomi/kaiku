@@ -56,7 +56,7 @@ def _load() -> dict:
         d = json.loads(_ctx_path().read_text(encoding="utf-8"))
     except (OSError, ValueError):
         d = {}
-    for k in ("messages", "latest", "awaiting_edit", "pending_buttons", "last_inbound", "decided", "business"):
+    for k in ("messages", "latest", "awaiting_edit", "pending_buttons", "last_inbound", "decided", "business", "lang"):
         d.setdefault(k, {})
     d.setdefault("seen", [])
     return d
@@ -69,7 +69,8 @@ def _save(d: dict) -> None:
     tmp.replace(_ctx_path())
 
 
-def register_sent(phone: str, suggestion_id: str, wa_message_id: str | None = None, business_id: str | None = None) -> None:
+def register_sent(phone: str, suggestion_id: str, wa_message_id: str | None = None, business_id: str | None = None,
+                  lang: str | None = None) -> None:
     """Remember which suggestion a WhatsApp message (and the phone's latest thread) belongs to."""
     ph = W.normalize_phone(phone)
     with _lock:
@@ -80,6 +81,8 @@ def register_sent(phone: str, suggestion_id: str, wa_message_id: str | None = No
         d["decided"].pop(suggestion_id, None)
         if business_id:
             d["business"][suggestion_id] = business_id
+        if lang:
+            d["lang"][suggestion_id] = lang
         _save(d)
 
 
@@ -103,10 +106,18 @@ def is_decided(suggestion_id: str) -> bool:
 
 # ------------------------------------------------------------------ free text
 
-_APPROVE = {"ok", "okei", "kyllä", "kylla", "jees", "joo", "juu", "hyväksyn", "hyvä", "k", "yes", "kyl", "selvä", "sopii"}
-_DECLINE = {"ei", "ei kiitos", "en", "ei muutosta", "no", "ei halua", "älä muuta", "ala muuta"}
-_CLOSED = {"suljettu", "kiinni", "kiinni koko päivän", "ei auki", "olemme kiinni", "closed"}
-_HOURS = re.compile(r"^(?:klo\.?\s*)?(\d{1,2})(?:[:.](\d{2}))?\s*(?:-|\u2013|\u2014|to|asti)\s*(?:klo\.?\s*)?(\d{1,2})(?:[:.](\d{2}))?$")
+_APPROVE = {"ok", "okei", "kyllä", "kylla", "jees", "joo", "juu", "hyväksyn", "hyvä", "k", "yes", "kyl", "selvä", "sopii",
+            "approve", "approved", "okay", "sure", "yeah", "yep", "yup", "y", "go ahead", "sounds good", "looks good",
+            "please do", "do it", "that works", "fine", "all good"}
+_DECLINE = {"ei", "ei kiitos", "en", "ei muutosta", "no", "ei halua", "älä muuta", "ala muuta",
+            "no thanks", "no thank you", "nope", "decline", "n", "not now", "skip", "dont", "don't", "do not change",
+            "no change", "leave it", "leave it as is", "keep it", "no thanks."}
+_CLOSED = {"suljettu", "kiinni", "kiinni koko päivän", "ei auki", "olemme kiinni", "closed", "we are closed", "we're closed",
+           "close", "closed all day", "closed the whole day", "not open"}
+_HOURS = re.compile(r"^(?:klo\.?\s*|from\s+)?(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm)?\s*(?:-|\u2013|\u2014|to|until|till|asti)\s*(?:klo\.?\s*)?"
+                    r"(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm)?$")
+_NUMWORD = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+            "eleven": 11, "twelve": 12}
 
 
 def _hhmm(h: str, m: str | None) -> str | None:
@@ -116,12 +127,24 @@ def _hhmm(h: str, m: str | None) -> str | None:
     return f"{h_i:02d}:{m_i:02d}"
 
 
+def _h24(h: str, ap: str | None) -> str:
+    n = int(h)
+    if ap == "am":
+        n = 0 if n == 12 else n
+    elif ap == "pm":
+        n = n if n == 12 else n + 12
+    return str(n)
+
+
 def parse_free_text(text: str) -> dict | None:
-    """-> {'action':'approve'} | {'action':'decline'} | {'action':'edit','edited':'closed'|[{start,end}]} | None"""
+    """-> {'action':'approve'} | {'action':'decline'} | {'action':'edit','edited':'closed'|[{start,end}]} | None.
+    Understands English and Finnish: yes/approve/ok/sure, no/no thanks, '9-13', '9am-1pm', 'nine to one', 'closed'."""
     t = re.sub(r"[!.?,]+$", "", (text or "").strip().lower())
     t = re.sub(r"\s+", " ", t)
+    t = re.sub(r"^(?:the hours? (?:are|is)|open|we(?:'re| are) open|hours?:?) ", "", t)
     if not t:
         return None
+    t = re.sub(r"\b(" + "|".join(_NUMWORD) + r")\b", lambda m: str(_NUMWORD[m[1]]), t) if " to " in t else t
     if t in _CLOSED:
         return {"action": "edit", "edited": "closed"}
     if t in _APPROVE:
@@ -130,7 +153,11 @@ def parse_free_text(text: str) -> dict | None:
         return {"action": "decline"}
     m = _HOURS.match(t)
     if m:
-        a, b = _hhmm(m[1], m[2]), _hhmm(m[3], m[4])
+        a = _hhmm(_h24(m[1], m[3]), m[2])
+        b_h = _h24(m[4], m[6])
+        if not m[6] and not m[3] and int(m[4]) < int(m[1]) <= 12:  # "9 to 1" -> 9-13
+            b_h = str(int(m[4]) + 12)
+        b = _hhmm(b_h, m[5])
         if a and b and a < b:
             return {"action": "edit", "edited": [{"start": a, "end": b}]}
     return None
@@ -176,6 +203,11 @@ def _now() -> str:
 def _known(d: dict, sid: str) -> bool:
     return (sid in d["decided"] or sid in d["business"] or sid in d["messages"].values()
             or sid in d["latest"].values() or sid in d["awaiting_edit"].values())
+
+
+def _lang(sid: str | None) -> str | None:
+    """Owner language remembered when the suggestion was sent; None = default (English)."""
+    return _load()["lang"].get(sid or "")
 
 
 def make_decision(sid: str, action: str, edited=None, via: str = "whatsapp") -> dict:
@@ -266,7 +298,7 @@ async def handle_payload(payload: dict, client: W.WhatsAppClient | None = None) 
                 known = _known(_load(), sid)
             if not known:
                 log.warning("button %r for unknown suggestion %r from %s", it.get("button_id"), sid, phone)
-                client.send_text(phone, M.unknown_suggestion_text()); out["replies"] += 1
+                client.send_text(phone, M.unknown_suggestion_text(_lang(sid))); out["replies"] += 1
                 out["unknown"].append(sid)
                 continue
             if act == "approve":
@@ -276,7 +308,7 @@ async def handle_payload(payload: dict, client: W.WhatsAppClient | None = None) 
             elif act == "edit":
                 with _lock:
                     d = _load(); d["awaiting_edit"][phone] = sid; _save(d)
-                client.send_text(phone, M.edit_prompt_text()); out["replies"] += 1
+                client.send_text(phone, M.edit_prompt_text(_lang(sid))); out["replies"] += 1
                 out["edit_requested"].append(sid)
                 continue
         elif it["kind"] == "text":
@@ -289,12 +321,12 @@ async def handle_payload(payload: dict, client: W.WhatsAppClient | None = None) 
                 elif parsed and parsed["action"] == "decline":
                     decision = make_decision(sid, "decline")
                 else:
-                    client.send_text(phone, M.unknown_reply_text()); out["replies"] += 1
+                    client.send_text(phone, M.unknown_reply_text(_lang(sid))); out["replies"] += 1
                     continue
             elif parsed:
                 decision = make_decision(sid, parsed["action"], parsed.get("edited"))
             else:
-                client.send_text(phone, M.unknown_reply_text()); out["replies"] += 1
+                client.send_text(phone, M.unknown_reply_text(_lang(sid))); out["replies"] += 1
                 continue
         if not decision:
             out["ignored"] += 1
@@ -313,13 +345,22 @@ async def handle_payload(payload: dict, client: W.WhatsAppClient | None = None) 
         _emit(decision, biz)
         await _forward(decision)
         if decision["action"] == "decline":
-            client.send_text(phone, M.decline_thanks_text()); out["replies"] += 1
+            client.send_text(phone, M.decline_thanks_text(_lang(sid))); out["replies"] += 1
     return out
 
 
 def send_receipt(phone: str, apply_result: dict, client: W.WhatsAppClient | None = None) -> dict:
     """Called by the apply step: tell the customer where the hours now show."""
-    return (client or W.get_client()).send_text(phone, M.receipt_text(apply_result))
+    r = dict(apply_result)
+    if not r.get("owner_language"):
+        r["owner_language"] = _lang(r.get("suggestion_id")) or None
+    if not r.get("holiday_date") and r.get("suggestion_id"):
+        try:  # the receipt names the date ("Christmas Eve 24.12.")
+            from kaiku import store  # type: ignore
+            r["holiday_date"] = store.get_suggestion(r["suggestion_id"]).holiday_date
+        except Exception:
+            pass
+    return (client or W.get_client()).send_text(phone, M.receipt_text(r))
 
 
 # ------------------------------------------------------------------ HTTP

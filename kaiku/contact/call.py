@@ -1,4 +1,5 @@
-"""Contact ladder step 2: Kaiku phones the owner in Finnish (ElevenLabs Conversational AI, native number).
+"""Contact ladder step 2: Kaiku phones the owner (ElevenLabs Conversational AI, native number). English by default;
+Finnish per owner (owner_language "fi").
 
 Transport is injectable (same shape as whatsapp.Transport) so tests never touch the network.
 Secrets come from .env and are never printed or logged. See docs/call.md for the assumptions made about the API.
@@ -20,10 +21,25 @@ BASE = "https://api.elevenlabs.io"
 MAX_MONTHLY_PRICE = 10.0
 Transport = W.Transport
 
-FIRST_MESSAGE = "Hei, täällä Kaiku, Fonecta Connectin avustaja. Soitan yrityksenne aukioloajoista, onko hetki aikaa?"
-FIRST_MESSAGE_EN = "Hello, this is Kaiku, Fonecta Connect's assistant. I am calling about your opening hours, do you have a moment?"
+FIRST_MESSAGE_FI = "Hei, täällä Kaiku, Fonecta Connectin avustaja. Soitan yrityksenne aukioloajoista, onko hetki aikaa?"
+FIRST_MESSAGE = "Hi, this is Kaiku, the Fonecta Connect assistant. I'm calling about your opening hours, do you have a moment?"
 
-SYSTEM_PROMPT = """Olet Kaiku, Fonecta Connectin avustaja. Soitat yrityksen {{business_name}} omistajalle. Puhu vain suomea, rauhallisesti, enintään kaksi lausetta kerrallaan.
+SYSTEM_PROMPT = """You are Kaiku, the Fonecta Connect assistant. You are calling the owner of {{business_name}}. Speak only English, calmly, at most two sentences at a time.
+Facts you may use (never invent anything else):
+- holiday: {{holiday_name}}, {{holiday_date}}
+- proposed opening hours: {{proposed_hours}}
+- last year's hours: {{last_year}}
+- reason: {{reason}}
+Flow:
+1. Once the owner has answered the first question, say in two sentences: {{holiday_name}} is on {{holiday_date}} and you propose the hours {{proposed_hours}}, because {{reason}}.
+2. Ask: "Do you approve?"
+3. If the owner says yes, I approve, yeah, sure or similar: say "Thanks, I'm updating it now. It will show on Google and the other channels shortly." and end the call.
+4. If the owner gives other hours (for example "nine to one", "9-13", "closed"): repeat the hours back and ask "Is that right?". When they confirm, thank them and end the call.
+5. If the owner says no: say "Understood, I won't change anything. Thanks for your time." and end the call.
+6. If the owner does not understand or asks something else, answer only from the facts above. If you do not know, say you do not know, and ask again: "Do you approve?"
+Never promise anything you cannot get from the facts. Never ask for personal data. End the call politely."""
+
+SYSTEM_PROMPT_FI = """Olet Kaiku, Fonecta Connectin avustaja. Soitat yrityksen {{business_name}} omistajalle. Puhu vain suomea, rauhallisesti, enintään kaksi lausetta kerrallaan.
 Tiedot, joita saat käyttää (älä keksi mitään muuta):
 - pyhäpäivä: {{holiday_name_fi}}, {{holiday_date_fi}}
 - ehdotetut aukioloajat: {{proposed_hours}}
@@ -38,9 +54,14 @@ Kulku:
 6. Jos omistaja ei ymmärrä tai kysyy jotain muuta, vastaa vain yllä olevien tietojen perusteella. Jos et tiedä, sano ettet tiedä, ja kysy uudelleen: "Hyväksytkö?"
 Älä koskaan lupaa mitään, mitä et saa tiedoista. Älä pyydä henkilötietoja. Lopeta puhelu kohteliaasti."""
 
-# English gloss of the script is in docs/call.md.
-
 DATA_COLLECTION = {
+    "action": {"type": "string",
+               "description": "The owner's decision: approve (approved the proposed hours), edit (gave other hours or said closed), decline (no change), none (no decision)."},
+    "hours": {"type": "string",
+              "description": "If action is edit: the hours the owner gave as HH:MM-HH:MM, or 'closed' if closed. Otherwise empty."},
+}
+
+DATA_COLLECTION_FI = {
     "action": {"type": "string",
                "description": "Omistajan päätös: approve (hyväksyi ehdotetut ajat), edit (antoi muut ajat tai sanoi suljettu), decline (ei muutosta), none (ei päätöstä)."},
     "hours": {"type": "string",
@@ -134,23 +155,36 @@ def ensure_webhook(api: Api | None = None) -> dict:
     return {"ok": True, "webhook_id": b["webhook_id"], "created": True}
 
 
-def agent_payload(voice_id: str, webhook_id: str | None = None) -> dict:
+def agent_config(lang: str = "en") -> dict:
+    """The language-dependent agent fields (also PATCHed onto a live agent): conversation_config.agent + data_collection."""
+    fi = lang == "fi"
+    return {
+        "agent": {
+            "language": "fi" if fi else "en",
+            "first_message": FIRST_MESSAGE_FI if fi else FIRST_MESSAGE,
+            "prompt": {"prompt": SYSTEM_PROMPT_FI if fi else SYSTEM_PROMPT},
+            "dynamic_variables": {"dynamic_variable_placeholders": (
+                {"business_name": "yrityksenne", "holiday_name_fi": "pyhäpäivä", "holiday_date_fi": "24.12.",
+                 "proposed_hours": "9-13", "last_year": "ei tietoa", "reason": "viime vuonna oli samat ajat"} if fi else
+                {"business_name": "your business", "holiday_name": "the holiday", "holiday_date": "December 24",
+                 "proposed_hours": "9 AM to 1 PM", "last_year": "no data", "reason": "your hours were the same last year"})},
+        },
+        "data_collection": DATA_COLLECTION_FI if fi else DATA_COLLECTION,
+    }
+
+
+def agent_payload(voice_id: str, webhook_id: str | None = None, lang: str = "en") -> dict:
+    cfg = agent_config(lang)
+    cfg["agent"]["prompt"].update({"llm": "gemini-2.0-flash", "temperature": 0.2})
     p = {
         "name": "Kaiku (Connect call)",
         "conversation_config": {
-            "agent": {
-                "language": "fi",
-                "first_message": FIRST_MESSAGE,
-                "prompt": {"prompt": SYSTEM_PROMPT, "llm": "gemini-2.0-flash", "temperature": 0.2},
-                "dynamic_variables": {"dynamic_variable_placeholders": {
-                    "business_name": "yrityksenne", "holiday_name_fi": "pyhäpäivä", "holiday_date_fi": "24.12.",
-                    "proposed_hours": "9-13", "last_year": "ei tietoa", "reason": "viime vuonna oli samat ajat"}},
-            },
+            "agent": cfg["agent"],
             "tts": {"voice_id": voice_id, "model_id": "eleven_flash_v2_5"},
             "conversation": {"max_duration_seconds": 240},
         },
         "platform_settings": {
-            "data_collection": DATA_COLLECTION,
+            "data_collection": cfg["data_collection"],
             "overrides": {"conversation_config_override": {"agent": {"first_message": True, "language": False}}},
         },
     }
@@ -172,6 +206,25 @@ def ensure_agent(api: Api | None = None) -> dict:
         return {"ok": False, "error": _err(st, b)}
     set_env("ELEVENLABS_AGENT_ID", b["agent_id"])
     return {"ok": True, "agent_id": b["agent_id"], "created": True}
+
+
+def update_agent(api: Api | None = None, lang: str = "en") -> dict:
+    """PATCH the live agent to the given language (first message, prompt, placeholders, data collection), then GET to verify."""
+    api = api or Api()
+    W.load_env()
+    aid = os.environ.get("ELEVENLABS_AGENT_ID")
+    if not aid:
+        return {"ok": False, "error": "ELEVENLABS_AGENT_ID missing"}
+    cfg = agent_config(lang)
+    body = {"conversation_config": {"agent": cfg["agent"]}, "platform_settings": {"data_collection": cfg["data_collection"]}}
+    st, b = api.call("PATCH", f"/v1/convai/agents/{aid}", body)
+    if st >= 300:
+        return {"ok": False, "error": _err(st, b)}
+    st, b = api.call("GET", f"/v1/convai/agents/{aid}")
+    ag = ((b.get("conversation_config") or {}).get("agent") or {}) if isinstance(b, dict) else {}
+    res = {"ok": st < 300 and ag.get("language") == cfg["agent"]["language"] and ag.get("first_message") == cfg["agent"]["first_message"],
+           "language": ag.get("language"), "first_message_ok": ag.get("first_message") == cfg["agent"]["first_message"]}
+    return res
 
 
 def _price(item: dict):
@@ -249,27 +302,60 @@ def _log(rec: dict) -> None:
         pass
 
 
-def _hours_text(v) -> str:
+def _hours_text(v, lang: str = "fi") -> str:
     v = M._hours_of(v)
+    if lang == "en":
+        return "no data" if v is None else _spoken_hours(v)
     return "ei tietoa" if v is None else M.fi_hours(v)
 
 
+def _spoken_time(t: str) -> str:
+    h, _, m = t.partition(":")
+    h_i, m_i = int(h), int(m or 0)
+    ap = "AM" if h_i < 12 or h_i == 24 else "PM"
+    h12 = h_i % 12 or 12
+    return f"{h12} {ap}" if m_i == 0 else f"{h12}:{m_i:02d} {ap}"
+
+
+def _spoken_hours(hours) -> str:
+    """[{'start':'09:00','end':'13:00'}] -> '9 AM to 1 PM' (what the voice says); closed -> 'closed'."""
+    if not hours or hours == "closed":
+        return "closed"
+    return " and ".join(f"{_spoken_time(h['start'])} to {_spoken_time(h['end'])}" for h in hours)
+
+
+def _spoken_date(d) -> str:
+    from datetime import date as _d
+    d = _d.fromisoformat(d[:10]) if isinstance(d, str) else d
+    return f"{d.strftime('%B')} {d.day}"
+
+
 def dynamic_variables(s: dict) -> dict:
+    lang = M.owner_lang(s)
     reasons = s.get("reasons") or []
     reason = ""
+    key = "text_en" if lang == "en" else "text_fi"
     if reasons:
         r0 = reasons[0]
-        reason = r0.get("text_fi", "") if isinstance(r0, dict) else str(r0)
+        reason = r0.get(key, "") if isinstance(r0, dict) else str(r0)
+    ids = {"suggestion_id": str(s.get("id", "")), "business_id": str(s.get("business_id", ""))}
+    if lang == "en":
+        hol = s.get("holiday_name_en") or "the exception day"
+        return {
+            "business_name": M.business_name(s) if (s.get("business_name") or s.get("business")) else "your business",
+            "holiday_name": hol, "holiday_date": _spoken_date(s["holiday_date"]),
+            "proposed_hours": _spoken_hours(s.get("proposed")),
+            "last_year": _hours_text(M._last_year(s), "en"),
+            "reason": (reason or "your hours were the same last year").rstrip("."),
+            **ids}
     return {
         "business_name": M.business_name(s),
         "holiday_name_fi": M.holiday_name(s).lower() if M._has_name(s) else "pyhäpäivä",
         "holiday_date_fi": M.fi_date(s["holiday_date"]),
         "proposed_hours": M.fi_hours(s.get("proposed")),
-        "last_year": _hours_text(M._last_year(s)),
+        "last_year": _hours_text(M._last_year(s), "fi"),
         "reason": (reason or "viime vuoden ajat olivat samat").rstrip("."),
-        "suggestion_id": str(s.get("id", "")),
-        "business_id": str(s.get("business_id", "")),
-    }
+        **ids}
 
 
 def outbound_payload(s: dict, to_number: str, agent_id: str, phone_id: str) -> dict:
@@ -343,6 +429,8 @@ def main(argv: list[str] | None = None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("setup")
     sub.add_parser("status")
+    u = sub.add_parser("update-agent")
+    u.add_argument("--lang", default="en", choices=["en", "fi"])
     c = sub.add_parser("call")
     c.add_argument("--to", required=True)
     c.add_argument("--suggestion", required=True)
@@ -350,6 +438,10 @@ def main(argv: list[str] | None = None) -> int:
     if a.cmd == "status":
         print(json.dumps(status(), indent=1))
         return 0
+    if a.cmd == "update-agent":
+        r = update_agent(lang=a.lang)
+        print(json.dumps(r, indent=1))
+        return 0 if r.get("ok") else 2
     if a.cmd == "setup":
         r = setup()
         print(json.dumps(r, indent=1))  # ids only

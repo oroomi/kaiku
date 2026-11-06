@@ -42,6 +42,7 @@ class Business:
     last_year_exceptions: list = field(default_factory=list)
     website: Optional[str] = None
     owner_whatsapp: Optional[str] = None
+    owner_language: str = "en"
     source: str = "sample"
     exceptions: list = field(default_factory=list)  # extra: exception hours already set for the coming year, same shape as last_year_exceptions
 
