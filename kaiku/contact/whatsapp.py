@@ -100,6 +100,19 @@ class WhatsAppClient:
         return {"messaging_product": "whatsapp", "to": normalize_phone(to), "type": "template",
                 "template": {"name": name, "language": {"code": lang}}}
 
+    @staticmethod
+    def template_hours_payload(to: str, business_name: str, date_fi: str, hours_fi: str, reason_fi: str,
+                               suggestion_id: str, name: str = "kaiku_hours_fi") -> dict:
+        """Approved UTILITY template with 3 quick-reply buttons. The button payloads are the same ids the interactive
+        message uses ("approve:<id>" ...), so the inbound webhook (type "button") needs no new code."""
+        params = [{"type": "text", "text": t} for t in (business_name, date_fi, hours_fi, reason_fi)]
+        comps: list[dict] = [{"type": "body", "parameters": params}]
+        for i, (action, _title) in enumerate(DEFAULT_BUTTONS):
+            comps.append({"type": "button", "sub_type": "quick_reply", "index": str(i),
+                          "parameters": [{"type": "payload", "payload": f"{action}:{suggestion_id}"}]})
+        return {"messaging_product": "whatsapp", "to": normalize_phone(to), "type": "template",
+                "template": {"name": name, "language": {"code": "fi"}, "components": comps}}
+
     # ---- sending ----
     def _url(self, path: str = "messages") -> str:
         return f"{GRAPH_BASE}/{GRAPH_VERSION}/{self.phone_id}/{path}"
@@ -148,6 +161,11 @@ class WhatsAppClient:
     def send_template(self, to: str, name: str = "hello_world", lang: str = "en_US") -> dict:
         return self._post(self.template_payload(to, name, lang), "template")
 
+    def send_template_hours(self, to: str, business_name: str, date_fi: str, hours_fi: str, reason_fi: str,
+                            suggestion_id: str, name: str = "kaiku_hours_fi") -> dict:
+        return self._post(self.template_hours_payload(to, business_name, date_fi, hours_fi, reason_fi, suggestion_id, name),
+                          "template")
+
     def mark_read(self, message_id: str) -> dict:
         return self._post({"messaging_product": "whatsapp", "status": "read", "message_id": message_id}, "read")
 
@@ -184,3 +202,5 @@ def send_text(to, body): return get_client().send_text(to, body)
 def send_buttons(to, body, buttons=None): return get_client().send_buttons(to, body, buttons)
 def send_template(to, name="hello_world", lang="en_US"): return get_client().send_template(to, name, lang)
 def mark_read(message_id): return get_client().mark_read(message_id)
+def send_template_hours(to, business_name, date_fi, hours_fi, reason_fi, suggestion_id, name="kaiku_hours_fi"):
+    return get_client().send_template_hours(to, business_name, date_fi, hours_fi, reason_fi, suggestion_id, name)

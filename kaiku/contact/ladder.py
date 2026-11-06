@@ -46,6 +46,17 @@ def body_for(s: dict) -> str:
     return M.suggestion_text(s)
 
 
+def template_name() -> str:
+    """WA_TEMPLATE_NAME (e.g. kaiku_hours_fi) switches step 1 to the approved template. Unset = interactive buttons."""
+    W.load_env()
+    return (os.environ.get("WA_TEMPLATE_NAME") or "").strip()
+
+
+def _send_hours_template(client: W.WhatsAppClient, phone: str, s: dict, name: str) -> dict:
+    return client.send_template_hours(phone, M.business_name(s), M.fi_date(s["holiday_date"]), M.fi_hours(s.get("proposed")),
+                                      M.holiday_name(s).lower(), s["id"], name)
+
+
 def _log(s: dict, channel: str, detail: str) -> None:
     entry = {"channel": channel, "at": _now(), "detail": detail}
     s.setdefault("channel_log", []).append(entry)
@@ -71,6 +82,8 @@ def contact(suggestion: dict, client: W.WhatsAppClient | None = None, escalate_s
 
     if btns is None:
         r = client.send_text(phone, body)
+    elif template_name() and s.get("kind") not in ("ask", "no_change"):
+        r = _send_hours_template(client, phone, s, template_name())  # works outside the 24 h window too
     else:
         r = client.send_buttons(phone, body, btns)
         if r.get("needs_template"):

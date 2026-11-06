@@ -369,15 +369,61 @@ def test_call_lane_missing_is_logged():
     assert L._call_step(s) in ("not_configured", "placed", "failed")
 
 
-# ---------------------------------------------------------------- live (self-skipping)
+# ---------------------------------------------------------------- template path (WA_TEMPLATE_NAME)
 
-W.load_env()
-LIVE = {k: os.environ.get(k) for k in ("WA_TOKEN", "WA_PHONE_ID", "OWNER_WHATSAPP")}
+def test_template_hours_payload_shape():
+    f = Fake([(200, {"messages": [{"id": "wamid.T"}]})])
+    r = client(f).send_template_hours("+358 40 123 4567", "Furry Paw Vet Clinic", "24.12.", "9-13", "jouluaatto", "sg1")
+    assert r["ok"]
+    assert f.calls[0][3] == {
+        "messaging_product": "whatsapp", "to": "358401234567", "type": "template",
+        "template": {"name": "kaiku_hours_fi", "language": {"code": "fi"}, "components": [
+            {"type": "body", "parameters": [{"type": "text", "text": t} for t in
+                                            ("Furry Paw Vet Clinic", "24.12.", "9-13", "jouluaatto")]},
+            {"type": "button", "sub_type": "quick_reply", "index": "0", "parameters": [{"type": "payload", "payload": "approve:sg1"}]},
+            {"type": "button", "sub_type": "quick_reply", "index": "1", "parameters": [{"type": "payload", "payload": "edit:sg1"}]},
+            {"type": "button", "sub_type": "quick_reply", "index": "2", "parameters": [{"type": "payload", "payload": "decline:sg1"}]}]}}
 
 
-@pytest.mark.skipif(not all(LIVE.values()),
-                    reason="no WA_TOKEN in .env")
+def test_ladder_template_switch(monkeypatch):
+    monkeypatch.setenv("KAIKU_ENV", "/nonexistent/.env")
+    monkeypatch.setenv("WA_TEMPLATE_NAME", "kaiku_hours_fi")
+    f = Fake([(200, {"messages": [{"id": "wamid.T"}]})])
+    s = L.contact(dict(SUG, id="sgt", channel_log=[]), client=client(f), escalate_s=10**6)
+    p = f.calls[0][3]
+    assert p["type"] == "template" and p["template"]["name"] == "kaiku_hours_fi"
+    assert p["template"]["components"][0]["parameters"][1]["text"] == "24.12."
+    assert p["template"]["components"][1]["parameters"][0]["payload"] == "approve:sgt"
+    assert s["status"] == "sent" and len(f.calls) == 1
+
+
+def test_ladder_default_stays_interactive(monkeypatch):
+    monkeypatch.setenv("KAIKU_ENV", "/nonexistent/.env")
+    monkeypatch.delenv("WA_TEMPLATE_NAME", raising=False)
+    f = Fake([(200, {"messages": [{"id": "wamid.B"}]})])
+    L.contact(dict(SUG, id="sgb", channel_log=[]), client=client(f), escalate_s=10**6)
+    assert f.calls[0][3]["type"] == "interactive"
+
+
+# ---------------------------------------------------------------- live (only with KAIKU_LIVE=1)
+
+def _live_env() -> dict:
+    """Read the real values straight from .env (python-dotenv unquotes WA_TOKEN="..."). os.environ is NOT used for
+    OWNER_WHATSAPP: other test modules overwrite it with a fake number at import time."""
+    try:
+        from dotenv import dotenv_values
+        vals = dotenv_values(W.env_path())
+    except ImportError:
+        vals = {}
+    return {k: vals.get(k) for k in ("WA_TOKEN", "WA_PHONE_ID", "OWNER_WHATSAPP")}
+
+
+@pytest.mark.live
+@pytest.mark.skipif(os.environ.get("KAIKU_LIVE") != "1", reason="sends a real WhatsApp message, set KAIKU_LIVE=1")
 def test_live_send_buttons_to_owner():
-    c = W.WhatsAppClient(token=LIVE["WA_TOKEN"], phone_id=LIVE["WA_PHONE_ID"])
-    r = c.send_buttons(LIVE["OWNER_WHATSAPP"], "Kaiku testi: painaa jotakin painiketta.")
+    live = _live_env()
+    if not all(live.values()):
+        pytest.skip("no WA_TOKEN in .env")
+    c = W.WhatsAppClient(token=live["WA_TOKEN"], phone_id=live["WA_PHONE_ID"])
+    r = c.send_buttons(live["OWNER_WHATSAPP"], "Kaiku testi: painaa jotakin painiketta.")
     assert r["ok"] or r.get("needs_template"), r

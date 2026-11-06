@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import asyncio
 import importlib
+import hmac
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -16,6 +18,8 @@ from . import chain, events, store
 from .config import settings
 
 log = logging.getLogger("kaiku")
+for _n in ("httpx", "httpcore"):  # their INFO lines carry full URLs, including api_key= query strings
+    logging.getLogger(_n).setLevel(logging.WARNING)
 WEB = Path(__file__).parent / "web"
 templates = Jinja2Templates(directory=str(WEB / "templates"))
 
@@ -98,4 +102,10 @@ def healthz():
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     b = store.get_business("furry-paw")
-    return render(request, "home.html", business=b)
+    resp = render(request, "home.html", business=b)
+    want = os.environ.get("KAIKU_ROOM_KEY", "")
+    qk = request.query_params.get("key", "")
+    if want and hmac.compare_digest(qk.encode(), want.encode()):  # keyed laptop: unlock the decision link for this browser
+        resp.set_cookie(events.KEY_COOKIE, qk, httponly=True, samesite="lax", max_age=86400,
+                        secure=request.headers.get("x-forwarded-proto") == "https")
+    return resp

@@ -75,8 +75,7 @@ def map_page(request: Request):
 
 @router.get("/room", response_class=HTMLResponse)
 def room_page(request: Request):
-    return _render(request, "room.html", join_url=_public(request) + "/join", embed=True,
-                   reset_key=request.query_params.get("key", ""))
+    return _render(request, "room.html", join_url=_public(request) + "/join", embed=True)
 
 
 @router.get("/join", response_class=HTMLResponse)
@@ -123,8 +122,9 @@ def state():
 
 
 @router.get("/api/room/reset")
-def reset(key: str = ""):
+def reset(request: Request, key: str = ""):
     want = os.environ.get("KAIKU_ROOM_KEY", "")
+    key = key or request.headers.get("x-kaiku-key", "")
     if not want or not hmac.compare_digest(key.encode(), want.encode()):
         return _deny(403, "Nollaus vaatii avaimen.", "Reset needs the room key.")
     room.reset()
