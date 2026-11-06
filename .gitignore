@@ -6,3 +6,5 @@ node_modules/
 *.pyc
 shots/
 .next/
+data/*.sqlite*
+data/tunnel.log

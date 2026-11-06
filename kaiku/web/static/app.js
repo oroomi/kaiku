@@ -9,7 +9,7 @@
   function jget(url) { return fetch(url).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function span(h) { return h.length ? h.map(function (s) { return parseInt(s.start, 10) + "-" + parseInt(s.end, 10); }).join(", ") : "suljettu"; }
-  function hhmmss(ts) { var d = new Date(ts); return isNaN(d) ? "" : d.toLocaleTimeString("fi-FI", { hour12: false }); }
+  function hhmmss(ts) { var d = new Date(ts); if (isNaN(d)) return ""; var p = function (n) { return (n < 10 ? "0" : "") + n; }; return p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds()); }
 
   /* ---------- business card ---------- */
   function renderBusiness(b) {
@@ -24,6 +24,7 @@
   /* ---------- arc hero ---------- */
   var track = $("arc-track"), fill = $("arc-fill"), dot = $("dot"), halo = $("dot-halo");
   var LEN = track.getTotalLength();
+  var rows = $("rows");
   var arc = { t: 0, running: false, done: 0, raf: 0, target: null };
   function place(t) {
     var p = track.getPointAtLength(LEN * Math.max(0, Math.min(1, t)));
@@ -62,17 +63,23 @@
       setBig(pct + "<small>%</small>", "CONFIDENCE, " + stepsDone() + "/6 STEPS");
     }
   }
+  function resetRun() {
+    seenSteps = {}; current = null; rows.innerHTML = ""; $("rows-empty").hidden = false;
+    setBig("&hellip;", "SCANNING, 0/6 STEPS");
+    $("sentence").textContent = "Kaiku tarkistaa aukioloajat."; $("gloss").textContent = "Kaiku is checking the opening hours.";
+  }
   function setRunning(on) {
     arc.running = on; $("run").disabled = on;
     $("run").textContent = on ? "Chain is running" : "Run the chain";
-    if (on) { seenSteps = {}; setBig("&hellip;", "SCANNING"); }
+    if (on) { resetRun(); }
     else if (current) arc.target = current.confidence;
   }
 
   /* ---------- event strip ---------- */
-  var rows = $("rows"), runSid = null;
+  var runSid = null;
   function markDone() { Array.prototype.forEach.call(rows.querySelectorAll(".row.cur"), function (r) { r.classList.remove("cur"); }); }
   function addEvent(e, live) {
+    if (live && e.step === "detect" && !arc.running) { setRunning(true); }
     $("rows-empty").hidden = true;
     var err = e.detail && e.detail.error;
     markDone();
@@ -93,7 +100,7 @@
     if (err || e.step === "learn") {
       setRunning(false);
       if (e.suggestion_id) jget("/api/suggestions/" + e.suggestion_id).then(function (s) { showSuggestion(s, !err); }).catch(function () {});
-    } else if (!arc.running && e.step === "detect") { setRunning(true); }
+    }
   }
   function connect() {
     var es = new EventSource("/api/events?replay=1&last=12"), replaying = true;

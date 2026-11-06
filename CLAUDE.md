@@ -41,7 +41,8 @@ The Yext write NEVER depends on the broker being up: broker/fallback.py keeps th
 FastAPI + Jinja2 + vanilla JS (no build step), SQLite app state, Orion-LD + MongoDB in Docker (compose in broker/), MapLibre
 for maps, voice-pilot (vendored) for Kaiku's voice. Python 3.12, `pip install -r requirements.txt` into /root/hack/kaiku/.venv.
 Main app port 8210 (systemd unit hack-kaiku via /root/hack/bin/deploy.sh). Orion-LD on 127.0.0.1:1026. Builders test on
-their own port 82xx given in their task. Public URL: filled in below once exposed.
+their own port 82xx given in their task. 
+Public URL: https://kaiku.hankintaviikko.fi
 ```
 kaiku/            app.py config.py events.py store.py chain.py (CORE, owner: core builder)
 kaiku/broker/     client.py models.py subs.py fallback.py router.py docker-compose.yml   (owner: broker)

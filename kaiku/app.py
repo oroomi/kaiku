@@ -26,7 +26,25 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Kaiku", lifespan=lifespan)
-app.mount("/static", StaticFiles(directory=str(WEB / "static")), name="static")
+
+
+class NoCacheStatic(StaticFiles):
+    """Cloudflare would otherwise cache css/js for hours; pages add ?v=<mtime> to bust it."""
+    async def get_response(self, path, scope):
+        r = await super().get_response(path, scope)
+        r.headers["Cache-Control"] = "no-cache"
+        return r
+
+
+def asset_v() -> str:
+    try:
+        return str(int(max(p.stat().st_mtime for p in (WEB / "static").iterdir() if p.is_file())))
+    except ValueError:
+        return "0"
+
+
+templates.env.globals["asset_v"] = asset_v
+app.mount("/static", NoCacheStatic(directory=str(WEB / "static")), name="static")
 app.include_router(events.router)
 app.include_router(chain.router)
 
