@@ -1,6 +1,9 @@
 """Owner chat: fallback parser, opening messages from a stub feed, decisions reaching the chain with a fake Yext."""
 import asyncio
 import json
+import os
+
+os.environ.setdefault("OWNER_WHATSAPP", "+358000000000")  # same as test_core: settings are read at first import
 
 import pytest
 from fastapi.testclient import TestClient
