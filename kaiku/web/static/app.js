@@ -7,18 +7,18 @@
   function loadToday() {
     var el = $("today"); if (!el) return Promise.resolve();
     return fetch("/api/today").then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(function (t) { el.textContent = t.label_fi; el.title = t.label_en; if ($("tt-date") && t.date) { $("tt-date").value = t.date; ttToday = t.date; } })
+      .then(function (t) { var q = t.date.split("-"); el.textContent = "Today: " + parseInt(q[2], 10) + "." + parseInt(q[1], 10) + "." + q[0]; el.title = "Demo clock (time travel)"; if ($("tt-date") && t.date) { $("tt-date").value = t.date; ttToday = t.date; } })
       .catch(function () { el.hidden = true; });
   }
   loadToday();
   if (!$("hero") || !$("arc-track") || !$("run") || !$("rows") || !$("reset")) return;  // not the home page: nothing to drive
   var LABEL = { detect: "DETECT", suggest: "SUGGEST", contact: "CONTACT", decide: "DECIDE", apply: "APPLY", learn: "LEARN", broker: "BROKER" };
   var ORDER = ["detect", "suggest", "contact", "decide", "apply", "learn"];
-  var DAYS = [["mon", "Ma"], ["tue", "Ti"], ["wed", "Ke"], ["thu", "To"], ["fri", "Pe"], ["sat", "La"], ["sun", "Su"]];
+  var DAYS = [["mon", "Mon"], ["tue", "Tue"], ["wed", "Wed"], ["thu", "Thu"], ["fri", "Fri"], ["sat", "Sat"], ["sun", "Sun"]];
 
   function jget(url) { return fetch(url).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
-  function span(h) { return h.length ? h.map(function (s) { return parseInt(s.start, 10) + "-" + parseInt(s.end, 10); }).join(", ") : "suljettu"; }
+  function span(h) { return h.length ? h.map(function (s) { return parseInt(s.start, 10) + "-" + parseInt(s.end, 10); }).join(", ") : "closed"; }
   function hhmmss(ts) { var d = new Date(ts); if (isNaN(d)) return ""; var p = function (n) { return (n < 10 ? "0" : "") + n; }; return p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds()); }
 
   /* ---------- business card ---------- */
@@ -90,23 +90,22 @@
     $("ba-old-v").textContent = oldV; oldEl.className = "ba-old" + (isDone ? " struck" : ""); oldEl.hidden = kind === "no_change";
     var en, fi, nv;
     if (kind === "no_change") {
-      nv = "no change"; en = name + " keeps its regular hours on " + di.en + ". Nothing to change.";
-      fi = caps(di.fi) + " " + name + " noudattaa tavallisia aukioloaikoja. Ei muutosta.";
+      nv = "no change"; en = name + " keeps its regular hours on " + di.en + ". Nothing to change."; fi = "";
     } else if (hrs) {
       nv = hrs.length ? span(hrs) : "closed";
-      var verbEn = hrs.length ? "open " + span(hrs) : "closed", verbFi = hrs.length ? "auki klo " + span(hrs) : "suljettu";
+      var verbEn = hrs.length ? "open " + span(hrs) : "closed";
       if (isDone) {
         en = name + " is " + verbEn + " on " + di.en + ". Saved to Connect, owner approved.";
-        fi = caps(di.fi) + " " + name + " on " + verbFi + ". Tallennettu Connectiin, omistaja hyväksyi.";
+        fi = "";
       } else {
         en = name + " is " + (current ? "" : "likely ") + verbEn + " on " + di.en + ". Everywhere Connect publishes still says " + oldV + ".";
-        fi = caps(di.fi) + " " + name + " on " + (current ? "" : "todennäköisesti ") + verbFi + ". Kaikkialla, minne Connect julkaisee, lukee yhä " + (reg && reg.length ? span(reg) : "suljettu") + ".";
+        fi = "";
       }
     } else {
-      nv = "ready"; en = "Run the chain to see what Kaiku proposes for " + di.en + " (" + di.d + ")."; fi = "Käynnistä ketju: Kaiku ehdottaa aukioloajat " + di.fi + " (" + di.d + ").";
+      nv = "ready"; en = "Run the chain to see what Kaiku proposes for " + di.en + " (" + di.d + ")."; fi = "";
     }
     var nb = function (t) { return t.replace(/(\d)-(\d)/g, "$1\u2060-\u2060$2"); };
-    $("headline").textContent = nb(en); $("fi-line").textContent = nb(fi);
+    $("headline").textContent = nb(en); $("fi-line").textContent = nb(fi); $("fi-line").hidden = !fi;
     $("ba-new-v").textContent = nv; newEl.className = "ba-new" + (current ? " live" : " idle");
     var du = current && current.decide_url, row = $("decide-row");
     row.hidden = !(du && !finished); if (du) $("decide-go").href = du;
@@ -118,12 +117,12 @@
   function showSuggestion(s, finished) {
     if (!s) return;
     current = s;
-    $("sentence").textContent = s.message_fi || "";
-    $("gloss").textContent = s.message_en || "";
+    $("sentence").textContent = s.message_en || s.message_fi || "";
+    $("gloss").textContent = "";
     var pct = Math.round(s.confidence * 100);
     paint();
     if (finished) {
-      setCap(pct + " % sure \u00b7 " + pct + " % varma");
+      setCap(pct + " % sure \u00b7 " + stepsDone() + "/6 steps");
       arc.running = false; arc.target = s.confidence;
     } else {
       setCap(pct + " % sure \u00b7 " + stepsDone() + "/6 steps");
@@ -132,7 +131,7 @@
   function resetRun() {
     seenSteps = {}; current = null; applied = null; rows.innerHTML = ""; $("rows-empty").hidden = false;
     paint(); setCap("Scanning \u00b7 0/6 steps");
-    $("sentence").textContent = "Kaiku tarkistaa aukioloajat."; $("gloss").textContent = "Kaiku is checking the opening hours.";
+    $("sentence").textContent = "Kaiku is checking the opening hours."; $("gloss").textContent = "";
   }
   function setRunning(on) {
     arc.running = on; $("run").disabled = on;
@@ -147,11 +146,11 @@
   function extra(e) {
     var d = e.detail || {}, h = "";
     if (d.decide_url && (e.step === "contact" || d.phase === "waiting")) {
-      h += '<small><a href="' + esc(d.decide_url) + '" target="_blank" rel="noopener" data-pilot="decide-link">Avaa päätöslinkki (omistajan näkymä)</a> <i>Open the decision link (owner view)</i></small>';
+      h += '<small><a href="' + esc(d.decide_url) + '" target="_blank" rel="noopener" data-pilot="decide-link">Open the decision link (owner view)</a></small>';
     }
     if (e.step === "apply" && d.where_it_shows && d.where_it_shows.length) {
       h += '<small>' + d.where_it_shows.filter(function (p) { return p.kind === "named"; }).map(function (p) { return esc(p.name); }).join(", ") +
-        (d.verified ? " (sandbox, luettu takaisin / read back)" : " (sandbox)") + '</small>';
+        (d.verified ? " (sandbox, read back)" : " (sandbox)") + '</small>';
     }
     return h;
   }
@@ -164,7 +163,7 @@
     li.className = "row" + (err ? " err" : "") + (live && !err && e.step !== "learn" ? " cur" : "");
     li.setAttribute("data-step", e.step);
     li.innerHTML = '<span class="dot"></span><span class="lab">' + (LABEL[e.step] || e.step) + '</span><span class="ttl">' + esc(e.title_en) +
-      '<small lang="fi">' + esc(e.title_fi) + '</small>' + extra(e) + '</span><time>' + hhmmss(e.ts) + '</time>';
+      extra(e) + '</span><time>' + hhmmss(e.ts) + '</time>';
     rows.appendChild(li);
     if (e.step === "apply" && e.detail && e.detail.hours) { applied = e.detail.hours === "closed" ? [] : e.detail.hours; appliedFor = e.suggestion_id; if (current) paint(); }
     if (!live) return;
@@ -172,7 +171,7 @@
     if (e.suggestion_id && (e.step === "suggest")) {
       jget("/api/suggestions/" + e.suggestion_id).then(function (s) { showSuggestion(s, false); }).catch(function () {});
     }
-    if (e.step === "decide" && e.detail && e.detail.phase === "waiting") { delete seenSteps.decide; $("run").textContent = "Waiting for the owner"; }
+    if (e.step === "decide" && e.detail && e.detail.phase === "waiting") { delete seenSteps.decide; $("run").textContent = "Waiting for the owner's decision"; }
     if (e.step === "apply" || (e.step === "decide" && e.detail && e.detail.phase === "decided")) {
       if (e.suggestion_id) jget("/api/suggestions/" + e.suggestion_id).then(function (s) { showSuggestion(s, !arc.running); }).catch(function () {});
     }
@@ -208,13 +207,13 @@
       .then(function () { return loadToday(); })
       .then(function () {
         if (!note) return;
-        $("tt-note").textContent = "Aikamatka: tänään on nyt " + fiD(iso) + " / Time travel: today is now " + fiD(iso);
+        $("tt-note").textContent = "Time travel: today is now " + fiD(iso);
         clearTimeout(ttTimer); ttTimer = setTimeout(function () { $("tt-note").textContent = ""; }, 2000);
       });
   }
   $("tt-date").addEventListener("change", function () {
     var v = $("tt-date").value; if (!v || arc.running) { $("tt-date").value = ttToday; return; }
-    travel(v, true).catch(function () { $("tt-note").textContent = "Aikamatka epäonnistui / time travel failed"; });
+    travel(v, true).catch(function () { $("tt-note").textContent = "Time travel failed"; });
   });
   $("run").addEventListener("click", function () {
     var date = $("date").value;
@@ -228,16 +227,16 @@
       return fetch("/api/run?business=furry-paw&date=" + date, { method: "POST" });
     }).then(function (r) { return r.json(); })
       .then(function (j) { runSid = j.suggestion_id; })
-      .catch(function () { setRunning(false); setBig("!", "COULD NOT START"); });
+      .catch(function () { setRunning(false); setCap("COULD NOT START"); });
   });
 
   /* ---------- status strip + reset ---------- */
   function setChip(id, text, ok) { var c = $(id); c.querySelector("b").textContent = text; c.className = "chip" + (ok ? " ok" : ""); }
   function loadStatus() {
     return jget("/api/status").then(function (s) {
-      setChip("st-broker", s.broker === "orion-ld" ? "Orion-LD" : "varakäsittelijä", s.broker === "orion-ld");
+      setChip("st-broker", s.broker === "orion-ld" ? "Orion-LD" : "fallback", s.broker === "orion-ld");
       $("st-broker").title = s.broker === "orion-ld" ? "FIWARE NGSI-LD context broker Orion-LD is live" : "Orion-LD is not reachable, the in-memory fallback keeps the chain alive";
-      setChip("st-wa", s.whatsapp_configured ? "käytössä" : "ei käytössä", s.whatsapp_configured);
+      setChip("st-wa", s.whatsapp_configured ? "in use" : "not in use", s.whatsapp_configured);
       $("st-wa").title = s.whatsapp_configured ? "WhatsApp in use: the message goes to the owner's phone" : "WhatsApp not in use yet: the decision link is shown instead of a message";
       setChip("st-yext", s.yext_entity, true);
     }).catch(function () { if ($("st-broker")) setChip("st-broker", "no data", false); });
@@ -249,12 +248,12 @@
     rkey = sessionStorage.getItem("kaikuKey") || "";
   } catch (x) { rkey = new URLSearchParams(location.search).get("key") || ""; }
   $("reset").addEventListener("click", function () {
-    var btn = $("reset"); btn.disabled = true; $("reset-msg").textContent = "Nollataan... / resetting...";
+    var btn = $("reset"); btn.disabled = true; $("reset-msg").textContent = "Resetting...";
     fetch("/api/reset", { method: "POST", headers: rkey ? { "X-Kaiku-Key": rkey } : {} })
       .then(function (r) { if (r.status === 403) throw new Error("key"); return r.json(); }).then(function () { $("date").value = "2026-12-24"; location.reload(); })
       .catch(function (err) {
         btn.disabled = false;
-        $("reset-msg").textContent = err && err.message === "key" ? "Avain puuttuu, avaa sivu ?key=... / key needed, open the page with ?key=..." : "Nollaus epäonnistui / reset failed";
+        $("reset-msg").textContent = err && err.message === "key" ? "Key needed, open the page with ?key=..." : "Reset failed";
       });
   });
 
@@ -265,7 +264,7 @@
       if (st === "applied" || st === "declined" || st === "expired") {
         if (arc.running) { setRunning(false); showSuggestion(l[0], st !== "expired"); }
       } else if (st === "sent" && arc.running && Object.keys(seenSteps).length <= 3) {
-        $("run").textContent = "Waiting for the owner";
+        $("run").textContent = "Waiting for the owner's decision";
       } else if (!l.length && arc.running && !runSid) { setRunning(false); }
     }).catch(function () {});
   }

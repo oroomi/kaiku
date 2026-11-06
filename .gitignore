@@ -11,3 +11,10 @@ data/tunnel.log
 
 # video outputs (owner reviews first, never committed)
 video/*.mp4
+data/decide_tokens.json
+data/timetravel.json
+data/wa_context.json
+data/wa_sends.jsonl
+data/wa_status.jsonl
+data/call_log.jsonl
+data/learn_prefs.json

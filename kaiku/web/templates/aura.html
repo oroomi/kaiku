@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Aura, Turku livenä yhdessä välittäjässä{% endblock %}
+{% block title %}Aura, live Turku in one broker{% endblock %}
 {% block head %}
 <!-- MAPLIBRE-CDN-BLOCK: the orchestrator switches these two tags to the vendored local path at merge -->
 <link rel="stylesheet" href="/static/vendor/maplibre/maplibre-gl.css">
@@ -15,35 +15,34 @@
     <span class="mono ttl">AURA</span>
     <span class="badge mono" id="badge" title="Entities read from the NGSI-LD broker">FIWARE NGSI-LD <b id="n-ent">0</b></span>
   </div>
-  <p class="live-line"><span id="l-bus">Linja-autoja <b>...</b></span><span id="l-ship">laivoja <b>...</b></span><span id="l-wx">Turku ...</span></p>
-  <p class="gloss" id="l-en">Buses ..., ships ..., Turku ...</p>
-  <p class="src mono" id="src-mode">...</p>
-  <details class="sources" id="sources"><summary class="mono">Lähteet <span class="en">Sources</span></summary>
+  <p class="live-line"><span id="l-bus">Buses <b>...</b></span><span id="l-ship">ships <b>...</b></span><span id="l-wx">Turku ...</span></p>
+    <p class="src mono" id="src-mode">...</p>
+  <details class="sources" id="sources"><summary class="mono">Sources</summary>
     <ul>
       <li><b>Föli</b> data.foli.fi/siri/vm, CC BY 4.0, 10 s</li>
       <li><b>Fintraffic Digitraffic</b> AIS, CC BY 4.0, 20 s</li>
-      <li><b>Open-Meteo</b> sää, CC BY 4.0, 5 min</li>
-      <li>Kartta <b>OpenFreeMap</b> &amp; OpenStreetMap</li>
+      <li><b>Open-Meteo</b> weather, CC BY 4.0, 5 min</li>
+      <li>Map <b>OpenFreeMap</b> &amp; OpenStreetMap</li>
     </ul>
   </details>
 </section>
 
 <section class="glass tray" id="tray" data-pilot="aura-tray">
-  <div class="tray-head mono"><span>Tilaukset <span class="en">Subscriptions</span></span><span id="sub-count">0</span></div>
+  <div class="tray-head mono"><span>Subscriptions</span><span id="sub-count">0</span></div>
   <form id="ask" class="ask" autocomplete="off">
-    <input id="ask-text" type="text" maxlength="300" placeholder="Kerro kun bussi tulee Kauppatorille" aria-label="Kysy Auralta">
-    <button class="primary" id="ask-go" type="submit">Kysy</button>
+    <input id="ask-text" type="text" maxlength="300" placeholder="Tell me when a bus comes to Kauppatori" aria-label="Ask Aura">
+    <button class="primary" id="ask-go" type="submit">Ask</button>
   </form>
   <p class="gloss" id="ask-gloss">Ask in your own words, e.g. "tell me when a bus comes within 300 m of Kauppatori".</p>
   <div class="proposal" id="proposal" hidden>
-    <span class="mono tag">EHDOTUS <span class="en">PROPOSAL</span></span>
-    <p id="prop-fi"></p><p class="gloss" id="prop-en"></p>
+    <span class="mono tag">PROPOSAL</span>
+    <p id="prop-fi" hidden></p><p class="gloss" id="prop-en"></p>
     <p class="mono tech" id="prop-tech"></p>
-    <div class="btns"><button class="primary" id="prop-ok" type="button">Luo tilaus</button><button class="ghost" id="prop-no" type="button">Hylkää</button></div>
+    <div class="btns"><button class="primary" id="prop-ok" type="button">Create subscription</button><button class="ghost" id="prop-no" type="button">Reject</button></div>
   </div>
   <ul class="subs" id="subs"></ul>
-  <div class="feed-head mono">Ilmoitukset <span class="en">Notifications</span></div>
-  <ul class="feed" id="feed"><li class="empty">Ei vielä ilmoituksia. <span class="en">No notifications yet.</span></li></ul>
+  <div class="feed-head mono">Notifications</div>
+  <ul class="feed" id="feed"><li class="empty">No notifications yet.</li></ul>
 </section>
 {% endblock %}
 {% block scripts %}<script src="/static/aura.js?v={{ asset_v() }}" defer></script>{% endblock %}
