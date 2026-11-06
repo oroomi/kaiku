@@ -288,7 +288,9 @@ def place_call(suggestion: dict, to_number: str | None = None, api: Api | None =
     if not W.normalize_phone(to):
         return {"ok": False, "reason": "no recipient number"}
     api = api or Api()
-    st, b = api.call("POST", "/v1/convai/twilio/outbound-call", outbound_payload(suggestion, to, agent_id, phone_id))
+    provider = os.environ.get("ELEVENLABS_PHONE_PROVIDER", "twilio")
+    endpoint = "/v1/convai/sip-trunk/outbound-call" if provider == "sip_trunk" else "/v1/convai/twilio/outbound-call"
+    st, b = api.call("POST", endpoint, outbound_payload(suggestion, to, agent_id, phone_id))
     if st >= 300 or not b.get("success", True) or not b.get("conversation_id"):
         err = b.get("message") if isinstance(b, dict) and b.get("message") else _err(st, b)
         _log({"suggestion_id": sid, "ok": False, "error": err})
