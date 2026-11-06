@@ -15,7 +15,7 @@ or decline; standing permission for recurring changes), RELIABILITY (how wrong s
 ask instead of guess), EXTENSIBILITY (same loop for review replies / posts), COLD START (customer with no history).
 Fonecta scores suggestion quality with a SCORING SCRIPT on HIDDEN TEST DATA (dataset not released yet; design the suggest
 engine with a pluggable dataset loader and machine-readable output).
-Contact ladder (Dayo's decision): WhatsApp first, then a phone call by Kaiku (ElevenLabs voice, Finnish). NO EMAIL.
+Contact ladder (Dayo's decision): WhatsApp first, then a phone call by Kaiku (ElevenLabs voice, English for the demo; Finnish per owner_language). NO EMAIL.
 Demo business: the Yext sandbox entity "Furry Paw Vet Clinic", Vantaa (fictional, provisioned by Fonecta; id SinceAI07).
 Hero holiday: jouluaatto Thu 24 Dec 2026 reached by TIME TRAVEL (fake "today"). Isanpaiva Sun 8 Nov is NOT a public holiday
 (flag day): for a vet closed on Sundays the right answer is "no change", shown as reliability, not silence.
@@ -34,7 +34,7 @@ The Yext write NEVER depends on the broker being up: broker/fallback.py keeps th
 - No persons: businesses only. The owner's phone number in demos = Dayo's own.
 - Secrets only in /root/hack/kaiku/.env (chmod 600, gitignored). Never print secret values. Never touch any other secrets
   file on the box. If a key is missing, mark BLOCKED in your report and build against a fake.
-- Finnish copy: correct Finnish, no em dashes anywhere (use commas or full stops), dates "24.12.", times "9-13".
+- Demo language: English everywhere a visitor or the owner sees text; Finnish per owner_language; no em dashes; dates 24.12., times 9-13.
 - Never `pkill -f`/`killall`. Stop servers by port (`fuser -k PORT/tcp`) or systemd unit. Commit every 20-30 min.
 
 ## Stack and layout (fixed; do not rename)

@@ -11,7 +11,7 @@ On screen: Detect, Suggest, Contact, Decide, Apply as five boxes with the Orion-
 Say: Connect suggests, the customer approves: five steps, no login, and the customer has the last word.
 
 ## 3. Live demo frames
-On screen: three screenshots. The home headline (Connect 9-17, Kaiku 9-13) and the event strip; the phone decision page with Hyväksy, Muokkaa, Ei kiitos (Approve, Edit, No thanks); the Yext read-back saying verified.
+On screen: three screenshots. The home headline (Connect 9-17, Kaiku 9-13) and the event strip; the phone decision page with Approve, Edit, No thanks; the Yext read-back saying verified.
 Say: This is the real app on a phone: one tap writes to the team's Yext entity and we read it back.
 
 ## 4. Reliability
@@ -31,5 +31,5 @@ On screen: 10 hand-made cases, wrong-suggestion rate 0.0, abstain rate 0.2; the 
 Say: We have not seen Fonecta's data yet. The backtest has a pluggable loader and prints machine-readable output, ready for your scoring script.
 
 ## 8. What is next
-On screen: review replies and automatic posts on the same loop; production sources (Connect's exception-hours history, Google Business Profile, category peers from the customer base); the Finnish call lane (in progress); an 8-week pilot (PILOT.md).
+On screen: review replies and automatic posts on the same loop; production sources (Connect's exception-hours history, Google Business Profile, category peers from the customer base); the English call lane (proven end to end 6 Nov, Finnish per owner); an 8-week pilot (PILOT.md).
 Say: Same loop, more use cases. Scan the QR code and approve a suggestion on your own phone.

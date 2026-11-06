@@ -2,7 +2,7 @@
 
 Demo business: Furry Paw Vet Clinic (fictional Yext sandbox entity). Items 1 to 4 are the exact Suggestion texts from `python3 -m kaiku.suggest.cli --business data/furry_paw.json` (no network): 24.12. hours, 25.12. closed, 24.12. with no history (ask), 8.11. no change. Text as sent over WhatsApp, with English glosses.
 
-## 1. Suggestion with proposed hours (WhatsApp buttons: Hyväksy / Muokkaa / Ei kiitos)
+## 1. Suggestion with proposed hours (WhatsApp buttons: Approve / Edit / No thanks; Finnish owners: Hyväksy / Muokkaa / Ei kiitos)
 
 Finnish:
 
@@ -96,7 +96,7 @@ English gloss:
 
 > I could not find the suggestion this reply belongs to.
 
-## 6. Edit prompt after Muokkaa
+## 6. Edit prompt after Edit
 
 Finnish:
 
@@ -106,7 +106,7 @@ English gloss:
 
 > Sure. Reply with the new hours, for example "9-13" or "closed".
 
-## 7. Thanks after Ei kiitos
+## 7. Thanks after No thanks
 
 Finnish:
 

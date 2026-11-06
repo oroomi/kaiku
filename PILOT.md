@@ -4,7 +4,7 @@
 | Week | Deliverable |
 |---|---|
 | 1-2 | Connect Kaiku to a read-only export of exception-hours history and published hours for 50 to 100 consenting customers; agree the scoring method |
-| 3-5 | Detect and Suggest running weekly on that data with the confidence gate tuned on your history; WhatsApp message in an approved Finnish template; decide page on your domain; weekly demo |
+| 3-5 | Detect and Suggest running weekly on that data with the confidence gate tuned on your history; WhatsApp message in an approved WhatsApp template (English for the demo, Finnish per owner); decide page on your domain; weekly demo |
 | 6-8 | Live sends to the pilot customers for real holidays; measured result against today's baseline (how many customers add holiday hours themselves); go or no-go |
 
 ## What we need from you
