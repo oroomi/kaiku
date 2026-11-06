@@ -74,6 +74,40 @@ def body_for(s: dict) -> str:
     return M.suggestion_text(s)
 
 
+REPLY_LINE = {"en": "Reply in your own words.", "fi": "Vastaa omin sanoin."}
+
+
+def buttons_enabled() -> bool:
+    """Interactive Approve / Edit / No thanks buttons only when WA_BUTTONS=1; the default is one plain text message."""
+    W.load_env()
+    return (os.environ.get("WA_BUTTONS") or "").strip() == "1"
+
+
+def chat_text_for(s: dict) -> str:
+    """The WhatsApp opening as ONE plain text: the same intro and suggestion lines the website chat shows on load
+    (kaiku.chat.router.opening), then "Reply in your own words." Finnish owners and businesses the chat does not know
+    get the suggestion text instead."""
+    lang = M.owner_lang(s)
+    tail = REPLY_LINE["fi" if lang == "fi" else "en"]
+    if lang != "fi":
+        try:
+            from kaiku import store  # type: ignore
+            from kaiku.chat import router as CR  # type: ignore
+            bid = s.get("business_id")
+            if bid and store.get_business(bid) is not None:
+                msgs = CR.opening(bid, "wa-opening")
+                lines = [m["text"] for m in msgs if m.get("text") and m.get("role") == "kaiku"]
+                if lines:
+                    try:  # the reply that follows continues on this suggestion
+                        CR.session("wa:" + owner_phone(s))["focus"] = s.get("id")
+                    except Exception:
+                        pass
+                    return "\n\n".join(lines) + "\n\n" + tail
+        except Exception:
+            pass
+    return body_for(s) + "\n\n" + tail
+
+
 def template_name(lang: str = "fi") -> str:
     """WA_TEMPLATE_NAME (e.g. kaiku_hours_fi) switches step 1 to the approved template. Unset = interactive buttons.
     Finnish owners use WA_TEMPLATE_NAME; English owners only use a template when WA_TEMPLATE_NAME_EN (an approved
@@ -150,12 +184,22 @@ def _whatsapp(s: dict, client: W.WhatsAppClient | None = None, escalate_s: float
     if not phone:
         _log(s, "whatsapp", "blocked: no recipient (OWNER_WHATSAPP missing)")
         return s
+    use_buttons = buttons_enabled()
     body = body_for(s)
     btns = buttons_for(s)
+    chat_text = None
+    if not use_buttons and s.get("kind") != "no_change":
+        chat_text = chat_text_for(s)  # one text message, the same conversation as the website chat
     R.register_sent(phone, s["id"], None, s.get("business_id"), M.owner_lang(s))
 
     if btns is None:
         r = client.send_text(phone, body)
+    elif chat_text is not None and not (template_name(M.owner_lang(s)) and s.get("kind") not in ("ask", "no_change")):
+        r = client.send_text(phone, chat_text)
+        if r.get("needs_template"):
+            _log(s, "whatsapp", "outside 24 h window: template first, the text follows after the owner replies")
+            R.set_pending_buttons(phone, s["id"], chat_text, None)
+            r = client.send_template(phone)
     elif template_name(M.owner_lang(s)) and s.get("kind") not in ("ask", "no_change"):
         r = _send_hours_template(client, phone, s, template_name(M.owner_lang(s)))  # works outside the 24 h window too
     else:

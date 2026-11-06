@@ -90,7 +90,8 @@ def set_pending_buttons(phone: str, suggestion_id: str, body: str, buttons=None)
     with _lock:
         d = _load()
         d["pending_buttons"][W.normalize_phone(phone)] = {"suggestion_id": suggestion_id, "body": body,
-                                                          "buttons": buttons or W.DEFAULT_BUTTONS}
+                                                          "buttons": buttons or W.DEFAULT_BUTTONS,
+                                                          "text_only": buttons is None}
         _save(d)
 
 
@@ -215,6 +216,84 @@ def make_decision(sid: str, action: str, edited=None, via: str = "whatsapp") -> 
             "standing_permission": False, "via": via, "at": _now()}
 
 
+# ------------------------------------------------------------------ the website chat brain on WhatsApp
+
+DEFAULT_BUSINESS = "furry-paw"
+MAX_MSG = 400
+
+
+def session_id(phone: str) -> str:
+    return "wa:" + W.normalize_phone(phone)
+
+
+def _business_for(sid: str | None) -> str | None:
+    """The chat business behind a suggestion (or the demo business): None when the chat does not know it."""
+    try:
+        from kaiku import store  # type: ignore
+    except ImportError:
+        return None
+    cands = [_load()["business"].get(sid or "")]
+    try:
+        sg = store.get_suggestion(sid) if sid else None
+        cands.append(getattr(sg, "business_id", None))
+    except Exception:
+        pass
+    cands.append(DEFAULT_BUSINESS)
+    for c in cands:
+        if c and store.get_business(c) is not None:
+            return c
+    return None
+
+
+def _is_owner_phone(phone: str) -> bool:
+    W.load_env()
+    own = W.normalize_phone(os.environ.get("OWNER_WHATSAPP"))
+    return bool(own) and own == W.normalize_phone(phone)
+
+
+def chat_session(phone: str) -> dict:
+    """The same session store the website chat uses; one session per phone, so a second message continues it."""
+    from kaiku.chat import router as CR  # type: ignore
+    s = CR.session(session_id(phone))
+    s["via"] = "whatsapp"
+    return s
+
+
+async def chat_turn(phone: str, text: str, bid: str, focus: str | None = None) -> tuple[str, list]:
+    """One inbound text through the chat brain. Raises when the brain is unusable (caller falls back to the keyword parser)."""
+    from kaiku.chat import brain, feed as F, router as CR  # type: ignore
+    s = chat_session(phone)
+    s["t"] = time.time()
+    if focus:
+        s["focus"] = focus
+    msg = (text or "").strip()[:MAX_MSG]
+    reply, acts = await brain.respond(bid, s, msg)
+    s["hist"] += [("user", msg), ("assistant", reply)]
+    s["log"] += [{"role": "user", "kind": "chat", "text": msg}, {"role": "kaiku", "kind": "chat", "text": reply}]
+    f = brain.focus_of(F.get_feed(bid).get("suggestions", []), s)
+    s["focus"] = f["id"] if f else None
+    return reply, acts
+
+
+async def _run_decision(decision: dict) -> bool:
+    """A WhatsApp decision runs through the web chat's own path: chain.on_decision when a chain run is waiting, else
+    chain.post_decision (kaiku.chat.actions.decide). True when the chat path handled it."""
+    sid = decision["suggestion_id"]
+    bid = _business_for(sid)
+    if not bid:
+        return False
+    try:
+        from kaiku.chat import actions as A, feed as F  # type: ignore
+        if F.find(bid, sid) is None:
+            return False
+        edited = decision.get("edited")
+        r = await A.decide(bid, sid, decision["action"], edited, via="whatsapp")
+        return bool(r.get("ok"))
+    except Exception as e:
+        log.warning("chat decide failed (%s), using chain.on_decision", type(e).__name__)
+        return False
+
+
 # ------------------------------------------------------------------ handling
 
 def _emit(decision: dict, business_id: str | None) -> None:
@@ -281,11 +360,18 @@ async def handle_payload(payload: dict, client: W.WhatsAppClient | None = None) 
             client.mark_read(it["message_id"])
         # A reply to the first-contact template reopens the window: now deliver the real message.
         if pend and it["kind"] == "text" and parse_free_text(it.get("text", "")) is None:
-            r = client.send_buttons(phone, pend["body"], [tuple(b) for b in pend["buttons"]])
+            if pend.get("text_only"):
+                r = client.send_text(phone, pend["body"])
+            else:
+                r = client.send_buttons(phone, pend["body"], [tuple(b) for b in pend["buttons"]])
             if r.get("ok"):
                 register_sent(phone, pend["suggestion_id"], r.get("message_id"))
             out["replies"] += 1
             continue
+        if it["kind"] == "text" and (sid or _is_owner_phone(phone)):
+            handled = await _chat_text(phone, it.get("text", ""), sid, client, out)
+            if handled:
+                continue
         if not sid:
             out["ignored"] += 1
             continue
@@ -308,6 +394,10 @@ async def handle_payload(payload: dict, client: W.WhatsAppClient | None = None) 
             elif act == "edit":
                 with _lock:
                     d = _load(); d["awaiting_edit"][phone] = sid; _save(d)
+                try:
+                    chat_session(phone)["focus"] = sid
+                except Exception:
+                    pass
                 client.send_text(phone, M.edit_prompt_text(_lang(sid))); out["replies"] += 1
                 out["edit_requested"].append(sid)
                 continue
@@ -342,11 +432,39 @@ async def handle_payload(payload: dict, client: W.WhatsAppClient | None = None) 
             biz = d["business"].get(decision["suggestion_id"])
             _save(d)
         out["decisions"].append(decision)
-        _emit(decision, biz)
-        await _forward(decision)
+        if not await _run_decision(decision):
+            _emit(decision, biz)
+            await _forward(decision)
         if decision["action"] == "decline":
             client.send_text(phone, M.decline_thanks_text(_lang(sid))); out["replies"] += 1
     return out
+
+
+async def _chat_text(phone: str, text: str, sid: str | None, client: W.WhatsAppClient, out: dict) -> bool:
+    """Any inbound text goes to the chat brain; its reply goes back as a WhatsApp text. False = brain unavailable, the
+    keyword parser takes over (yes / no / new times), so the lane never goes silent."""
+    bid = _business_for(sid)
+    if not bid or not (text or "").strip():
+        return False
+    try:
+        with _lock:
+            d = _load()
+            awaiting = d["awaiting_edit"].pop(phone, None)
+            _save(d)
+        reply, acts = await chat_turn(phone, text, bid, awaiting)
+    except Exception as e:
+        log.warning("chat brain failed on WhatsApp (%s), keyword parser", type(e).__name__)
+        return False
+    for a in acts:
+        if a.get("type") == "decided":
+            dec = make_decision(a["suggestion_id"], a["action"])
+            with _lock:
+                d = _load(); d["decided"][dec["suggestion_id"]] = dec["action"]; _save(d)
+            out["decisions"].append(dec)
+    if reply:
+        client.send_text(phone, reply)
+        out["replies"] += 1
+    return True
 
 
 def send_receipt(phone: str, apply_result: dict, client: W.WhatsAppClient | None = None) -> dict:
