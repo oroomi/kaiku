@@ -65,7 +65,9 @@ def by_id(bid: str) -> dict | None:
 
 def parse_answer(text: str) -> dict:
     """Chips and free text to {kind, display, hours}. Never invents: unknown text is kept as typed."""
-    t = re.sub(r"[\x00-\x1f<>]", "", (text or "")).replace("–", "-").replace("—", "-").strip()[:40]
+    t = (text or "").replace("–", "-").replace("—", "-")
+    # explicit whitelist: letters, digits, space, colon, dot, hyphen (HTML is escaped on render, never stripped there)
+    t = "".join(ch for ch in t if ch.isalnum() or ch in " :.-").strip()[:40]
     low = t.lower()
     m = re.search(r"(\d{1,2})(?:[:.](\d\d))?\s*-\s*(\d{1,2})(?:[:.](\d\d))?", t)
     if re.search(r"suljettu|kiinni|closed", low):
@@ -101,7 +103,7 @@ def record(bid: str, text: str, token: str = "") -> dict:
     with _lock:
         st = load_state()
         a = parse_answer(text)
-        a.update(at=datetime.now(timezone.utc).isoformat(), raw=(text or "")[:60])
+        a.update(at=datetime.now(timezone.utc).isoformat(), raw=(text or "")[:40])
         st["answers"][bid] = a
         if token:
             st["assignments"][token] = bid

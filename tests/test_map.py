@@ -22,6 +22,10 @@ FIX = Path(__file__).parent / "fixtures" / "overpass_sample.json"
 
 @pytest.fixture()
 def client(monkeypatch):
+    monkeypatch.setenv("KAIKU_ROOM_KEY", "sekret")
+    import importlib
+    _r = importlib.import_module("kaiku.map.router")
+    _r._hits.clear()
     monkeypatch.setenv("KAIKU_DATA_DIR", str(TMP))
     items = osm.parse(json.loads(FIX.read_text()))
     doc = {"source": osm.SOURCE, "mirror": "fixture", "label": "real", "fallback": False, "fetched_at": "x",
@@ -71,7 +75,7 @@ def test_known_holiday_business_never_assigned(client):
 
 def test_answer_emits_events_and_updates_state(client):
     client.get("/join")
-    bid = room.businesses()[0]["id"]
+    bid = room.assign(client.cookies["kaiku_room"])["id"]
     before = len(store.recent_events(500))
     r = client.post("/api/room/answer", json={"business_id": bid, "answer": "9-13"})
     assert r.status_code == 200 and r.json()["answer"] == "9-13"
@@ -87,15 +91,20 @@ def test_answer_parsing_and_unknown_business(client):
     assert room.parse_answer("Suljettu")["kind"] == "closed"
     assert room.parse_answer("Normaalisti")["kind"] == "regular"
     assert room.parse_answer("10–14")["display"] == "10-14"
-    assert room.parse_answer("<b>moi</b>")["display"] == "bmoi/b"
+    assert room.parse_answer("<b>moi</b>")["display"] == "bmoib"
+    assert room.parse_answer("9:30 - 13.00 !?;/")["display"] == "9:30-13"
     assert client.post("/api/room/answer", json={"business_id": "nope", "answer": "9-13"}).status_code == 404
 
 
 def test_reset(client):
-    bid = room.businesses()[1]["id"]
-    client.post("/api/room/answer", json={"business_id": bid, "answer": "Suljettu"})
+    client.get("/join")
+    bid = room.assign(client.cookies["kaiku_room"])["id"]
+    assert client.post("/api/room/answer", json={"business_id": bid, "answer": "Suljettu"}).status_code == 200
     assert client.get("/api/room/state").json()["counts"]["answered"] == 1
-    assert client.get("/api/room/reset").json()["ok"] is True
+    assert client.get("/api/room/reset").status_code == 403
+    assert client.get("/api/room/reset?key=wrong").status_code == 403
+    assert client.get("/api/room/state").json()["counts"]["answered"] == 1
+    assert client.get("/api/room/reset?key=sekret").json()["ok"] is True
     assert client.get("/api/room/state").json()["counts"]["answered"] == 0
 
 
@@ -108,3 +117,36 @@ def test_pages_render(client):
     assert q.status_code == 200 and "<svg" in q.text
     for t in (m.text, r.text, client.get("/join").text):
         assert "—" not in t and "–" not in t
+
+
+def test_answer_requires_cookie_ownership(client):
+    client.get("/join")
+    mine = room.assign(client.cookies["kaiku_room"])["id"]
+    other = next(b["id"] for b in room.businesses() if b["id"] != mine)
+    r = client.post("/api/room/answer", json={"business_id": other, "answer": "9-13"})
+    assert r.status_code == 403 and "ei ole sinun" in r.json()["fi"] and "not yours" in r.json()["en"]
+    stranger = TestClient(app)  # no cookie at all
+    assert stranger.post("/api/room/answer", json={"business_id": mine, "answer": "9-13"}).status_code == 403
+    assert client.get("/api/room/state").json()["counts"]["answered"] == 0
+    assert client.post("/api/room/answer", json={"business_id": mine, "answer": "9-13"}).status_code == 200
+
+
+def test_answer_rate_limit_3_per_minute(client):
+    client.get("/join")
+    bid = room.assign(client.cookies["kaiku_room"])["id"]
+    codes = [client.post("/api/room/answer", json={"business_id": bid, "answer": f"{i}-17"}).status_code for i in range(5)]
+    assert codes == [200, 200, 200, 429, 429]
+
+
+def test_free_text_whitelist_and_escape(client):
+    assert room.parse_answer("a<script>alert(1)</script>&\"'")["display"] == "ascriptalert1script"
+    assert len(room.parse_answer("x" * 100)["display"]) == 40
+    client.get("/join")
+    bid = room.assign(client.cookies["kaiku_room"])["id"]
+    client.post("/api/room/answer", json={"business_id": bid, "answer": "<img src=x onerror=1>"})
+    assert "<img" not in client.get("/join").text
+
+
+def test_reset_link_needs_key(client):
+    assert client.get("/room?key=sekret").text.count("reset?key=sekret") == 1
+    assert client.get("/api/room/reset").status_code == 403

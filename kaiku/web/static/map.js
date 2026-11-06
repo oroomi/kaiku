@@ -55,7 +55,7 @@
     style: { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#0c1418' } }],
              glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf' }
   });
-  map.addControl(new maplibregl.AttributionControl({ compact: false, customAttribution: 'Businesses: OpenStreetMap contributors (ODbL)' }), 'bottom-right');
+  /* attribution lives in its own strip (#mattr) so it never overlaps the legend */
   var styleReady = fetch('https://tiles.openfreemap.org/styles/positron').then(function (r) { return r.json(); })
     .then(function (s) { return new Promise(function (res) { map.setStyle(darken(s), { diff: false }); map.once('style.load', res); }); })
     .catch(function () { /* offline: dots on the dark background */ });
@@ -135,25 +135,29 @@
     });
   }
 
-  var es = null;
-  function connect() {
-    es = new EventSource('/api/events');
-    es.onopen = function () { elC.className = 'mono live on'; elC.innerHTML = '<i></i>live'; };
-    es.onerror = function () { elC.className = 'mono live'; elC.innerHTML = '<i></i>reconnecting'; };
-    es.addEventListener('kaiku', function (m) {
-      var e; try { e = JSON.parse(m.data); } catch (x) { return; }
-      var d = e.detail || {};
-      if (!d.map) return;
-      if (d.reset) { loadState().then(function () { map.getSource('biz') && Object.keys(STATE).forEach(function (id) { map.removeFeatureState({ source: 'biz', id: id }); }); }); return; }
-      var ll = d.lon != null ? [d.lon, d.lat] : null;
-      if (e.step === 'decide') { if (ll) pulse(ll); }
-      else if (e.step === 'apply') turnGreen(e.business_id, d.answer || '', d.name, null, true);
-    });
+  var es = null, backoff = 1000, retryT = null;
+  function onEvent(m) {
+    var e; try { e = JSON.parse(m.data); } catch (x) { return; }
+    var d = e.detail || {};
+    if (!d.map) return;
+    if (d.reset) { loadState().then(function () { map.getSource('biz') && Object.keys(STATE).forEach(function (id) { map.removeFeatureState({ source: 'biz', id: id }); }); }).catch(function () {}); return; }
+    var ll = d.lon != null ? [d.lon, d.lat] : null;
+    if (e.step === 'decide') { if (ll) pulse(ll); }
+    else if (e.step === 'apply') turnGreen(e.business_id, d.answer || '', d.name, null, true);
   }
+  /* SSE is optional: the dots come from /api/room/state; if the stream is down we retry with backoff and poll state meanwhile */
+  function connect() {
+    clearTimeout(retryT);
+    try { es = new EventSource('/api/events'); } catch (x) { retry(); return; }
+    es.onopen = function () { backoff = 1000; elC.className = 'mono live on'; elC.innerHTML = '<i></i>live'; loadState().catch(function () {}); };
+    es.onerror = function () { elC.className = 'mono live'; elC.innerHTML = '<i></i>reconnecting'; if (es) { es.close(); es = null; } retry(); };
+    es.addEventListener('kaiku', onEvent);
+  }
+  function retry() { clearTimeout(retryT); retryT = setTimeout(connect, backoff); backoff = Math.min(backoff * 2, 30000); }
+  function loadStateRetry(n) { loadState().catch(function () { setTimeout(function () { loadStateRetry(n + 1); }, Math.min(1000 * (n + 1), 10000)); }); }
+  loadStateRetry(0);
   connect();
-  loadState();
-  es.addEventListener('open', function () {});
   window.__kaikuMap = map;
   /* resync after a dropped connection so counts never drift */
-  setInterval(function () { if (es && es.readyState === 1) fetch('/api/room/state').then(function (r) { return r.json(); }).then(function (s) { answered = s.counts.answered; unknown = s.counts.unknown; counts(); }).catch(function () {}); }, 15000);
+  setInterval(function () { fetch('/api/room/state').then(function (r) { return r.json(); }).then(function (s) { answered = s.counts.answered; unknown = s.counts.unknown; counts(); if (!es || es.readyState !== 1) loadState().catch(function () {}); }).catch(function () {}); }, 5000);
 })();
