@@ -169,6 +169,8 @@ def agent_config(lang: str = "en") -> dict:
                 {"business_name": "your business", "holiday_name": "the holiday", "holiday_date": "December 24",
                  "proposed_hours": "9 AM to 1 PM", "last_year": "no data", "reason": "your hours were the same last year"})},
         },
+        # ElevenLabs: English agents must use turbo/flash v2 (v2.5 is the multilingual one Finnish needs).
+        "tts": {"model_id": "eleven_flash_v2_5" if fi else "eleven_flash_v2"},
         "data_collection": DATA_COLLECTION_FI if fi else DATA_COLLECTION,
     }
 
@@ -180,7 +182,7 @@ def agent_payload(voice_id: str, webhook_id: str | None = None, lang: str = "en"
         "name": "Kaiku (Connect call)",
         "conversation_config": {
             "agent": cfg["agent"],
-            "tts": {"voice_id": voice_id, "model_id": "eleven_flash_v2_5"},
+            "tts": {"voice_id": voice_id, "model_id": cfg["tts"]["model_id"]},
             "conversation": {"max_duration_seconds": 240},
         },
         "platform_settings": {
@@ -216,7 +218,7 @@ def update_agent(api: Api | None = None, lang: str = "en") -> dict:
     if not aid:
         return {"ok": False, "error": "ELEVENLABS_AGENT_ID missing"}
     cfg = agent_config(lang)
-    body = {"conversation_config": {"agent": cfg["agent"]}, "platform_settings": {"data_collection": cfg["data_collection"]}}
+    body = {"conversation_config": {"agent": cfg["agent"], "tts": cfg["tts"]}, "platform_settings": {"data_collection": cfg["data_collection"]}}
     st, b = api.call("PATCH", f"/v1/convai/agents/{aid}", body)
     if st >= 300:
         return {"ok": False, "error": _err(st, b)}

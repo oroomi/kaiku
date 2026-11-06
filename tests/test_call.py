@@ -47,7 +47,7 @@ def test_agent_payload_shape_and_env_store(env):
     assert cc["agent"]["language"] == "en" and cc["tts"]["voice_id"] == "voice1"
     assert cc["agent"]["first_message"] == ("Hi, this is Kaiku, the Fonecta Connect assistant. "
                                             "I'm calling about your opening hours, do you have a moment?")
-    assert cc["tts"]["model_id"] == "eleven_flash_v2_5" and "Do you approve?" in cc["agent"]["prompt"]["prompt"]
+    assert cc["tts"]["model_id"] == "eleven_flash_v2" and "Do you approve?" in cc["agent"]["prompt"]["prompt"]
     assert "{{holiday_date}}" in cc["agent"]["prompt"]["prompt"] and "Speak only English" in cc["agent"]["prompt"]["prompt"]
     dc = p["platform_settings"]["data_collection"]
     assert "approve" in dc["action"]["description"] and "HH:MM-HH:MM" in dc["hours"]["description"] and "ä" not in json.dumps(dc)
