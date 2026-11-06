@@ -1,0 +1,8 @@
+.env
+.worktrees/
+__pycache__/
+node_modules/
+.venv/
+*.pyc
+shots/
+.next/
