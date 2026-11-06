@@ -67,7 +67,8 @@ def test_events_recent_and_sse_replay(client):
     import asyncio
 
     async def first_chunks():  # call the endpoint directly: TestClient streaming hangs on some starlette versions
-        r = await events.stream(replay=1, last=1)
+        from starlette.requests import Request
+        r = await events.stream(Request({"type": "http", "headers": []}), replay=1, last=1)
         assert r.media_type.startswith("text/event-stream")
         got = ""
         async for chunk in r.body_iterator:
@@ -134,7 +135,7 @@ def _run(client, day, until="learn", timeout=15):
     sid = client.post(f"/api/run?business=furry-paw&date={day}").json()["suggestion_id"]
     end = time.time() + timeout
     while time.time() < end:
-        evs = [e for e in client.get("/api/events/recent?limit=100").json() if e["suggestion_id"] == sid]
+        evs = [e for e in client.get("/api/events/recent?limit=100", headers={"x-kaiku-key": "testkey"}).json() if e["suggestion_id"] == sid]
         if any(e["step"] == until for e in evs):
             return sid, evs
         time.sleep(0.1)
@@ -147,7 +148,7 @@ def test_chain_end_to_end_with_fakes(client, wired, _module_fakes):
     assert steps[:2] == ["detect", "suggest"] and steps[-1] == "learn"
     for want in ["detect", "suggest", "contact", "decide", "apply", "learn"]:
         assert want in steps
-    s = client.get(f"/api/suggestions/{sid}").json()
+    s = client.get(f"/api/suggestions/{sid}", headers={"x-kaiku-key": "testkey"}).json()
     assert s["kind"] == "hours" and s["proposed"] == HOURS_13 and s["confidence"] == 0.75 and s["status"] == "applied"
     assert s["decide_url"].startswith("https://kaiku.example/d/")
     contact = next(e for e in evs if e["step"] == "contact")
@@ -250,3 +251,37 @@ def test_emit_once_dedupes():
     assert br.emit_once("missing", "x", "2026-12-24") is True
     assert br.emit_once("missing", "x", "2026-12-24") is False
     assert br.emit_once("missing", "x", "2026-12-25") is True
+
+
+# ---------- fix-night: decide link, header keys, MCP proposals on reset ----------
+def test_decide_url_only_for_keyed_viewers(client):
+    from kaiku import events as ev
+    from kaiku.schema import Event
+    url = "https://kaiku.example/d/SECRETTOKEN"
+    ev.emit(Event(step="contact", business_id="furry-paw", suggestion_id="zz1", title_fi="x", title_en="x",
+                  detail={"decide_url": url, "message_fi": f"Hei\nVoitte myös päättää selaimessa: {url}", "phase": "waiting"}))
+    anon = client.get("/api/events/recent?business=furry-paw", headers={"cookie": ""}).json()
+    assert "SECRETTOKEN" not in str(anon) and not any("decide_url" in e["detail"] for e in anon)
+    assert any(e["detail"].get("message_fi") == "Hei" for e in anon)  # everything else is kept
+    for h in ({"x-kaiku-key": "testkey"}, {"cookie": "kaiku_key=testkey"}):
+        keyed = client.get("/api/events/recent?business=furry-paw", headers=h).json()
+        assert any(e["detail"].get("decide_url") == url for e in keyed)
+    assert "SECRETTOKEN" not in client.get("/api/events/recent", headers={"x-kaiku-key": "wrong"}).text
+    r = client.get("/?key=testkey")
+    assert "kaiku_key=testkey" in r.headers["set-cookie"] and "httponly" in r.headers["set-cookie"].lower()
+    assert "set-cookie" not in client.get("/?key=nope").headers
+
+
+def test_room_reset_accepts_header_key(client):
+    assert client.get("/api/room/reset", headers={"X-Kaiku-Key": "wrong"}).status_code == 403
+    assert client.get("/api/room/reset", headers={"X-Kaiku-Key": "testkey"}).status_code == 200
+
+
+def test_reset_clears_mcp_proposals(client, monkeypatch, tmp_path):
+    import json
+    p = tmp_path / "proposals.json"
+    p.write_text(json.dumps({"prop-1": {"proposal_id": "prop-1", "status": "pending"}}))
+    monkeypatch.setenv("NGSI_LD_PROPOSALS", str(p))
+    r = client.post("/api/reset", headers={"X-Kaiku-Key": "testkey"}).json()
+    assert r["reset"]["mcp_proposals_cleared"] is True
+    assert json.loads(p.read_text()) == {}

@@ -148,5 +148,5 @@ def test_free_text_whitelist_and_escape(client):
 
 
 def test_reset_link_needs_key(client):
-    assert client.get("/room?key=sekret").text.count("reset?key=sekret") == 1
+    assert "sekret" not in client.get("/room?key=sekret").text  # the key never sits in the HTML; the page sends it as a header
     assert client.get("/api/room/reset").status_code == 403

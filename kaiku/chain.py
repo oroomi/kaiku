@@ -631,16 +631,16 @@ async def api_run(business: str = "furry-paw", date: str = "2026-12-24"):
 
 
 @router.get("/api/suggestions")
-def api_suggestions(business: str = "furry-paw", limit: int = 20):
-    return [s.model_dump(mode="json") for s in store.list_suggestions(business, limit)]
+def api_suggestions(request: Request, business: str = "furry-paw", limit: int = 20):
+    return [events.public_view(s.model_dump(mode="json"), request) for s in store.list_suggestions(business, limit)]
 
 
 @router.get("/api/suggestions/{sid}")
-def api_suggestion(sid: str):
+def api_suggestion(sid: str, request: Request):
     s = store.get_suggestion(sid)
     if not s:
         raise HTTPException(404, "not found (a run id exists before its suggestion step finishes)")
-    return s.model_dump(mode="json")
+    return events.public_view(s.model_dump(mode="json"), request)
 
 
 @router.get("/api/business/{bid}")
@@ -710,6 +710,14 @@ async def api_reset(request: Request, learn: int = 0, key: str = ""):
     except Exception as exc:
         out["yext_error"] = f"{type(exc).__name__}: {str(exc)[:120]}"
     out.update(store.clear_runs("furry-paw"))
+    try:  # the MCP gateway's pending proposals (a probe may have left some)
+        from ngsi_ld_mcp.config import Config as _McpConfig
+        from ngsi_ld_mcp.store import ProposalStore
+        ProposalStore(_McpConfig().proposals_path)._write({})
+        out["mcp_proposals_cleared"] = True
+    except Exception as exc:
+        out["mcp_proposals_cleared"] = False
+        log.warning("mcp proposals reset failed: %s", exc)
     try:
         from .broker.router import reset_dedupe
         reset_dedupe()
