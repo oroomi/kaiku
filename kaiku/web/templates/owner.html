@@ -1,28 +1,69 @@
 {% extends "base.html" %}
-{% block title %}Kaiku, your opening hours{% endblock %}
-{% block head %}<link rel="stylesheet" href="/static/chat.css?v={{ asset_v() }}">{% endblock %}
+{% block title %}Kaiku, holiday hours that ask once{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/chat.css?v={{ asset_v() }}"><link rel="stylesheet" href="/static/owner.css?v={{ asset_v() }}">{% endblock %}
 {% block content %}
-<div class="chat" id="chat" data-biz="{{ business.id if business else 'furry-paw' }}">
-  <section class="chat-card glass">
-    <header class="chat-head" data-pilot="business-card">
-      <i class="kdot" aria-hidden="true"></i>
-      <div class="who"><b id="c-name">{{ business.name if business else "Your business" }}</b><span class="mono">Kaiku · Fonecta Connect</span></div>
+<div class="home" data-biz="{{ business.id if business else 'furry-paw' }}" id="home">
+  <div class="statusbar mono" id="statusbar" data-pilot="status" aria-live="polite">
+    <button type="button" class="st-toggle" id="st-toggle" aria-expanded="false" aria-controls="statusbar" aria-label="Status info" title="Status info">i</button>
+    <span class="chip" id="st-broker" title="FIWARE NGSI-LD context broker: Orion-LD (live) or the in-memory fallback">BROKER: <b>...</b></span>
+    <span class="chip" id="st-wa" title="WhatsApp: not in use yet means the decision link is shown instead of a message">WhatsApp: <b>...</b></span>
+    <span class="chip" id="st-yext" title="Yext sandbox entity that receives the holiday hours">YEXT: <b>SinceAI07</b></span>
+  </div>
+
+  <section class="hero glass" data-pilot="hero" id="hero" aria-live="polite">
+    <h1 class="headline" id="headline">Furry Paw Vet Clinic: checking Christmas Eve.</h1>
+    <p class="fi-line" id="fi-line" lang="en" hidden></p>
+    <div class="arc-wrap">
+      <svg class="arc" viewBox="0 0 440 250" role="img" aria-label="Chain progress arc">
+        <defs>
+          <linearGradient id="arcg" x1="0" x2="1"><stop offset="0" stop-color="#8fd3e8" stop-opacity=".25"/><stop offset="1" stop-color="#8fd3e8"/></linearGradient>
+          <filter id="blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
+        </defs>
+        <path id="arc-track" d="M 30 230 A 190 190 0 0 1 410 230" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="3" stroke-linecap="round"/>
+        <path id="arc-fill" d="M 30 230 A 190 190 0 0 1 410 230" fill="none" stroke="url(#arcg)" stroke-width="4" stroke-linecap="round" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1"/>
+        <circle id="dot-halo" r="16" fill="#8fd3e8" opacity=".5" filter="url(#blur)" cx="30" cy="230"/>
+        <circle id="dot" r="6.5" fill="#fff" cx="30" cy="230"/>
+      </svg>
+      <div class="figure">
+        <div class="ba-old" id="ba-old" title="Regular hours as Connect publishes them today (not checked live on Google)"><span class="mono">Connect</span> <s id="ba-old-v">&ndash;</s></div>
+        <div class="ba-new" id="ba-new"><span class="mono">Kaiku</span> <b id="ba-new-v">&ndash;</b></div>
+        <div class="mono cap" id="big-cap">READY</div>
+      </div>
+    </div>
+    <div class="decide-row" id="decide-row" hidden>
+      <a class="primary link" id="decide-go" href="#" target="_blank" rel="noopener" data-pilot="decide-link">Open the owner's decision</a>
+    </div>
+  </section>
+
+  <section class="w-chat glass" id="chat" data-pilot="chat" data-biz="{{ business.id if business else 'furry-paw' }}" aria-label="Chat with Kaiku">
+    <header class="w-head">
+      <span class="mono">CHAT WITH KAIKU</span>
       <button type="button" class="demo-btn mono" id="demo-btn" hidden aria-expanded="false" aria-controls="drawer">Demo</button>
     </header>
-    <div class="thread" id="thread" data-pilot="hero" role="log" aria-live="polite" aria-label="Conversation with Kaiku"></div>
+    <div class="chat-log" id="chat-log" role="log" aria-live="polite" aria-label="Conversation with Kaiku"></div>
+    <form class="chat-form" id="composer" autocomplete="off">
+      <input id="msg" name="msg" type="text" inputmode="text" enterkeyhint="send" maxlength="400" placeholder="Tell Kaiku: yes, change the hours, or no" aria-label="Tell Kaiku: yes, change the hours, or no" autocomplete="off">
+    </form>
   </section>
-  <form class="composer" id="composer" autocomplete="off">
-    <div class="quick" id="quick" aria-label="Quick replies">
-      <button type="button" data-say="Yes, do it">Yes, do it</button>
-      <button type="button" data-say="Change the hours">Change the hours</button>
-      <button type="button" data-say="No thanks">No thanks</button>
+
+  <section class="w-thread glass" id="thread" data-pilot="thread" aria-label="Message to the owner">
+    <header class="w-head"><span class="mono">MESSAGE TO THE OWNER</span></header>
+    <div class="thread-log" id="thread-log" role="log" aria-live="polite">
+      <p class="empty" id="thread-empty">Nothing sent yet.</p>
     </div>
-    <div class="field">
-      <input id="msg" name="msg" type="text" inputmode="text" enterkeyhint="send" maxlength="400" placeholder="Answer Kaiku" aria-label="Your answer to Kaiku" autocomplete="off">
-      <button type="submit" id="send" aria-label="Send"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-    </div>
-  </form>
+  </section>
+
+  <section class="w-sug glass" id="suggestions" data-pilot="suggestions" aria-label="Suggestions to the business">
+    <header class="w-head"><span class="mono" id="sug-label">SUGGESTIONS FOR {{ (business.name if business else 'Furry Paw Vet Clinic')|upper }}</span><span class="mono soft" id="sug-count"></span></header>
+    <div class="sug-grid" id="sug-grid"></div>
+    <p class="empty" id="sug-empty" hidden>Nothing to suggest right now.</p>
+  </section>
+
+  <footer class="foot" data-pilot="reset" id="foot" hidden>
+    <button class="ghost" id="reset-foot" type="button" title="Reset demo: removes the holiday hours from the Yext sandbox, clears runs and events, sets the date to 17.12.2026">Reset demo</button>
+    <span class="mono soft" id="reset-msg" aria-live="polite"></span>
+  </footer>
 </div>
 <div id="drawer-host"></div>
 {% endblock %}
-{% block scripts %}<script src="/static/chat.js?v={{ asset_v() }}" defer></script>{% endblock %}
+{% block scripts %}<script src="/static/owner.js?v={{ asset_v() }}" defer></script><script src="/static/chat.js?v={{ asset_v() }}" defer></script>{% endblock %}

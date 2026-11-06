@@ -43,11 +43,11 @@ def _bubble(i: dict) -> dict:
                          and isinstance(i["proposed"][0], dict) and "date" in i["proposed"][0] else hours_text(i.get("proposed")) or None)}
 
 
-def opening(business_id: str, sess_id: str = "default") -> list[dict]:
+def opening(business_id: str, sess_id: str = "default", network: bool = True) -> list[dict]:
     b = store.get_business(business_id)
     if b is None:
         raise HTTPException(404, "unknown business")
-    items = F.get_feed(business_id).get("suggestions", [])
+    items = F.get_feed(business_id, network).get("suggestions", [])
     act = [i for i in items if i["kind"] != "no_change"]
     notes = [i for i in items if i["kind"] == "no_change"]
     fi = getattr(b, "owner_language", "en") == "fi"
@@ -69,8 +69,8 @@ def opening(business_id: str, sess_id: str = "default") -> list[dict]:
 
 
 @router.get("/api/chat/open")
-def chat_open(business: str = "furry-paw", session: str = "default"):
-    return {"business_id": business, "messages": opening(business, session)}
+def chat_open(business: str = "furry-paw", session: str = "default", quick: int = 0):
+    return {"business_id": business, "messages": opening(business, session, network=not quick)}
 
 
 @router.post("/api/chat")

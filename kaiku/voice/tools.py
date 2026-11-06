@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[2]
 HOME = "/"
 JUDGE = "/judge"                         # the live event strip and the demo clock live on the judge view
 SEL_SUGGESTION = '[data-pilot="hero"]'       # owner.html: the chat thread carries Kaiku's suggestions
-SEL_BUSINESS = '[data-pilot="business-card"]'
+SEL_BUSINESS = '[data-pilot="suggestions"]'
 SEL_STRIP = '[data-pilot="event-strip"]'
 SEL_TODAY = '[data-pilot="today"]'
 

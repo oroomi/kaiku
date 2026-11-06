@@ -1,57 +1,22 @@
-/* Owner chat + judge view. Horizon tokens (teal stage, glass, Newsreader for Kaiku, Inter for UI) come from horizon.css. */
-.owner-view .top{justify-content:flex-start}
-.owner-view main{max-width:760px;padding-top:6px;padding-bottom:calc(150px + env(safe-area-inset-bottom))}
-.chat{display:block}
-.chat-card{padding:0;overflow:hidden}
-.chat-head{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
-.kdot{width:34px;height:34px;border-radius:50%;flex:none;border:1px solid rgba(255,255,255,.3);
-  background:radial-gradient(circle at 35% 30%,rgba(143,211,232,.55),rgba(47,111,140,.6) 55%,rgba(12,20,24,.9));box-shadow:0 0 18px rgba(143,211,232,.35);position:relative}
-.kdot::after{content:"";position:absolute;width:7px;height:7px;border-radius:50%;background:#fff;left:19px;top:9px}
-.who{display:flex;flex-direction:column;min-width:0;line-height:1.25}
-.who b{font-weight:500;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.who .mono{font-size:9.5px;color:var(--ink3)}
+/* Chat bubbles, demo drawer (keyed) and judge view. Horizon tokens come from horizon.css. */
 .demo-btn{margin-left:auto;background:transparent;border:1px solid var(--edge);color:var(--ink3);border-radius:99px;padding:6px 12px;cursor:pointer;font-size:10px}
 .demo-btn:hover{color:var(--ink);border-color:var(--cyan)}
-
-.thread{padding:18px 14px 20px;display:flex;flex-direction:column;gap:12px;min-height:46vh}
-.msg-k,.msg-u{max-width:88%;animation:in .4s ease both}
+.msg-k,.msg-u{max-width:90%;animation:in .4s ease both}
 .msg-k{align-self:flex-start}
 .msg-u{align-self:flex-end}
-.msg-k .b{background:var(--glass2);border:1px solid var(--edge);border-radius:20px 20px 20px 6px;padding:12px 15px;
-  font:300 19px/1.34 var(--serif);letter-spacing:-.003em;text-wrap:pretty}
+.msg-k .b{background:var(--glass2);border:1px solid var(--edge);border-radius:20px 20px 20px 6px;padding:11px 15px;font:300 19px/1.34 var(--serif);letter-spacing:-.003em;text-wrap:pretty}
 .msg-u .b{background:rgba(143,211,232,.2);border:1px solid rgba(143,211,232,.4);border-radius:20px 20px 6px 20px;padding:10px 15px;font:400 15px/1.4 var(--sans)}
 .msg-k.intro{max-width:100%}
-.msg-k.intro .b{background:none;border:0;padding:4px 2px 2px;font:300 clamp(27px,7.4vw,36px)/1.14 var(--serif)}
+.msg-k.intro .b{background:none;border:0;padding:2px 2px 0;font:300 clamp(24px,6.4vw,30px)/1.16 var(--serif)}
 .msg-k.note .b{background:transparent;border-style:dashed;font-size:16.5px;color:var(--ink2)}
-.tag{display:table;margin-top:9px;font-size:9.5px;padding:3px 9px;border-radius:99px;border:1px solid var(--edge);color:var(--ink2);background:rgba(255,255,255,.05)}
-.tag.ok{color:var(--green);border-color:rgba(159,224,181,.4)}
-.tag.no{color:var(--ink3)}
-.tag.prop{color:var(--cyan);border-color:rgba(143,211,232,.4)}
+.tg{display:table;margin-top:9px;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:500;padding:3px 9px;border-radius:99px;border:1px solid var(--edge);color:var(--ink2);background:rgba(255,255,255,.05)}
+.tg.ok{color:var(--green);border-color:rgba(159,224,181,.4)}
+.tg.no{color:var(--ink3)}
+.tg.prop{color:var(--cyan);border-color:rgba(143,211,232,.4)}
 .typing .b{display:flex;gap:5px;padding:15px 16px}
 .typing i{width:7px;height:7px;border-radius:50%;background:var(--ink2);animation:blink 1.1s infinite}
 .typing i:nth-child(2){animation-delay:.18s}.typing i:nth-child(3){animation-delay:.36s}
 @keyframes blink{0%,70%,100%{opacity:.25}35%{opacity:1}}
-
-/* composer: fixed to the bottom of the same column as the voice orb, which sits at its right end */
-.composer{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(760px,100%);z-index:45;
-  padding:0 16px calc(18px + env(safe-area-inset-bottom)) 16px;display:flex;flex-direction:column;gap:9px;pointer-events:none}
-.composer>*{pointer-events:auto}
-.quick{display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:0 2px}
-.quick::-webkit-scrollbar{display:none}
-.quick button{flex:none;background:transparent;border:1px solid rgba(255,255,255,.14);color:var(--ink3);border-radius:99px;padding:7px 13px;font:400 13px var(--sans);cursor:pointer;min-height:34px}
-.quick button:hover,.quick button:focus-visible{color:var(--ink);border-color:var(--cyan)}
-.field{margin-right:80px;display:flex;gap:8px;align-items:center;background:rgba(9,14,18,.78);border:1px solid var(--edge);border-radius:99px;padding:5px 5px 5px 18px;
-  backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2);box-shadow:0 8px 30px rgba(0,0,0,.35)}
-.field input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:var(--ink);font:400 16px var(--sans);height:42px}
-.field input::placeholder{color:var(--ink3)}
-.field:focus-within{border-color:var(--cyan)}
-.field button{flex:none;width:42px;height:42px;border-radius:50%;border:0;background:var(--cyan);color:#06222c;display:grid;place-items:center;cursor:pointer}
-.field button[disabled]{opacity:.45}
-.owner-view .kv{left:50%;right:auto;width:min(760px,100%);transform:translateX(-50%);padding-bottom:calc(14px + env(safe-area-inset-bottom))}
-.owner-view .kv-cap,.owner-view .kv-hint,.owner-view .kv-mute{display:none!important}
-.owner-view .kv-orb{width:58px;height:58px}
-.owner-view .kv-orb svg{width:58px;height:58px}
-@media (max-width:700px){.composer{padding-left:12px;padding-right:12px}.field{margin-right:70px}.owner-view .kv{padding-left:12px;padding-right:12px}}
 
 /* demo drawer (keyed only) */
 .drawer-back{position:fixed;inset:0;z-index:60;background:rgba(5,12,16,.55)}
