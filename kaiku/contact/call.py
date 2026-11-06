@@ -182,7 +182,8 @@ def _price(item: dict):
 
 
 def ensure_phone_number(api: Api | None = None, max_price: float = MAX_MONTHLY_PRICE, country: str = "US") -> dict:
-    """Use an existing account number; else buy a native one only if monthly cost is known and < max_price (0 counts as free)."""
+    """Use an existing account number; else buy a native one only if monthly cost is known and < max_price (0 counts as free).
+    Any purchase additionally requires KAIKU_ALLOW_NUMBER_PURCHASE=1 (the owner's explicit yes after seeing the price)."""
     api = api or Api()
     W.load_env()
     if os.environ.get("ELEVENLABS_PHONE_NUMBER_ID"):
@@ -209,6 +210,8 @@ def ensure_phone_number(api: Api | None = None, max_price: float = MAX_MONTHLY_P
         return {"ok": False, "reason": f"no number under {max_price:g} per month; cheapest {min(known):g}" if known
                 else "price unknown, not buying"}
     x, p = min(ok, key=lambda t: t[1])
+    if os.environ.get("KAIKU_ALLOW_NUMBER_PURCHASE") != "1":
+        return {"ok": False, "reason": f"purchase needs the owner's yes: cheapest {p:g} per month; set KAIKU_ALLOW_NUMBER_PURCHASE=1 and rerun"}
     st, b = api.call("POST", "/v1/convai/phone-numbers/purchase", {"phone_number": x.get("phone_number"), "label": "Kaiku"})
     if st >= 300 or not b.get("phone_number_id"):
         return {"ok": False, "error": _err(st, b)}

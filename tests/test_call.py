@@ -77,7 +77,8 @@ def test_number_unknown_price_not_bought(env):
     assert len(f.calls) == 2
 
 
-def test_number_purchase_when_cheap(env):
+def test_number_purchase_when_cheap(monkeypatch, env):
+    monkeypatch.setenv("KAIKU_ALLOW_NUMBER_PURCHASE", "1")
     f = Fake([(200, []), (200, [{"phone_number": "+1555", "monthly_price": 1.0}, {"phone_number": "+1666", "monthly_price": 0}]),
               (200, {"phone_number_id": "ph9"})])
     r = C.ensure_phone_number(C.Api("k", f))
