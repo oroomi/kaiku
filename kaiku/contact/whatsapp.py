@@ -51,9 +51,9 @@ def normalize_phone(p: str | None) -> str:
 Transport = Callable[[str, str, dict, dict | None], tuple[int, dict]]
 
 
-def httpx_transport(method: str, url: str, headers: dict, payload: dict | None) -> tuple[int, dict]:
+def httpx_transport(method: str, url: str, headers: dict, payload: dict | None, timeout: float = 20) -> tuple[int, dict]:
     import httpx
-    r = httpx.request(method, url, headers=headers, json=payload, timeout=20)
+    r = httpx.request(method, url, headers=headers, json=payload, timeout=timeout)
     try:
         return r.status_code, r.json()
     except ValueError:

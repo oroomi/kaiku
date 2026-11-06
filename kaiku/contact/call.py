@@ -91,6 +91,12 @@ class Api:
 
     def call(self, method: str, path: str, payload: dict | None = None) -> tuple[int, dict]:
         try:
+            if "outbound-call" in path:  # ElevenLabs holds the request while the phone rings (ringing_timeout_secs=30)
+                try:
+                    return self.transport(method, BASE + path, {"xi-api-key": self.key, "Content-Type": "application/json"},
+                                          payload, timeout=75)
+                except TypeError:  # a test transport without the timeout argument
+                    pass
             return self.transport(method, BASE + path, {"xi-api-key": self.key, "Content-Type": "application/json"}, payload)
         except Exception as e:  # network errors never leak headers
             return 0, {"error": type(e).__name__}
