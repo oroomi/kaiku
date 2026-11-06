@@ -1,8 +1,11 @@
 """/map, /room, /join and the room API. Owned by the map builder."""
 from __future__ import annotations
 
+import hmac
 import io
+import os
 import secrets
+import time
 
 from fastapi import APIRouter, Body, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
@@ -14,6 +17,25 @@ from . import room
 
 router = APIRouter()
 COOKIE = "kaiku_room"
+RATE_MAX, RATE_WINDOW = 3, 60.0
+_hits: dict[str, list[float]] = {}
+
+
+def _rate_ok(token: str) -> bool:
+    """At most RATE_MAX answers per cookie per RATE_WINDOW seconds."""
+    now = time.monotonic()
+    for k in [k for k, v in _hits.items() if not v or now - v[-1] > RATE_WINDOW]:
+        _hits.pop(k, None)
+    recent = [t for t in _hits.get(token, []) if now - t < RATE_WINDOW]
+    if len(recent) >= RATE_MAX:
+        _hits[token] = recent
+        return False
+    _hits[token] = recent + [now]
+    return True
+
+
+def _deny(status: int, fi: str, en: str):
+    return JSONResponse({"ok": False, "error": en, "fi": fi, "en": en}, status_code=status)
 
 
 def _render(request: Request, name: str, **ctx):
@@ -52,7 +74,8 @@ def map_page(request: Request):
 
 @router.get("/room", response_class=HTMLResponse)
 def room_page(request: Request):
-    return _render(request, "room.html", join_url=_public(request) + "/join", embed=True)
+    return _render(request, "room.html", join_url=_public(request) + "/join", embed=True,
+                   reset_key=request.query_params.get("key", ""))
 
 
 @router.get("/join", response_class=HTMLResponse)
@@ -74,7 +97,13 @@ async def answer(request: Request, payload: dict = Body(...)):
     biz = room.by_id(bid)
     if not biz:
         return JSONResponse({"ok": False, "error": "unknown business"}, status_code=404)
-    a = room.record(bid, str(payload.get("answer") or ""), request.cookies.get(COOKIE, ""))
+    token = request.cookies.get(COOKIE, "")
+    if not token or room.load_state()["assignments"].get(token) != bid:
+        return _deny(403, "Tämä yritys ei ole sinun. Skannaa QR-koodi uudelleen.",
+                     "This business is not yours. Scan the QR code again.")
+    if not _rate_ok(token):
+        return _deny(429, "Liian monta vastausta, odota hetki.", "Too many answers, wait a moment.")
+    a = room.record(bid, str(payload.get("answer") or ""), token)
     disp = f"jouluaatto {a['display']}" if a["kind"] in ("hours",) else (
         "jouluaatto suljettu" if a["kind"] == "closed" else
         "jouluaatto normaalisti" if a["kind"] == "regular" else f"jouluaatto {a['display']}")
@@ -93,7 +122,10 @@ def state():
 
 
 @router.get("/api/room/reset")
-def reset():
+def reset(key: str = ""):
+    want = os.environ.get("KAIKU_ROOM_KEY", "")
+    if not want or not hmac.compare_digest(key.encode(), want.encode()):
+        return _deny(403, "Nollaus vaatii avaimen.", "Reset needs the room key.")
     room.reset()
     events.emit(Event(step="learn", title_fi="Huoneen vastaukset nollattu", title_en="Room answers cleared",
                       detail={"map": True, "reset": True}))

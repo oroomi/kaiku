@@ -11,7 +11,10 @@ Needs the `qrcode` python package (`pip install qrcode`); requirements.txt is co
 
 ## Room flow
 `/room` (big screen: QR to PUBLIC_URL/join, live map in an iframe) > phone opens `/join` (cookie `kaiku_room`, sticky round robin, businesses nearest the centre first) > chip or free text > `POST /api/room/answer` > state in `data/room_state.json` (atomic write) > Events `decide` then `apply` (detail.map=true) on `/api/events` > `map.js` sets the feature state of that one dot (no layer re-render), updates counts and the latest list, pulses cyan.
-`GET /api/room/reset` clears all answers (run before the live pitch); `GET /api/room/state` returns counts, businesses, latest. `KAIKU_DATA_DIR` overrides the data directory (tests).
+`GET /api/room/reset?key=$KAIKU_ROOM_KEY` clears all answers (run before the live pitch); without the key, or when `KAIKU_ROOM_KEY` is unset, it returns 403. Open `/room?key=<KAIKU_ROOM_KEY>` and the small "Nollaa huone" (reset room) link at the bottom of the left panel carries the key; plain `/room` shows the link too but it only 403s. Set the key in the server env, never in git.
+`POST /api/room/answer` requires the `kaiku_room` cookie to own the business id (403 with Finnish line and English gloss otherwise), allows 3 answers per cookie per minute (429), and keeps free text to 40 chars of letters, digits, space, colon, dot, hyphen; output is HTML-escaped on render.
+The map draws dots from `/api/room/state` alone; SSE (`/api/events`) only adds live pulses, reconnects with backoff (1 s up to 30 s), and state is re-polled every 5 s while SSE is down.
+ `GET /api/room/state` returns counts, businesses, latest. `KAIKU_DATA_DIR` overrides the data directory (tests).
 
 ## Load test
 `python -m kaiku.map.loadtest http://127.0.0.1:8213 20`: 20 parallel answers, time from POST to the SSE apply event: max 381 ms, median 199 ms (serialised by the SQLite event write). A real browser on /map showed 20 answered immediately after the burst.

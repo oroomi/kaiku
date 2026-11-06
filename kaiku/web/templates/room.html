@@ -13,6 +13,7 @@
     <p class="men">Answer one question: are you open on Christmas Eve? Your dot turns green.</p>
     <p class="men">Businesses: OpenStreetMap (real). Holiday hours: unknown in public data. Answers: from the room (demo).</p>
     <div class="mono live" id="rcount"><b id="r-answered">0</b> answered / <b id="r-total">0</b> businesses</div>
+    <a class="mono rreset" href="/api/room/reset?key={{ reset_key|urlencode }}" onclick="return confirm('Nollaa huone? / Reset the room?')">Nollaa huone <small>(reset room)</small></a>
   </section>
   <iframe class="roommap" src="/map?embed=1" title="Live map of Turku businesses" loading="eager"></iframe>
 </div>
