@@ -24,6 +24,7 @@ The holiday list lives INSIDE `hours`. Client does read-modify-write so existing
 - Rejected (400, code 2230 ENTITY_FIELD_INVALID): top-level `holidayHours` outside `hours`.
 - Rejected (400, code 2293): `Invalid field hours.holidayHours: Value must be a valid date` for date `24.12.2026`. Only `YYYY-MM-DD`.
 - ACCEPTED BUT WRONG: inverted interval 13:00 to 09:00 returned 200. The client therefore validates start < end and HH:MM locally (`holiday_row`).
+- Omitting `holidayHours` from `hours` does NOT clear it (old rows stay); to delete the last row send `"holidayHours": []`.
 - Sending `hours` with a new `holidayHours` list REPLACES the old list, so merging is done client side (`merge_holiday_rows`).
 
 ## Safety

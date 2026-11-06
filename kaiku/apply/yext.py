@@ -151,8 +151,7 @@ class YextSandbox:
         cur = self.get_hours(entity_id)
         new = {k: v for k, v in cur.items() if k != "holidayHours"}
         left = [r for r in cur.get("holidayHours", []) if r.get("date") != date]
-        if left:
-            new["holidayHours"] = left
+        new["holidayHours"] = left  # must send [] explicitly: omitting the key keeps the old rows
         return self.update_entity(entity_id, hours_payload(new))
 
 
