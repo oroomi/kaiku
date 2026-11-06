@@ -41,7 +41,8 @@ def last_year(business: Business, holiday: Holiday) -> dict:
                 return {"found": False, "invalid": True, "checked_date": prev.date, "bad_hours": ex.get("hours")}
             same_wd = date.fromisoformat(prev.date).weekday() == date.fromisoformat(holiday.date).weekday()
             return {"found": True, "date": prev.date, "hours": ex["hours"], "weekday_same": same_wd,
-                    "matched_holiday": prev.name_fi, "weekday_fi_then": hol.WD_FI[date.fromisoformat(prev.date).weekday()]}
+                    "matched_holiday": prev.name_fi, "weekday_fi_then": hol.WD_FI[date.fromisoformat(prev.date).weekday()],
+                    "weekday_en_then": hol.WD_EN[date.fromisoformat(prev.date).weekday()]}
     return {"found": False, "checked_date": prev.date}
 
 

@@ -439,14 +439,15 @@ def learn_real(s: Suggestion, dec: Decision) -> dict:
 def _learn_text(s: Suggestion, dec: Decision, p: dict) -> tuple[str, str, dict]:
     from .learn import prefs
     hid = prefs.holiday_id(_s_dict(s))
+    hen = s.holiday_name_en or hid
     if dec.action == "edit":
-        return (f"Opittu: {hid} aukeaa jatkossa {prefs._hours_fi(dec.edited)}", f"Learned: {hid} will use {prefs._hours_en(dec.edited)} next time", {"holiday": hid})
+        return (f"Opittu: {hid} aukeaa jatkossa {prefs._hours_fi(dec.edited)}", f"Learned: {hen} will use {prefs._hours_en(dec.edited)} next time", {"holiday": hid})
     if dec.action == "decline":
         n = (p.get("declines", {}).get(hid) or {}).get("count", 1)
-        return (f"Opittu: ehdotus {hid} hylättiin ({n}. kerta)", f"Learned: suggestion for {hid} declined (time {n})", {"holiday": hid, "declines": n})
+        return (f"Opittu: ehdotus {hid} hylättiin ({n}. kerta)", f"Learned: suggestion for {hen} declined (time {n})", {"holiday": hid, "declines": n})
     extra = "; pysyvä lupa annettu" if dec.standing_permission else ""
     extra_en = "; standing permission granted" if dec.standing_permission else ""
-    return (f"Opittu: {hid} hyväksytty{extra}, sama ehdotus kelpaa jatkossa", f"Learned: {hid} approved{extra_en}, the same suggestion will do next time",
+    return (f"Opittu: {hid} hyväksytty{extra}, sama ehdotus kelpaa jatkossa", f"Learned: {hen} approved{extra_en}, the same suggestion will do next time",
             {"holiday": hid, "standing_permission": bool(dec.standing_permission)})
 
 

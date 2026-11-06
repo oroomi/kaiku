@@ -75,7 +75,7 @@ def suggest(business: Business, det: Detection) -> Suggestion:
         primary, proposed = "lastyear", ly["hours"]
         conf = 0.85 if ly["weekday_same"] else 0.75
         note_fi = "" if ly["weekday_same"] else f" (viikonpäivä oli silloin {ly['weekday_fi_then']})"
-        note_en = "" if ly["weekday_same"] else f" (it was a different weekday then: {ly['weekday_fi_then']})"
+        note_en = "" if ly["weekday_same"] else f" (it was a {ly.get('weekday_en_then') or ly['weekday_fi_then']} that year)"
         reasons.append(_r("lastyear", f"Viime vuonna {ex.d_fi(ly['date'])} olitte {'suljettu' if ly['hours']=='closed' else 'auki ' + ex.hours_fi(ly['hours'])}{note_fi}.",
                           f"Last year on {ex.d_fi(ly['date'])} you were {ex.hours_en(ly['hours'])}{note_en}."))
         reasons.append(google_r)

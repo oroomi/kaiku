@@ -14,6 +14,7 @@ CACHE = Path(__file__).resolve().parents[2] / "data" / "holidays_fi_2026.json"
 API = "https://date.nager.at/api/v3/PublicHolidays/{year}/FI"
 WD_FI = ["maanantai", "tiistai", "keskiviikko", "torstai", "perjantai", "lauantai", "sunnuntai"]
 WD_FI_SHORT = ["ma", "ti", "ke", "to", "pe", "la", "su"]
+WD_EN = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 WD_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 # English names for the holidays Nager gives only the Finnish local name for
 NAME_EN = {"Uudenvuodenaatto": "New Year's Eve", "Isänpäivä": "Father's Day", "Äitienpäivä": "Mother's Day"}
