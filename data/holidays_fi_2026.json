@@ -1,0 +1,271 @@
+{
+ "source": "https://date.nager.at/api/v3/PublicHolidays/{year}/FI + computed flag days",
+ "holidays": [
+  {
+   "date": "2025-01-01",
+   "name_fi": "Uudenvuodenpäivä",
+   "name_en": "New Year's Day",
+   "public_holiday": true,
+   "weekday": "keskiviikko"
+  },
+  {
+   "date": "2025-01-06",
+   "name_fi": "Loppiainen",
+   "name_en": "Epiphany",
+   "public_holiday": true,
+   "weekday": "maanantai"
+  },
+  {
+   "date": "2025-04-18",
+   "name_fi": "Pitkäperjantai",
+   "name_en": "Good Friday",
+   "public_holiday": true,
+   "weekday": "perjantai"
+  },
+  {
+   "date": "2025-04-20",
+   "name_fi": "Pääsiäispäivä",
+   "name_en": "Easter Sunday",
+   "public_holiday": true,
+   "weekday": "sunnuntai"
+  },
+  {
+   "date": "2025-04-21",
+   "name_fi": "Toinen pääsiäispäivä",
+   "name_en": "Easter Monday",
+   "public_holiday": true,
+   "weekday": "maanantai"
+  },
+  {
+   "date": "2025-05-01",
+   "name_fi": "Vappu",
+   "name_en": "May Day",
+   "public_holiday": true,
+   "weekday": "torstai"
+  },
+  {
+   "date": "2025-05-11",
+   "name_fi": "Äitienpäivä",
+   "name_en": "Mother's Day",
+   "public_holiday": false,
+   "weekday": "sunnuntai"
+  },
+  {
+   "date": "2025-05-29",
+   "name_fi": "Helatorstai",
+   "name_en": "Ascension Day",
+   "public_holiday": true,
+   "weekday": "torstai"
+  },
+  {
+   "date": "2025-06-08",
+   "name_fi": "Helluntaipäivä",
+   "name_en": "Pentecost",
+   "public_holiday": true,
+   "weekday": "sunnuntai"
+  },
+  {
+   "date": "2025-06-20",
+   "name_fi": "Juhannusaatto",
+   "name_en": "Midsummer Eve",
+   "public_holiday": true,
+   "weekday": "perjantai"
+  },
+  {
+   "date": "2025-06-21",
+   "name_fi": "Juhannuspäivä",
+   "name_en": "Midsummer Day",
+   "public_holiday": true,
+   "weekday": "lauantai"
+  },
+  {
+   "date": "2025-11-01",
+   "name_fi": "Pyhäinpäivä",
+   "name_en": "All Saints' Day",
+   "public_holiday": true,
+   "weekday": "lauantai"
+  },
+  {
+   "date": "2025-11-09",
+   "name_fi": "Isänpäivä",
+   "name_en": "Father's Day",
+   "public_holiday": false,
+   "weekday": "sunnuntai"
+  },
+  {
+   "date": "2025-12-06",
+   "name_fi": "Itsenäisyyspäivä",
+   "name_en": "Independence Day",
+   "public_holiday": true,
+   "weekday": "lauantai"
+  },
+  {
+   "date": "2025-12-24",
+   "name_fi": "Jouluaatto",
+   "name_en": "Christmas Eve",
+   "public_holiday": true,
+   "weekday": "keskiviikko"
+  },
+  {
+   "date": "2025-12-25",
+   "name_fi": "Joulupäivä",
+   "name_en": "Christmas Day",
+   "public_holiday": true,
+   "weekday": "torstai"
+  },
+  {
+   "date": "2025-12-26",
+   "name_fi": "Tapaninpäivä",
+   "name_en": "St. Stephen's Day",
+   "public_holiday": true,
+   "weekday": "perjantai"
+  },
+  {
+   "date": "2025-12-31",
+   "name_fi": "Uudenvuodenaatto",
+   "name_en": "New Year's Eve",
+   "public_holiday": false,
+   "weekday": "keskiviikko"
+  },
+  {
+   "date": "2026-01-01",
+   "name_fi": "Uudenvuodenpäivä",
+   "name_en": "New Year's Day",
+   "public_holiday": true,
+   "weekday": "torstai"
+  },
+  {
+   "date": "2026-01-06",
+   "name_fi": "Loppiainen",
+   "name_en": "Epiphany",
+   "public_holiday": true,
+   "weekday": "tiistai"
+  },
+  {
+   "date": "2026-04-03",
+   "name_fi": "Pitkäperjantai",
+   "name_en": "Good Friday",
+   "public_holiday": true,
+   "weekday": "perjantai"
+  },
+  {
+   "date": "2026-04-05",
+   "name_fi": "Pääsiäispäivä",
+   "name_en": "Easter Sunday",
+   "public_holiday": true,
+   "weekday": "sunnuntai"
+  },
+  {
+   "date": "2026-04-06",
+   "name_fi": "Toinen pääsiäispäivä",
+   "name_en": "Easter Monday",
+   "public_holiday": true,
+   "weekday": "maanantai"
+  },
+  {
+   "date": "2026-05-01",
+   "name_fi": "Vappu",
+   "name_en": "May Day",
+   "public_holiday": true,
+   "weekday": "perjantai"
+  },
+  {
+   "date": "2026-05-10",
+   "name_fi": "Äitienpäivä",
+   "name_en": "Mother's Day",
+   "public_holiday": false,
+   "weekday": "sunnuntai"
+  },
+  {
+   "date": "2026-05-14",
+   "name_fi": "Helatorstai",
+   "name_en": "Ascension Day",
+   "public_holiday": true,
+   "weekday": "torstai"
+  },
+  {
+   "date": "2026-05-24",
+   "name_fi": "Helluntaipäivä",
+   "name_en": "Pentecost",
+   "public_holiday": true,
+   "weekday": "sunnuntai"
+  },
+  {
+   "date": "2026-06-19",
+   "name_fi": "Juhannusaatto",
+   "name_en": "Midsummer Eve",
+   "public_holiday": true,
+   "weekday": "perjantai"
+  },
+  {
+   "date": "2026-06-20",
+   "name_fi": "Juhannuspäivä",
+   "name_en": "Midsummer Day",
+   "public_holiday": true,
+   "weekday": "lauantai"
+  },
+  {
+   "date": "2026-10-31",
+   "name_fi": "Pyhäinpäivä",
+   "name_en": "All Saints' Day",
+   "public_holiday": true,
+   "weekday": "lauantai"
+  },
+  {
+   "date": "2026-11-08",
+   "name_fi": "Isänpäivä",
+   "name_en": "Father's Day",
+   "public_holiday": false,
+   "weekday": "sunnuntai"
+  },
+  {
+   "date": "2026-12-06",
+   "name_fi": "Itsenäisyyspäivä",
+   "name_en": "Independence Day",
+   "public_holiday": true,
+   "weekday": "sunnuntai"
+  },
+  {
+   "date": "2026-12-24",
+   "name_fi": "Jouluaatto",
+   "name_en": "Christmas Eve",
+   "public_holiday": true,
+   "weekday": "torstai"
+  },
+  {
+   "date": "2026-12-25",
+   "name_fi": "Joulupäivä",
+   "name_en": "Christmas Day",
+   "public_holiday": true,
+   "weekday": "perjantai"
+  },
+  {
+   "date": "2026-12-26",
+   "name_fi": "Tapaninpäivä",
+   "name_en": "St. Stephen's Day",
+   "public_holiday": true,
+   "weekday": "lauantai"
+  },
+  {
+   "date": "2026-12-31",
+   "name_fi": "Uudenvuodenaatto",
+   "name_en": "New Year's Eve",
+   "public_holiday": false,
+   "weekday": "torstai"
+  },
+  {
+   "date": "2027-01-01",
+   "name_fi": "Uudenvuodenpäivä",
+   "name_en": "New Year's Day",
+   "public_holiday": true,
+   "weekday": "perjantai"
+  },
+  {
+   "date": "2027-01-06",
+   "name_fi": "Loppiainen",
+   "name_en": "Epiphany",
+   "public_holiday": true,
+   "weekday": "keskiviikko"
+  }
+ ]
+}

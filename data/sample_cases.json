@@ -1,0 +1,818 @@
+{
+ "_label": "Hand-made fictional test cases (not Fonecta data).",
+ "cases": [
+  {
+   "case": "1 hero: last year exception, none this year",
+   "business": {
+    "id": "SinceAI07",
+    "name": "Furry Paw Vet Clinic",
+    "address": "Sample street 1",
+    "city": "Vantaa",
+    "category": "veterinary",
+    "regular_hours": {
+     "mon": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "tue": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "wed": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "thu": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "fri": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "sat": [
+      {
+       "start": "10:00",
+       "end": "14:00"
+      }
+     ],
+     "sun": []
+    },
+    "last_year_exceptions": [
+     {
+      "date": "2025-12-24",
+      "hours": [
+       {
+        "start": "09:00",
+        "end": "13:00"
+       }
+      ]
+     },
+     {
+      "date": "2025-12-25",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-12-26",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-12-31",
+      "hours": [
+       {
+        "start": "09:00",
+        "end": "15:00"
+       }
+      ]
+     },
+     {
+      "date": "2025-01-01",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-01-06",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-04-18",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-05-01",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-06-20",
+      "hours": [
+       {
+        "start": "09:00",
+        "end": "13:00"
+       }
+      ]
+     },
+     {
+      "date": "2025-11-01",
+      "hours": [
+       {
+        "start": "10:00",
+        "end": "14:00"
+       }
+      ]
+     }
+    ],
+    "website": "https://furrypaw.example",
+    "source": "sample (fictional)"
+   },
+   "date": "2026-12-24",
+   "today": "2026-12-17",
+   "target": "09:00-13:00",
+   "expect_kind": "hours"
+  },
+  {
+   "case": "2 isänpäivä for a vet closed Sundays: no_change",
+   "business": {
+    "id": "SinceAI07",
+    "name": "Furry Paw Vet Clinic",
+    "address": "Sample street 1",
+    "city": "Vantaa",
+    "category": "veterinary",
+    "regular_hours": {
+     "mon": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "tue": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "wed": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "thu": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "fri": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "sat": [
+      {
+       "start": "10:00",
+       "end": "14:00"
+      }
+     ],
+     "sun": []
+    },
+    "last_year_exceptions": [
+     {
+      "date": "2025-12-24",
+      "hours": [
+       {
+        "start": "09:00",
+        "end": "13:00"
+       }
+      ]
+     },
+     {
+      "date": "2025-12-25",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-12-26",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-12-31",
+      "hours": [
+       {
+        "start": "09:00",
+        "end": "15:00"
+       }
+      ]
+     },
+     {
+      "date": "2025-01-01",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-01-06",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-04-18",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-05-01",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-06-20",
+      "hours": [
+       {
+        "start": "09:00",
+        "end": "13:00"
+       }
+      ]
+     },
+     {
+      "date": "2025-11-01",
+      "hours": [
+       {
+        "start": "10:00",
+        "end": "14:00"
+       }
+      ]
+     }
+    ],
+    "website": "https://furrypaw.example",
+    "source": "sample (fictional)"
+   },
+   "date": "2026-11-08",
+   "today": "2026-11-01",
+   "target": "closed",
+   "expect_kind": "no_change"
+  },
+  {
+   "case": "3 joulupäivä, last year closed",
+   "business": {
+    "id": "SinceAI07",
+    "name": "Furry Paw Vet Clinic",
+    "address": "Sample street 1",
+    "city": "Vantaa",
+    "category": "veterinary",
+    "regular_hours": {
+     "mon": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "tue": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "wed": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "thu": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "fri": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "sat": [
+      {
+       "start": "10:00",
+       "end": "14:00"
+      }
+     ],
+     "sun": []
+    },
+    "last_year_exceptions": [
+     {
+      "date": "2025-12-24",
+      "hours": [
+       {
+        "start": "09:00",
+        "end": "13:00"
+       }
+      ]
+     },
+     {
+      "date": "2025-12-25",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-12-26",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-12-31",
+      "hours": [
+       {
+        "start": "09:00",
+        "end": "15:00"
+       }
+      ]
+     },
+     {
+      "date": "2025-01-01",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-01-06",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-04-18",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-05-01",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-06-20",
+      "hours": [
+       {
+        "start": "09:00",
+        "end": "13:00"
+       }
+      ]
+     },
+     {
+      "date": "2025-11-01",
+      "hours": [
+       {
+        "start": "10:00",
+        "end": "14:00"
+       }
+      ]
+     }
+    ],
+    "website": "https://furrypaw.example",
+    "source": "sample (fictional)"
+   },
+   "date": "2026-12-25",
+   "today": "2026-12-17",
+   "target": "closed",
+   "expect_kind": "closed"
+  },
+  {
+   "case": "4 cold start cafe, public holiday, prior short hours -> ask",
+   "business": {
+    "id": "cs-cafe",
+    "name": "Cafe Aurora",
+    "category": "cafe",
+    "city": "Helsinki",
+    "regular_hours": {
+     "mon": [
+      {
+       "start": "08:00",
+       "end": "18:00"
+      }
+     ],
+     "tue": [
+      {
+       "start": "08:00",
+       "end": "18:00"
+      }
+     ],
+     "wed": [
+      {
+       "start": "08:00",
+       "end": "18:00"
+      }
+     ],
+     "thu": [
+      {
+       "start": "08:00",
+       "end": "18:00"
+      }
+     ],
+     "fri": [
+      {
+       "start": "08:00",
+       "end": "18:00"
+      }
+     ],
+     "sat": [
+      {
+       "start": "08:00",
+       "end": "18:00"
+      }
+     ],
+     "sun": [
+      {
+       "start": "10:00",
+       "end": "16:00"
+      }
+     ]
+    },
+    "last_year_exceptions": [],
+    "website": null,
+    "source": "sample (fictional)"
+   },
+   "date": "2026-12-24",
+   "today": "2026-12-17",
+   "target": "09:00-14:00",
+   "expect_kind": "ask"
+  },
+  {
+   "case": "5 cold start florist on tapaninpäivä, prior closed",
+   "business": {
+    "id": "cs-florist",
+    "name": "Kukka Kuu",
+    "category": "florist",
+    "city": "Helsinki",
+    "regular_hours": {
+     "mon": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "tue": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "wed": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "thu": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "fri": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "sat": [
+      {
+       "start": "10:00",
+       "end": "14:00"
+      }
+     ],
+     "sun": []
+    },
+    "last_year_exceptions": [],
+    "website": null,
+    "source": "sample (fictional)"
+   },
+   "date": "2026-12-26",
+   "today": "2026-12-17",
+   "target": "closed",
+   "expect_kind": "closed"
+  },
+  {
+   "case": "6 pyhäinpäivä, last year 10-14 equals regular Saturday: no_change",
+   "business": {
+    "id": "SinceAI07",
+    "name": "Furry Paw Vet Clinic",
+    "address": "Sample street 1",
+    "city": "Vantaa",
+    "category": "veterinary",
+    "regular_hours": {
+     "mon": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "tue": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "wed": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "thu": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "fri": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "sat": [
+      {
+       "start": "10:00",
+       "end": "14:00"
+      }
+     ],
+     "sun": []
+    },
+    "last_year_exceptions": [
+     {
+      "date": "2025-12-24",
+      "hours": [
+       {
+        "start": "09:00",
+        "end": "13:00"
+       }
+      ]
+     },
+     {
+      "date": "2025-12-25",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-12-26",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-12-31",
+      "hours": [
+       {
+        "start": "09:00",
+        "end": "15:00"
+       }
+      ]
+     },
+     {
+      "date": "2025-01-01",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-01-06",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-04-18",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-05-01",
+      "hours": "closed"
+     },
+     {
+      "date": "2025-06-20",
+      "hours": [
+       {
+        "start": "09:00",
+        "end": "13:00"
+       }
+      ]
+     },
+     {
+      "date": "2025-11-01",
+      "hours": [
+       {
+        "start": "10:00",
+        "end": "14:00"
+       }
+      ]
+     }
+    ],
+    "website": "https://furrypaw.example",
+    "source": "sample (fictional)"
+   },
+   "date": "2026-10-31",
+   "today": "2026-10-24",
+   "target": "10:00-14:00",
+   "expect_kind": "no_change"
+  },
+  {
+   "case": "7 cold start shop, juhannusaatto",
+   "business": {
+    "id": "cs-shop",
+    "name": "Pieni Kauppa",
+    "category": "shop",
+    "city": "Helsinki",
+    "regular_hours": {
+     "mon": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "tue": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "wed": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "thu": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "fri": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "sat": [
+      {
+       "start": "10:00",
+       "end": "14:00"
+      }
+     ],
+     "sun": []
+    },
+    "last_year_exceptions": [],
+    "website": null,
+    "source": "sample (fictional)"
+   },
+   "date": "2026-06-19",
+   "today": "2026-06-12",
+   "target": "closed",
+   "expect_kind": "closed"
+  },
+  {
+   "case": "8 cold start restaurant, uudenvuodenaatto (not public) -> ask",
+   "business": {
+    "id": "cs-rest",
+    "name": "Ravintola Sinikello",
+    "category": "restaurant",
+    "city": "Helsinki",
+    "regular_hours": {
+     "mon": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "tue": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "wed": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "thu": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "fri": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "sat": [
+      {
+       "start": "10:00",
+       "end": "14:00"
+      }
+     ],
+     "sun": []
+    },
+    "last_year_exceptions": [],
+    "website": null,
+    "source": "sample (fictional)"
+   },
+   "date": "2026-12-31",
+   "today": "2026-12-24",
+   "target": "11:00-18:00",
+   "expect_kind": "ask"
+  },
+  {
+   "case": "9 hairdresser, vappu, last year closed",
+   "business": {
+    "id": "hair",
+    "name": "Hiusstudio Lumi",
+    "category": "hairdresser",
+    "city": "Helsinki",
+    "regular_hours": {
+     "mon": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "tue": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "wed": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "thu": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "fri": [
+      {
+       "start": "09:00",
+       "end": "17:00"
+      }
+     ],
+     "sat": [
+      {
+       "start": "10:00",
+       "end": "14:00"
+      }
+     ],
+     "sun": []
+    },
+    "last_year_exceptions": [
+     {
+      "date": "2025-05-01",
+      "hours": "closed"
+     }
+    ],
+    "website": null,
+    "source": "sample (fictional)"
+   },
+   "date": "2026-05-01",
+   "today": "2026-04-24",
+   "target": "closed",
+   "expect_kind": "closed"
+  },
+  {
+   "case": "10 cafe open Sunday, isänpäivä regular: no_change",
+   "business": {
+    "id": "cafe2",
+    "name": "Kahvila Sointu",
+    "category": "cafe",
+    "city": "Helsinki",
+    "regular_hours": {
+     "mon": [
+      {
+       "start": "08:00",
+       "end": "18:00"
+      }
+     ],
+     "tue": [
+      {
+       "start": "08:00",
+       "end": "18:00"
+      }
+     ],
+     "wed": [
+      {
+       "start": "08:00",
+       "end": "18:00"
+      }
+     ],
+     "thu": [
+      {
+       "start": "08:00",
+       "end": "18:00"
+      }
+     ],
+     "fri": [
+      {
+       "start": "08:00",
+       "end": "18:00"
+      }
+     ],
+     "sat": [
+      {
+       "start": "08:00",
+       "end": "18:00"
+      }
+     ],
+     "sun": [
+      {
+       "start": "10:00",
+       "end": "16:00"
+      }
+     ]
+    },
+    "last_year_exceptions": [],
+    "website": null,
+    "source": "sample (fictional)"
+   },
+   "date": "2026-11-08",
+   "today": "2026-11-01",
+   "target": "10:00-16:00",
+   "expect_kind": "no_change"
+  }
+ ]
+}
