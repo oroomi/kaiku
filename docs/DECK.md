@@ -27,7 +27,7 @@ On screen: one Store entity, one attribute `holidayHours`, five datasetIds (last
 Say: One business, many sources, one truth, and every source keeps its own provenance.
 
 ## 7. What we measured (honest)
-On screen: 10 hand-made cases, wrong-suggestion rate 0.0, abstain rate 0.2; the words "self-consistency, not accuracy". 173 tests passing offline.
+On screen: 10 hand-made cases, wrong-suggestion rate 0.0, abstain rate 0.2; the words "self-consistency, not accuracy". 208 tests passing offline (6 live-sending tests skipped unless KAIKU_LIVE=1).
 Say: We have not seen Fonecta's data yet. The backtest has a pluggable loader and prints machine-readable output, ready for your scoring script.
 
 ## 8. What is next

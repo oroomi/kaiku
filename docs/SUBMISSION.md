@@ -29,4 +29,4 @@ Kaiku runs Fonecta's whole chain for holiday hours. A FIWARE Orion-LD subscripti
 | Bonus: a live source replacing a dataset file | Nager.Date holiday refresh; docs/DATA_SOURCES.md |
 
 ## Honest status line for the form comments
-Contact works over WhatsApp when a token is configured and otherwise gives the decision link; the outbound call lane is in progress. Evaluation is a self-consistency check on 10 hand-made cases, not Fonecta's data.
+Contact works over WhatsApp (Meta test number, to the team's own phone; free-form messages need the 24 hour window, the Finnish template is pending Meta approval) and otherwise gives the decision link; the outbound call lane is implemented but not working (SIP 488). Evaluation is a self-consistency check on 10 hand-made cases, not Fonecta's data.

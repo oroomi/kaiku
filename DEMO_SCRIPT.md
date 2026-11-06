@@ -31,7 +31,7 @@ If a judge arrives mid-demo, stop: "Let me start from the top: Connect suggests,
 3. How is it measured? Honestly: 10 hand-made cases, self-consistency only. We built a backtest with a pluggable loader and have not seen Fonecta's data.
 4. What breaks first at scale? Our Orion-LD build cannot update a datasetId instance in place, so we re-create the entity. Fine for a pilot, not for thousands of businesses.
 5. Does it really reach Google? Not in the sandbox: it has no publisher listings. The Yext write is real and read back.
-6. Does WhatsApp really send? Only when a token is configured; otherwise the contact step gives the decision link. The call lane is in progress.
+6. Does WhatsApp really send? Yes, to the team's own phone through the Meta test number (token configured 6 Nov); free-form messages need the phone to have written first (24 hour window), the Finnish template is pending Meta approval. If a send fails the contact step gives the decision link. The call lane is implemented but not working (SIP 488). Delivery statuses are logged in `data/wa_status.jsonl`. The demo reset also clears pending MCP proposals.
 
 ## Table checklist
 - Laptop on power, phone on the live URL, QR card, one-page PILOT x10, 60-second screen recording on the phone as fallback.

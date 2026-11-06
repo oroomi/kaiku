@@ -36,7 +36,7 @@ No receipt file exists under `eval/receipts/`; the command above prints the numb
 - Learning: two declines of the same holiday turn it into `no_change`; one decline lowers confidence by 0.15; an edit is proposed next time at confidence at least 0.9.
 
 ## The Google signal
-Kaiku checks what Google shows through Serper places (`SERPER_API_KEY`). The status for the fictional Furry Paw business is unknown: it is not a real Google listing and no key was set on the build box on 6 Nov. When Google is unverified the message names Connect's published hours instead. Note: the home page headline still says "Google still says 9-17" for the demo business; that is the brief's own framing and the sample data, not a live Google read.
+Kaiku checks what Google shows through Serper places (`SERPER_API_KEY`). The status for the fictional Furry Paw business is unknown: it is not a real Google listing . `SERPER_API_KEY` is set on the build box and `google_now` in `kaiku/detect/signals.py` calls Serper places for it, but a fictional business returns no hours. When Google is unverified the message names Connect's published hours instead. Note: the home page headline still says "Google still says 9-17" for the demo business; that is the brief's own framing and the sample data, not a live Google read.
 
 ## Failure and edge rows (real engine output)
 | Case | Expected by author | Got | Why |
