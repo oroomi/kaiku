@@ -2,11 +2,31 @@
 field names are identical so swapping the import is enough."""
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field, asdict
 from typing import Any, Optional, Union
 
 Hours = list  # [{"start": "09:00", "end": "17:00"}]
 CLOSED = "closed"
+_HHMM = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
+
+
+def valid_interval(x) -> bool:
+    """{"start": "HH:MM", "end": "HH:MM"} with start strictly before end."""
+    if not isinstance(x, dict):
+        return False
+    s, e = x.get("start"), x.get("end")
+    return (isinstance(s, str) and isinstance(e, str) and bool(_HHMM.match(s)) and bool(_HHMM.match(e)) and s < e)
+
+
+def valid_hours(h) -> bool:
+    """"closed" or a non-empty list of valid, non-overlapping intervals."""
+    if h == CLOSED:
+        return True
+    if not isinstance(h, list) or not h or not all(valid_interval(x) for x in h):
+        return False
+    srt = sorted(h, key=lambda x: x["start"])
+    return all(a["end"] <= b["start"] for a, b in zip(srt, srt[1:]))
 
 
 @dataclass
@@ -50,6 +70,7 @@ class Detection:
     signals: dict = field(default_factory=dict)
     reason_codes: list = field(default_factory=list)
     holiday: Optional[dict] = None  # extra, convenience for suggest
+    status: str = "ok"  # extra: "ok" | "past" (the date is before today: nothing to suggest)
 
     def to_dict(self):
         return asdict(self)
@@ -69,6 +90,13 @@ class Suggestion:
     status: str = "proposed"
     channel_log: list = field(default_factory=list)
     question_fi: Optional[str] = None  # extra, only for kind=ask
+    # extras read by the contact lane
+    business_name: str = ""
+    holiday_name_fi: Optional[str] = None
+    holiday_name_en: Optional[str] = None
+    last_year_hours: Any = None  # [{start,end}] | "closed" | None
+    google_now: dict = field(default_factory=lambda: {"status": "unknown"})
+    decide_url: Optional[str] = None  # core fills it
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

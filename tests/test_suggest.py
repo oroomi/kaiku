@@ -51,7 +51,7 @@ def test_gate_no_guess_above_threshold_on_cold_start():
 def test_hero_message_snapshot():
     _, s = run(CASES[0])
     assert s.message_fi == ("Hei Furry Paw Vet Clinic! Jouluaatto on torstaina 24.12. Viime vuonna olitte auki 9-13, mutta "
-                            "tälle vuodelle ei ole lisätty poikkeusaukioloaikoja, joten Google näyttää nyt tavalliset "
+                            "tälle vuodelle ei ole lisätty poikkeusaukioloaikoja, joten Fonecta Connect näyttää nyt tavalliset "
                             "torstain aukioloajat (9-17). Ehdotus: to 24.12. klo 9-13.")
     assert s.proposed == [{"start": "09:00", "end": "13:00"}] and s.confidence == 0.75
 
@@ -115,3 +115,126 @@ def test_csv_loader(tmp_path):
                  "x1,cafe,mon-fri 09:00-17:00; sat 10:00-14:00,9-13,2026-12-24,9-13\n")
     res = backtest.run(backtest.load_cases(p))
     assert res[0]["correct"] and res[0]["kind"] == "hours"
+
+
+# ---- verifier fixes ------------------------------------------------------------------------------
+import subprocess
+import sys
+
+FP = {"id": "fp", "name": "Furry Paw", "category": "veterinary",
+      "regular_hours": {k: [{"start": "09:00", "end": "17:00"}] for k in ("mon", "tue", "wed", "thu", "fri")} | {"sat": [], "sun": []},
+      "last_year_exceptions": [{"date": "2025-12-24", "hours": [{"start": "09:00", "end": "13:00"}]}]}
+
+
+def sug(biz, date, today=None):
+    b = Business.from_dict(biz)
+    return suggest(b, detect(b, date, today, use_network=False))
+
+
+def test_past_date_gives_no_suggestion():
+    b = Business.from_dict(FP)
+    det = detect(b, "2026-12-24", "2026-12-27", use_network=False)
+    assert det.status == "past" and det.reason_codes == ["PAST_DATE"]
+    s = suggest(b, det)
+    assert s.kind == "no_change" and s.proposed is None and s.status == "expired" and s.confidence == 0.0
+    assert "mennyt" in s.message_fi
+    assert sug(FP, "2026-12-24", "2026-12-24").kind == "hours"  # today itself is still open
+    assert sug(FP, "2026-12-24", None).kind == "hours"
+
+
+def test_past_cli_prints_clearly():
+    r = subprocess.run([sys.executable, "-m", "kaiku.suggest.cli", "--date", "2026-12-24", "--today", "2026-12-27",
+                        "--no-network"], capture_output=True, text=True, cwd=ROOT)
+    assert r.returncode == 0 and "PAST:" in r.stdout and "jo mennyt" in r.stdout
+
+
+def test_public_holiday_on_closed_weekday_is_true():
+    s = sug(FP, "2026-12-06", "2026-11-30")  # Itsenäisyyspäivä on a Sunday, closed Sundays
+    assert s.kind == "no_change" and s.proposed is None
+    assert s.message_fi == "Itsenäisyyspäivä 6.12. on sunnuntai ja olette silloin kiinni, joten muutosta ei tarvita."
+    assert "not a public holiday" not in s.message_en and "ei ole arkipyhä" not in s.message_fi
+    assert all("ei ole arkipyhä" not in r["text_fi"] for r in s.reasons)
+
+
+@pytest.mark.parametrize("bad", [[{"start": "13:00", "end": "09:00"}], [{"start": "9:00", "end": "13:00"}],
+                                 [{"start": "09:00", "end": "09:00"}], [], [{"start": "25:00", "end": "26:00"}], "garbage"])
+def test_invalid_last_year_never_proposed(bad):
+    biz = {**FP, "last_year_exceptions": [{"date": "2025-12-24", "hours": bad}]}
+    s = sug(biz, "2026-12-24", "2026-12-17")
+    assert s.kind == "ask" and s.proposed is None and s.confidence < ASK_BELOW
+    assert s.last_year_hours is None
+
+
+def test_invalid_last_year_falls_through_to_next_signal(monkeypatch):
+    biz = {**FP, "last_year_exceptions": [{"date": "2025-12-24", "hours": [{"start": "13:00", "end": "09:00"}]}]}
+    b = Business.from_dict(biz)
+    monkeypatch.setattr(sg, "website", lambda *a, **k: {"quote": "Jouluaatto 24.12. klo 10-12",
+                                                        "hours": [{"start": "10:00", "end": "12:00"}], "url": "x"})
+    s = suggest(b, detect(b, "2026-12-24", "2026-12-17", use_network=True))
+    assert s.kind == "hours" and s.confidence == 0.8 and s.proposed == [{"start": "10:00", "end": "12:00"}]
+
+
+def test_unknown_google_is_not_claimed():
+    s = sug(FP, "2026-12-24", "2026-12-17")
+    assert "Google näyttää" not in s.message_fi and "Google now shows" not in s.message_en
+    assert "Fonecta Connect näyttää nyt tavalliset torstain aukioloajat (9-17)" in s.message_fi
+    assert all("Google" not in r["text_fi"] for r in s.reasons)
+
+
+def test_verified_google_is_named(monkeypatch):
+    monkeypatch.setattr(sg, "google_now", lambda b, d: {"status": "shows_hours", "text": "9-17",
+                                                        "hours": [{"start": "09:00", "end": "17:00"}]})
+    b = Business.from_dict(FP)
+    s = suggest(b, detect(b, "2026-12-24", "2026-12-17", use_network=True))
+    assert "Google näyttää nyt tavalliset torstain aukioloajat (9-17)" in s.message_fi
+    assert s.google_now["status"] == "shows_hours"
+
+
+def test_cli_jsonl_flag_and_invalid_dates():
+    r = subprocess.run([sys.executable, "-m", "kaiku.suggest.cli", "--date", "2026-12-24", "2026-12-25", "--today",
+                        "2026-12-17", "--no-network", "--jsonl"], capture_output=True, text=True, cwd=ROOT)
+    assert r.returncode == 0
+    lines = r.stdout.strip().splitlines()
+    assert len(lines) == 2 and [json.loads(x)["holiday_date"] for x in lines] == ["2026-12-24", "2026-12-25"]
+    for bad in ("garbage", "2026-13-40"):
+        r = subprocess.run([sys.executable, "-m", "kaiku.suggest.cli", "--date", bad, "--no-network"],
+                           capture_output=True, text=True, cwd=ROOT)
+        assert r.returncode == 2 and "Traceback" not in r.stderr and len(r.stderr.strip().splitlines()) == 1
+    r = subprocess.run([sys.executable, "-m", "kaiku.suggest.cli", "--date", "2026-12-24", "--today", "nope"],
+                       capture_output=True, text=True, cwd=ROOT)
+    assert r.returncode == 2 and "Traceback" not in r.stderr
+
+
+def test_contact_lane_fields_on_every_suggestion():
+    keys = {"business_name", "holiday_name_fi", "holiday_name_en", "last_year_hours", "google_now", "decide_url"}
+    for c in CASES:
+        _, s = run(c)
+        d = s.to_dict()
+        assert keys <= set(d), c["case"]
+        assert d["business_name"] == c["business"]["name"] and d["decide_url"] is None
+        assert "status" in d["google_now"]
+        assert d["last_year_hours"] is None or d["last_year_hours"] == "closed" or isinstance(d["last_year_hours"], list)
+    d = run(CASES[0])[1].to_dict()
+    assert d["holiday_name_fi"] == "Jouluaatto" and d["holiday_name_en"] == "Christmas Eve"
+    assert d["last_year_hours"] == [{"start": "09:00", "end": "13:00"}]
+    assert sug(FP, "2026-12-24", "2026-12-27").to_dict().keys() >= keys  # past path too
+
+
+def test_holidays_survive_network_failure(tmp_path, monkeypatch):
+    import time
+    monkeypatch.setattr(hol, "_cache", None)
+    old = tmp_path / "h.json"
+    old.write_text(json.dumps({"holidays": [{"date": "2026-12-24", "name_fi": "Jouluaatto", "name_en": "Christmas Eve",
+                                             "public_holiday": True, "weekday": "torstai"}]}))
+    import os
+    os.utime(old, (time.time() - 40 * 86400,) * 2)  # stale
+    monkeypatch.setattr(hol, "CACHE", old)
+
+    def boom(*a, **k):
+        raise OSError("no network")
+    monkeypatch.setattr(hol, "fetch_year", boom)
+    assert [h.date for h in hol.all_holidays()] == ["2026-12-24"]  # kept the bundled file
+    monkeypatch.setattr(hol, "_cache", None)
+    monkeypatch.setattr(hol, "CACHE", tmp_path / "missing.json")
+    assert any(h.name_fi == "Isänpäivä" for h in hol.all_holidays())  # no file, no network: still no crash
+    monkeypatch.setattr(hol, "_cache", None)
