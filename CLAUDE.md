@@ -15,7 +15,7 @@ or decline; standing permission for recurring changes), RELIABILITY (how wrong s
 ask instead of guess), EXTENSIBILITY (same loop for review replies / posts), COLD START (customer with no history).
 Fonecta scores suggestion quality with a SCORING SCRIPT on HIDDEN TEST DATA (dataset not released yet; design the suggest
 engine with a pluggable dataset loader and machine-readable output).
-Contact ladder (Dayo's decision): WhatsApp first, then a phone call by Kaiku (ElevenLabs voice, English for the demo; Finnish per owner_language). NO EMAIL.
+Contact ladder (Dayo's decision, 6 Nov 23:00Z): email with the decision link FIRST, WhatsApp (conversational, same Kaiku brain) if no reply, then a phone call by Kaiku (ElevenLabs voice, English for the demo; Finnish per owner_language).
 Demo business: the Yext sandbox entity "Furry Paw Vet Clinic", Vantaa (fictional, provisioned by Fonecta; id SinceAI07).
 Hero holiday: jouluaatto Thu 24 Dec 2026 reached by TIME TRAVEL (fake "today"). Isanpaiva Sun 8 Nov is NOT a public holiday
 (flag day): for a vet closed on Sundays the right answer is "no change", shown as reliability, not silence.

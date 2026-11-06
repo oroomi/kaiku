@@ -224,6 +224,15 @@ def whatsapp_configured() -> bool:
         return False
 
 
+def email_configured(s: "Suggestion | None" = None) -> bool:
+    """True when the ladder has an owner email to start with (OWNER_EMAIL, or the business's owner_email)."""
+    try:
+        from .contact import email as E
+        return bool(E.owner_email(s.model_dump(mode="json") if s is not None else {}))
+    except Exception:
+        return False
+
+
 def decide_link(s: Suggestion) -> str:
     try:
         from .decide import tokens
@@ -241,10 +250,11 @@ def contact_message(s: Suggestion) -> str:
 
 
 async def contact_step(s: Suggestion) -> None:
-    """WhatsApp first. Without WA_TOKEN the lane is degraded: no message leaves, the decision link is shown instead."""
+    """Email with the decision link first (when an owner email exists), WhatsApp if no reply, then Kaiku calls.
+    Without WA_TOKEN and without an owner email the lane is degraded: no message leaves, the decision link is shown instead."""
     b = store.get_business(s.business_id)
     msg = contact_message(s)
-    if whatsapp_configured():
+    if whatsapp_configured() or email_configured(s):
         from .contact import ladder
         d = s.model_dump(mode="json")
         await asyncio.to_thread(ladder.contact, d)  # ladder emits its own contact events

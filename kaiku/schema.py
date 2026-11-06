@@ -32,6 +32,7 @@ class Business(BaseModel):
     last_year_exceptions: list[Exception_] = Field(default_factory=list)
     website: Optional[str] = None
     owner_whatsapp: Optional[str] = None
+    owner_email: Optional[str] = None  # step 1 of the contact ladder; the seed address is fictional, OWNER_EMAIL overrides
     owner_language: str = "en"  # language of every owner-facing text: "en" (demo default) or "fi"
     source: str = ""
     note: Optional[str] = None

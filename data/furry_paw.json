@@ -28,6 +28,8 @@
     {"date": "2025-11-01", "hours": [{"start": "10:00", "end": "14:00"}]}
   ],
   "website": "https://furrypaw.example",
+  "owner_email": "owner@example.com",
+  "owner_email_note": "fictional address; a real one is set by env OWNER_EMAIL",
   "owner_whatsapp": null,
   "owner_language": "en",
   "source": "yext-sandbox",

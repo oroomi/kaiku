@@ -2,7 +2,7 @@
 
 Demo business: Furry Paw Vet Clinic (fictional Yext sandbox entity). Items 1 to 4 are the exact Suggestion texts from `python3 -m kaiku.suggest.cli --business data/furry_paw.json` (no network): 24.12. hours, 25.12. closed, 24.12. with no history (ask), 8.11. no change. Text as sent over WhatsApp, with English glosses.
 
-## 1. Suggestion with proposed hours (WhatsApp buttons: Approve / Edit / No thanks; Finnish owners: Hyväksy / Muokkaa / Ei kiitos)
+## 1. Suggestion with proposed hours (WhatsApp buttons: Approve / Edit / No thanks)
 
 Finnish:
 
@@ -58,7 +58,7 @@ Finnish:
 
 English gloss:
 
-> Thank you! The Christmas Eve hours (9 to 13) are now saved. They show on Google, Apple Maps, Bing and Fonecta services.
+> Done. Christmas Eve hours 9-13 are saved and will show on Google, Fonecta Finder, 020202 and the other channels Connect publishes to.
 
 ## 5b. Receipt after apply (closed day, singular)
 
@@ -68,7 +68,7 @@ Finnish:
 
 English gloss:
 
-> Thank you! The Christmas Day closure is now saved. It shows on Google, Apple Maps, Bing and Fonecta services.
+> Done. Christmas Day closure is saved and will show on Google, Fonecta Finder, 020202 and the other channels Connect publishes to.
 
 ## 5c. Suggestion when a decide link exists (example URL)
 
@@ -96,6 +96,46 @@ English gloss:
 
 > I could not find the suggestion this reply belongs to.
 
+## 0. Step 1 email (subject, then body)
+
+Finnish:
+
+> Furry Paw Vet Clinic: Jouluaaton aukioloajat, yksi kysymys
+>
+> Hei, Furry Paw Vet Clinic!
+>
+> Viime vuonna aukioloaikanne sinä päivänä oli 9-13.
+> Ehdotan, että aukioloaikanne 24.12. on 9-13.
+>
+> Hyväksy, muokkaa tai kieltäydy yhdellä napautuksella, kirjautumista ei tarvita:
+> https://kaiku.example/d/EXAMPLE-TOKEN
+>
+> Kaiku, Fonecta Connect
+
+English gloss:
+
+> Furry Paw Vet Clinic: Christmas Eve hours, one question
+>
+> Hi, Furry Paw Vet Clinic!
+>
+> Last year your hours that day were 9 to 13.
+> I suggest your hours on Christmas Eve (24.12.) are 9 to 13.
+>
+> Approve, edit or decline with one tap, no login needed:
+> https://kaiku.example/d/EXAMPLE-TOKEN
+>
+> Kaiku, Fonecta Connect
+
+## 5e. Standing-permission question after an approval
+
+Finnish:
+
+> Viime vuonna 9-13, tänä vuonna taas 9-13. Tehdäänkö näin joka jouluaatto?
+
+English gloss:
+
+> Last year 9 to 13, this year 9 to 13 again. Want me to do this every Christmas Eve?
+
 ## 6. Edit prompt after Edit
 
 Finnish:
@@ -104,7 +144,7 @@ Finnish:
 
 English gloss:
 
-> Sure. Reply with the new hours, for example "9-13" or "closed".
+> Reply with the new hours, like 9-13, or 'closed'.
 
 ## 7. Thanks after No thanks
 
@@ -124,4 +164,4 @@ Finnish:
 
 English gloss:
 
-> I did not understand that. Tap one of the buttons or write for example "9-13" or "closed".
+> Sorry, I did not understand that. Tap one of the buttons, or write the hours like 9-13, or 'closed'.

@@ -152,9 +152,10 @@ def test_chain_end_to_end_with_fakes(client, wired, _module_fakes):
     assert s["kind"] == "hours" and s["proposed"] == HOURS_13 and s["confidence"] == 0.75 and s["status"] == "applied"
     assert s["decide_url"].startswith("https://kaiku.example/d/")
     contact = next(e for e in evs if e["step"] == "contact")
-    assert contact["title_fi"] == "WhatsApp ei ole vielä käytössä, päätöslinkki valmis"
-    assert contact["title_en"] == "WhatsApp not configured yet, decision link ready"
-    assert contact["detail"]["decide_url"] == s["decide_url"] and "24.12." in contact["detail"]["message_fi"]
+    # email-first ladder (6 Nov): the seed business has a fictional owner_email, so the first contact event is the email
+    # step; without SMTP it is a dry run (an .eml in the data dir), never a send.
+    assert contact["title_en"] == "Email drafted (dry run, no SMTP configured)"
+    assert contact["detail"]["channel"] == "email"
     assert wired == [("SinceAI07", "2026-12-24", HOURS_13)]
     apply_ev = next(e for e in evs if e["step"] == "apply")
     assert apply_ev["detail"]["verified"] is True and len(apply_ev["detail"]["where_it_shows"]) >= 4
