@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import logging
+import threading
+import time
 
 from fastapi import APIRouter, Request
 
@@ -17,6 +19,43 @@ _seen: dict = {}  # dedupe: Orion-LD re-notifies every instance each time the en
 _HOL = {"12-24": ("jouluaaton", "Christmas Eve"), "12-25": ("joulupäivän", "Christmas Day"),
         "12-26": ("tapaninpäivän", "Boxing Day"), "12-31": ("uudenvuodenaaton", "New Year's Eve"),
         "01-01": ("uudenvuodenpäivän", "New Year's Day")}
+
+
+_emitted: dict = {}
+_emit_lock = threading.Lock()
+DEDUPE_S = 5.0
+
+
+def reset_dedupe() -> None:
+    with _emit_lock:
+        _emitted.clear()
+    _seen.clear()
+
+
+def short_day(date: str | None) -> str:
+    """'2026-12-24' -> '24.12.'; empty or malformed -> 'lomapäivä' style neutral label."""
+    try:
+        return f"{int(date[8:10])}.{int(date[5:7])}."
+    except Exception:
+        return ""
+
+
+def emit_once(kind: str, business_id: str, date: str | None, detail: dict | None = None) -> bool:
+    """ONE broker event per (business, kind, date) within DEDUPE_S seconds. Used by the notification handler AND by the
+    chain, so the subscription firing and the chain's own status write never show up twice."""
+    key = (business_id, kind, date or "")
+    now = time.monotonic()
+    with _emit_lock:
+        if now - _emitted.get(key, -1e9) < DEDUPE_S:
+            return False
+        _emitted[key] = now
+    d = short_day(date)
+    if kind == "missing":
+        fi, en = f"Tilaus laukesi: {d} aukioloajat puuttuvat", f"Subscription fired: {d} hours missing"
+    else:
+        fi, en = f"Tilaus laukesi: {d} aukioloajat vahvistettu", f"Subscription fired: {d} hours resolved"
+    _emit("broker", business_id, fi.replace("  ", " "), en.replace("  ", " "), {"kind": kind, "date": date, **(detail or {})})
+    return True
 
 
 def holiday_label(date: str | None) -> tuple[str, str]:
@@ -52,15 +91,12 @@ def handle_notification(note: dict) -> list[dict]:
         st = ent.get("holidayHoursStatus")
         for inst in as_list(st) if st else []:
             v = inst.get("value") or {}
-            if v.get("status") == "missing":
+            if v.get("status") == "missing" and not v.get("seed") and v.get("date"):
                 key = (biz, "missing", v.get("date"), inst.get("observedAt"))
                 if inst.get("observedAt") and _seen.get(key[:3]) == key[3]:
                     continue
                 _seen[key[:3]] = inst.get("observedAt")
-                fi, en = holiday_label(v.get("date"))
-                _emit("broker", biz, f"Tilaus laukesi: {fi} aukioloajat puuttuvat",
-                      f"Subscription fired: {en} hours missing",
-                      {"kind": "missing", "date": v.get("date"), "subscriptionId": note.get("subscriptionId")})
+                emit_once("missing", biz, v.get("date"), {"subscriptionId": note.get("subscriptionId")})
                 fired.append({"kind": "missing", "business": biz, "date": v.get("date")})
         hh = ent.get("holidayHours")
         for inst in as_list(hh) if hh else []:
@@ -71,10 +107,9 @@ def handle_notification(note: dict) -> list[dict]:
             if inst.get("observedAt") and _seen.get(key) == inst.get("observedAt"):
                 continue
             _seen[key] = inst.get("observedAt")
-            fi, en = holiday_label(v.get("date"))
-            _emit("broker", biz, f"Tilaus laukesi: {fi} aukioloajat vahvistettu",
-                  f"Subscription fired: {en} hours resolved", {"kind": "resolved", "value": v,
-                                                             "subscriptionId": note.get("subscriptionId")})
+            if v.get("seed"):
+                continue  # the idle default instance written at start-up or reset is not a decision
+            emit_once("resolved", biz, v.get("date"), {"value": v, "subscriptionId": note.get("subscriptionId")})
             fired.append({"kind": "resolved", "business": biz, "value": v})
     return fired
 

@@ -209,9 +209,44 @@ def test_status_and_reset_shapes(client, wired):
     assert st["broker"] in ("orion-ld", "fallback") and st["yext_entity"] == "SinceAI07" and st["whatsapp_configured"] is False
     timetravel.set_today(date(2026, 5, 1))
     _run(client, "2026-12-24")
-    r = client.post("/api/reset").json()
+    assert client.post("/api/reset").status_code == 403
+    assert client.post("/api/reset?key=wrong").status_code == 403
+    assert client.post("/api/reset", headers={"X-Kaiku-Key": "wrong"}).status_code == 403
+    r = client.post("/api/reset?key=testkey").json()
+    assert client.post("/api/reset", headers={"X-Kaiku-Key": "testkey"}).status_code == 200
     assert r["today"] == "2026-12-17" and r["reset"]["yext_holiday_rows"] == 0 and r["reset"]["broker_reset"] is True
     assert client.get("/api/suggestions?business=furry-paw").json() == []
     assert client.get("/api/events/recent?limit=10").json() == []
     ent = chain.get_broker().get_entity("urn:ngsi-ld:Store:furry-paw")
-    assert "holidayHours" not in ent and ent["holidayHoursStatus"]["value"]["status"] == "missing"
+    assert ent["holidayHoursStatus"]["value"]["status"] == "missing"
+    inst = {i.get("datasetId", "default"): i["value"] for i in ent["holidayHours"]}
+    ds = "urn:ngsi-ld:dataset:kaiku:"
+    assert "urn:ngsi-ld:dataset:kaiku:proposed" not in inst
+    assert inst[ds + "lastyear"]["hours"] == [{"start": "09:00", "end": "13:00"}] and inst[ds + "lastyear"]["date"] == "2025-12-24"
+    assert inst[ds + "website"]["hours"] == "unknown" and inst[ds + "google"]["hours"] == "unknown" and ds + "peers" in inst
+    assert inst["default"]["hours"] == [{"start": "09:00", "end": "17:00"}] and inst["default"]["date"] == "2026-12-24"
+
+
+def test_run_validates_input(client, wired):
+    for bad in ["garbage", "2026-13-40", "2024-12-24", "2028-01-01", "2026-W52-3", "20261224", ""]:
+        r = client.post(f"/api/run?business=furry-paw&date={bad}")
+        assert r.status_code == 400 and "Virheellinen" in r.json()["detail"] and "Invalid date" in r.json()["detail"], bad
+    r = client.post("/api/run?business=nope&date=2026-12-24")
+    assert r.status_code == 400 and "Unknown business" in r.json()["detail"]
+
+
+def test_one_broker_event_before_detect(client, wired):
+    sid, evs = _run(client, "2026-12-24")
+    allev = client.get("/api/events/recent?limit=100").json()
+    first_detect = next(i for i, e in enumerate(allev) if e["step"] == "detect")
+    pre = [e for e in allev[:first_detect] if e["step"] == "broker"]
+    assert len(pre) == 1 and pre[0]["title_fi"] == "Tilaus laukesi: 24.12. aukioloajat puuttuvat"
+    assert pre[0]["title_en"] == "Subscription fired: 24.12. hours missing" and pre[0]["detail"]["date"] == "2026-12-24"
+
+
+def test_emit_once_dedupes():
+    from kaiku.broker import router as br
+    br.reset_dedupe()
+    assert br.emit_once("missing", "x", "2026-12-24") is True
+    assert br.emit_once("missing", "x", "2026-12-24") is False
+    assert br.emit_once("missing", "x", "2026-12-25") is True

@@ -7,13 +7,17 @@ Step functions may be sync or async.
 from __future__ import annotations
 
 import asyncio
+import hmac
 import inspect
 import logging
+import os
+import re
 import uuid
 from datetime import date, datetime, timezone
+from datetime import date as _date_cls
 from typing import Callable, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 from . import events, store
 from .config import settings
@@ -287,22 +291,59 @@ def _hours_json(proposed):
     return "closed" if proposed in (None, "closed") else [s if isinstance(s, dict) else s.model_dump() for s in proposed]
 
 
-def _entity(b: Business, status: str = "missing", day: str = ""):
+def _entity(b: Business, status: str = "missing", day: str = "", instances: dict | None = None, extra: dict | None = None):
     from .broker import models as M
     mb = M.Business(id=b.id, name=b.name, address=b.address, city=b.city, lat=b.lat, lon=b.lon, category=b.category,
                     regular_hours={k: [s.model_dump() for s in v] for k, v in b.regular_hours.items()},
                     website=b.website or "", source=b.source)
-    return M, M.business_to_entity(mb, status={"date": day, "status": status})
+    return M, M.business_to_entity(mb, instances=instances, status={"date": day, "status": status, **(extra or {})})
+
+
+HERO_DAY = "2026-12-24"
+
+
+def idle_instances(b: Business, day: str = HERO_DAY) -> dict:
+    """What the broker already knows while idle: one holidayHours instance per source (not the proposed one) plus the
+    default instance (the regular hours that weekday). Values flagged seed:true are ignored by the notification router."""
+    from .broker import models as M
+    ly_day = f"{int(day[:4]) - 1}{day[4:]}"
+    ly = next((e for e in b.last_year_exceptions if e.date == ly_day), None)
+    reg = b.regular_hours.get(WD[date.fromisoformat(day).weekday()], [])
+    obs = M.now_iso()
+    peer: object = "unknown"
+    try:
+        from .detect import engine, signals
+        pv = signals.peers(_sbiz(b), engine._holiday(day))
+        peer = (pv or {}).get("hours") or "unknown"
+        if peer != "unknown" and not isinstance(peer, str):
+            peer = [{"start": x["start"], "end": x["end"]} for x in peer]
+    except Exception:
+        pass
+    out = {
+        "lastyear": (M.hours_value(ly_day, _hours_json(ly.hours) if ly else "unknown"), obs),
+        "website": (M.hours_value(day, "unknown"), obs),
+        "google": (M.hours_value(day, "unknown"), obs),
+        "peers": (M.hours_value(day, peer), obs),
+    }
+    out["peers"][0]["note"] = f"category prior ({b.category})"
+    out["default"] = ({**M.hours_value(day, _hours_json(reg) if reg else "closed"), "seed": True}, obs)
+    return out
+
+
+def _seed_entity(b: Business):
+    return _entity(b, "missing", HERO_DAY, instances=idle_instances(b), extra={"seed": True})
 
 
 def broker_seed(business_id: str = "furry-paw", fresh: bool = False) -> str:
-    """Create the Furry Paw entity with holidayHoursStatus present. fresh=True replaces it (demo reset)."""
+    """Create the Furry Paw entity with holidayHoursStatus and the idle holidayHours instances present, so the judge curl
+    shows one business, several datasetIds and one truth before any run. fresh=True replaces it (demo reset)."""
     b = store.get_business(business_id)
     br = get_broker()
-    M, ent = _entity(b)
+    M, ent = _seed_entity(b)
     if fresh:
         br.delete_entity(ent["id"])  # fallback upsert merges, Orion replaces: delete first so both start clean
-    if fresh or br.get_entity(ent["id"]) is None:
+    cur = None if fresh else br.get_entity(ent["id"])
+    if cur is None or "holidayHours" not in cur:
         br.upsert_entity(ent)
     return br.name
 
@@ -313,7 +354,7 @@ def broker_set(b: Business, what: str, day: str, proposed=None, status: str = ""
     M, ent = _entity(b)
     eid = ent["id"]
     if br.get_entity(eid) is None:
-        br.upsert_entity(ent)
+        br.upsert_entity(_seed_entity(b)[1])
     if what == "proposed":
         br.append_instance(eid, "holidayHours", M.hours_value(day, _hours_json(proposed)), "proposed")
     elif what == "truth":
@@ -333,6 +374,23 @@ async def _broker(b: Business, sid: str, fi: str, en: str, **kw) -> bool:
         log.warning("broker write failed: %s", exc)
         _ev("broker", b, sid, "Broker ei vastaa, ketju jatkuu", "Broker offline, the chain continues", message=str(exc)[:120])
         return False
+
+
+async def _broker_missing(b: Business, holiday_date: str) -> None:
+    """Write status 'missing' to the broker. The subscription firing is THE one event (deduped 5 s against the
+    notification handler); if the notification never arrives (broker offline) the chain emits it itself."""
+    try:
+        name = await asyncio.to_thread(broker_set, b, "status", holiday_date, None, "missing")
+    except Exception as exc:
+        log.warning("broker write failed: %s", exc)
+        _ev("broker", b, "", "Broker ei vastaa, ketju jatkuu", "Broker offline, the chain continues", message=str(exc)[:120])
+        return
+    from .broker.router import emit_once
+    if name != "orion-ld":
+        emit_once("missing", b.id, holiday_date, {"broker": name})
+        return
+    await asyncio.sleep(0.6)  # give Orion's notification time to arrive and emit the event itself
+    emit_once("missing", b.id, holiday_date, {"broker": name})
 
 
 # ---------- apply (real Yext sandbox write) ----------
@@ -453,8 +511,7 @@ async def run_chain(business_id: str, holiday_date: str, now: Optional[datetime]
 
     day = _short(holiday_date)
     try:
-        await _broker(b, sid, f"Brokerin tila: {day} aukioloajat puuttuvat", f"Broker status: {day} hours missing",
-                      what="status", day=holiday_date, status="missing")
+        await _broker_missing(b, holiday_date)
         await pause("detect")
         det = await _call(STEPS["detect"], b, holiday_date, now)
         hn = (det.holiday or {}).get("name_fi")
@@ -559,7 +616,13 @@ async def _bg(*a):
 @router.post("/api/run")
 async def api_run(business: str = "furry-paw", date: str = "2026-12-24"):
     if store.get_business(business) is None:
-        raise HTTPException(404, "unknown business")
+        raise HTTPException(400, "Tuntematon yritys. / Unknown business id.")
+    try:
+        d = _date_cls.fromisoformat(date) if re.fullmatch(r"\d{4}-\d{2}-\d{2}", date) else None
+    except ValueError:
+        d = None
+    if d is None or not (_date_cls(2025, 1, 1) <= d <= _date_cls(2027, 12, 31)):
+        raise HTTPException(400, "Virheellinen päivämäärä, käytä muotoa VVVV-KK-PP väliltä 2025-2027. / Invalid date, use YYYY-MM-DD between 2025-01-01 and 2027-12-31.")
     sid = uuid.uuid4().hex[:10]
     t = asyncio.create_task(_bg(business, date, now_dt(), sid))
     _tasks.add(t)
@@ -631,8 +694,13 @@ def yext_reset() -> dict:
 
 
 @router.post("/api/reset")
-async def api_reset(learn: int = 0):
-    """Demo reset: zero holiday rows on the sandbox, no suggestions or events, broker back to 'missing', clock 2026-12-17."""
+async def api_reset(request: Request, learn: int = 0, key: str = ""):
+    """Demo reset: zero holiday rows on the sandbox, no suggestions or events, broker seeded again, clock 2026-12-17.
+    Needs KAIKU_ROOM_KEY as ?key= or header X-Kaiku-Key (403 otherwise)."""
+    want = os.environ.get("KAIKU_ROOM_KEY", "")
+    got = key or request.headers.get("x-kaiku-key", "")
+    if not want or not hmac.compare_digest(got.encode(), want.encode()):
+        raise HTTPException(403, "Nollaus vaatii avaimen. / Reset needs the key.")
     for t in list(_tasks):
         t.cancel()
     out: dict = {}
@@ -642,6 +710,11 @@ async def api_reset(learn: int = 0):
     except Exception as exc:
         out["yext_error"] = f"{type(exc).__name__}: {str(exc)[:120]}"
     out.update(store.clear_runs("furry-paw"))
+    try:
+        from .broker.router import reset_dedupe
+        reset_dedupe()
+    except Exception:
+        pass
     try:
         await asyncio.to_thread(broker_seed, "furry-paw", True)
         out["broker_reset"] = True

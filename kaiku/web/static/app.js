@@ -2,7 +2,15 @@
 (function () {
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
-  if (!$("arc-track") || !$("run") || !$("rows")) return;  // not the home page: nothing to drive
+  /* header date label: every page has #today, only the home drives the rest */
+  function loadToday() {
+    var el = $("today"); if (!el) return;
+    fetch("/api/today").then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (t) { el.textContent = t.label_fi; el.title = t.label_en; })
+      .catch(function () { el.hidden = true; });
+  }
+  loadToday();
+  if (!$("hero") || !$("arc-track") || !$("run") || !$("rows") || !$("reset")) return;  // not the home page: nothing to drive
   var LABEL = { detect: "DETECT", suggest: "SUGGEST", contact: "CONTACT", decide: "DECIDE", apply: "APPLY", learn: "LEARN", broker: "BROKER" };
   var ORDER = ["detect", "suggest", "contact", "decide", "apply", "learn"];
   var DAYS = [["mon", "Ma"], ["tue", "Ti"], ["wed", "Ke"], ["thu", "To"], ["fri", "Pe"], ["sat", "La"], ["sun", "Su"]];
@@ -18,9 +26,6 @@
     $("b-name").textContent = b.name; $("b-addr").textContent = b.address; $("b-note").textContent = b.note || "";
     $("b-hours").innerHTML = DAYS.map(function (d) { return "<dt>" + d[1] + "</dt><dd>" + esc(span(b.regular_hours[d[0]] || [])) + "</dd>"; }).join("");
   }
-
-  /* ---------- today ---------- */
-  function loadToday() { jget("/api/today").then(function (t) { $("today").textContent = t.label_fi; }).catch(function () { $("today").textContent = "Tänään: no data"; }); }
 
   /* ---------- arc hero ---------- */
   var track = $("arc-track"), fill = $("arc-fill"), dot = $("dot"), halo = $("dot-halo");
@@ -144,18 +149,27 @@
       setChip("st-wa", s.whatsapp_configured ? "käytössä" : "ei käytössä", s.whatsapp_configured);
       $("st-wa").title = s.whatsapp_configured ? "WhatsApp in use: the message goes to the owner's phone" : "WhatsApp not in use yet: the decision link is shown instead of a message";
       setChip("st-yext", s.yext_entity, true);
-    }).catch(function () { setChip("st-broker", "no data", false); });
+    }).catch(function () { if ($("st-broker")) setChip("st-broker", "no data", false); });
   }
+  var rkey = "";  /* the reset key is never in the HTML: it only travels in ?key= and lives in sessionStorage */
+  try {
+    var qk = new URLSearchParams(location.search).get("key");
+    if (qk) sessionStorage.setItem("kaikuKey", qk);
+    rkey = sessionStorage.getItem("kaikuKey") || "";
+  } catch (x) { rkey = new URLSearchParams(location.search).get("key") || ""; }
   $("reset").addEventListener("click", function () {
     var btn = $("reset"); btn.disabled = true; $("reset-msg").textContent = "Nollataan... / resetting...";
-    fetch("/api/reset", { method: "POST" }).then(function (r) { return r.json(); }).then(function () { location.reload(); })
-      .catch(function () { btn.disabled = false; $("reset-msg").textContent = "Nollaus epäonnistui / reset failed"; });
+    fetch("/api/reset", { method: "POST", headers: rkey ? { "X-Kaiku-Key": rkey } : {} })
+      .then(function (r) { if (r.status === 403) throw new Error("key"); return r.json(); }).then(function () { location.reload(); })
+      .catch(function (err) {
+        btn.disabled = false;
+        $("reset-msg").textContent = err && err.message === "key" ? "Avain puuttuu, avaa sivu ?key=... / key needed, open the page with ?key=..." : "Nollaus epäonnistui / reset failed";
+      });
   });
 
   /* ---------- boot ---------- */
   loadStatus();
   $("rows-empty").hidden = false;
-  loadToday();
   jget("/api/business/furry-paw").then(renderBusiness).catch(function () {});
   jget("/api/suggestions?business=furry-paw&limit=1").then(function (l) {
     if (l.length) { seenSteps = { detect: 1, suggest: 1, contact: 1, decide: 1, apply: 1, learn: 1 }; showSuggestion(l[0], l[0].status === "applied" || l[0].status === "declined"); }

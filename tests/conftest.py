@@ -5,6 +5,7 @@ import pytest
 
 # Keep tests off the live app state (sqlite, tokens, prefs, clock) before any kaiku module is imported.
 os.environ.setdefault("KAIKU_DB", os.path.join(tempfile.mkdtemp(prefix="kaiku-test-"), "t.sqlite"))
+os.environ["KAIKU_ROOM_KEY"] = "testkey"
 os.environ.setdefault("KAIKU_DATA_DIR", tempfile.mkdtemp(prefix="kaiku-data-"))
 
 

@@ -38,21 +38,35 @@ The disagreement IS the product. Last year says closed, Google says 9-13, our en
 the owner decides. Five opinions, one attribute, each with provenance (`observedAt`) and no lossy merging.
 NGSI-LD gives this natively; a flat key-value store would need five columns and a convention.
 
-Judge beat for the FIWARE CEO (one business, five datasetIds, one truth):
+Judge beat for the FIWARE CEO (one business, five datasetIds, one truth). The entity is seeded at start-up and on every
+`POST /api/reset`, so the answer is there even when the demo is idle (before any run):
 ```
-curl -s http://127.0.0.1:1026/ngsi-ld/v1/entities/urn:ngsi-ld:Store:furry-paw?attrs=holidayHours \
+curl -s 'http://127.0.0.1:1026/ngsi-ld/v1/entities/urn:ngsi-ld:Store:furry-paw?attrs=holidayHours' \
   -H 'Accept: application/json' \
   -H 'Link: <https://raw.githubusercontent.com/smart-data-models/dataModel.PointOfInterest/master/context.jsonld>; rel="http://www.w3.org/ns/json-ld#context"; type="application/ld+json"' | python3 -m json.tool
 ```
-(`python -m kaiku.broker.smoke --keep` leaves an equivalent `urn:ngsi-ld:Store:furry-paw-smoke` in place.)
+Idle output (trimmed; each instance also has `type: Property` and `observedAt`):
+```
+"holidayHours": [
+  {"value": {"date": "2026-12-24", "hours": [{"start": "09:00", "end": "17:00"}], "seed": true}},                 <- default = the truth today (regular Thursday hours)
+  {"datasetId": "urn:ngsi-ld:dataset:kaiku:lastyear", "value": {"date": "2025-12-24", "hours": [{"start": "09:00", "end": "13:00"}]}},
+  {"datasetId": "urn:ngsi-ld:dataset:kaiku:website",  "value": {"date": "2026-12-24", "hours": "unknown"}},
+  {"datasetId": "urn:ngsi-ld:dataset:kaiku:google",   "value": {"date": "2026-12-24", "hours": "unknown"}},
+  {"datasetId": "urn:ngsi-ld:dataset:kaiku:peers",    "value": {"date": "2026-12-24", "hours": [{"start": "09:00", "end": "13:00"}], "note": "category prior (veterinary)"}}
+]
+```
+A run then adds the `proposed` instance (suggest), and the owner's tap replaces the default instance (apply, `seed` gone) and sets
+`holidayHoursStatus` to `applied`. `seed: true` marks the idle default; the notification router ignores it so start-up and reset
+fire no events. (`python -m kaiku.broker.smoke --keep` leaves an equivalent `urn:ngsi-ld:Store:furry-paw-smoke` in place.)
 
 ## Subscriptions (`subs.py`, created idempotently by `subscriptionName`)
 - `kaiku-holiday-hours-missing`: watches `holidayHoursStatus`, notifies `{PUBLIC_URL}/broker/notify`. The
   router keeps only `status == "missing"` (DETECT).
 - `kaiku-holiday-hours-resolved`: watches `holidayHours`; the router keeps only the default instance, deduped
   on `observedAt` (DECIDE).
-`router.py` emits `Event(step="broker")` ("Tilaus laukesi: jouluaaton aukioloajat puuttuvat" / "Subscription
-fired: Christmas Eve hours missing") when `kaiku.events` and `kaiku.schema` exist, otherwise logs. Core should
+`router.py` emits ONE `Event(step="broker")` per run before detect ("Tilaus laukesi: 24.12. aukioloajat puuttuvat" / "Subscription
+fired: 24.12. hours missing", date filled); `emit_once` dedupes repeats of the same (business, kind, date) within 5 s, and the
+chain calls the same function so the notification and the chain's own status write never show twice when `kaiku.events` and `kaiku.schema` exist, otherwise logs. Core should
 call `subs.ensure_subscriptions()` in its lifespan (router.on_event startup is ignored when an app has a lifespan);
 `POST /broker/ensure` does the same, `GET /broker/status` shows `orion-ld` or `fallback`.
 

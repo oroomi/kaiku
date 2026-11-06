@@ -222,3 +222,15 @@ def test_live_demo_line_what_is_wrong():
     r = run(brain.ask("Kaiku, what's wrong with Furry Paw?"))
     print(r)
     assert "get_suggestions" in r["tools"] and any(a["type"] == "spotlight" for a in r["actions"])
+
+
+def test_cap_words_sentence_boundary():
+    from kaiku.voice.brain import cap_words
+    short = "Ehdotan 9-13. Google näyttää 9-17."
+    assert cap_words(short) == short
+    long = "First sentence has seven words here. " + " ".join(["more"] * 40) + "."
+    out = cap_words(long)
+    assert out == "First sentence has seven words here." and len(out.split()) <= 30
+    run_on = " ".join(["word"] * 50)
+    out = cap_words(run_on)
+    assert len(out.split()) == 30 and out.endswith(".")

@@ -58,6 +58,23 @@ def _merge_actions(raw: list[dict]) -> list[dict]:
     return out
 
 
+MAX_WORDS = 30
+
+
+def cap_words(text: str, limit: int = MAX_WORDS) -> str:
+    """Server-side guarantee for the 30-word rule: cut at the last sentence end inside the limit, else at the limit."""
+    words = text.split()
+    if len(words) <= limit:
+        return text
+    head = " ".join(words[:limit])
+    cut = max(head.rfind(". "), head.rfind("! "), head.rfind("? "))
+    if head[-1:] in ".!?":
+        return head
+    if cut >= 10:
+        return head[:cut + 1]
+    return head.rstrip(",;:- ") + "."
+
+
 async def ask(text: str, page: str = "/", lang: str = "auto", history: list[dict] | None = None,
               client: Any = None, tools: Tools | None = None) -> dict:
     text = (text or "").strip()
@@ -96,4 +113,5 @@ async def ask(text: str, page: str = "/", lang: str = "auto", history: list[dict
         final = ""
     if not final:
         final = "En tiedä." if lang == "fi" else "I do not know."
+    final = cap_words(final)
     return {"text": final, "actions": _merge_actions(raw_actions), "tools": used, "steps": steps}

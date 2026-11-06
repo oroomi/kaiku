@@ -8,10 +8,6 @@
 <link rel="stylesheet" href="/static/aura.css?v={{ asset_v() }}">
 {% endblock %}
 {% block content %}
-<!-- core app.js is written for the Horizon home DOM and throws without these ids; remove this block once core guards it -->
-<div hidden aria-hidden="true" id="home-stub"><svg><path id="arc-track" d="M0 0L10 0"/><path id="arc-fill" d="M0 0L10 0"/><circle id="dot"/><circle id="dot-halo"/></svg>
-<span id="conn"></span><button id="run"></button><select id="date"><option value="2026-12-24"></option></select><ul id="rows"></ul><p id="rows-empty"></p>
-<p id="sentence"></p><p id="gloss"></p><span id="big"></span><span id="big-cap"></span><span id="b-name"></span><span id="b-addr"></span><span id="b-note"></span><dl id="b-hours"></dl></div>
 <div id="map" data-pilot="aura-map" aria-label="Turku, live buses and ships"></div>
 
 <section class="glass panel" id="panel" data-pilot="aura-panel">
