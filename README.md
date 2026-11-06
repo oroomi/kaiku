@@ -4,7 +4,7 @@
 **Challenge:** Fonecta, "Connect suggests, customer approves" | **Partner technology:** FIWARE (Orion-LD NGSI-LD broker, Smart Data Models)
 **Team:** VY7, solo (Dayo) with Claude coding tools
 
-![Kaiku home: Furry Paw Vet Clinic, Christmas Eve, Google 9-17 versus Kaiku 9-13](docs/img/hero.jpg)
+![Kaiku home: Furry Paw Vet Clinic, Christmas Eve, Connect 9-17 versus Kaiku 9-13](docs/img/hero.jpg)
 
 ## 30 seconds
 **Problem (Fonecta's words).** Customers forget one-off changes like holiday hours, search results show outdated information, and people turn up when the business is closed.
@@ -64,7 +64,7 @@ Note: `mcp` and `ngsi-ld-mcp` are not in `requirements.txt`. Install `./ngsi-ld-
 | Map and room: 813 real OSM Turku businesses, QR join | `kaiku/map` | [docs/map.md](docs/map.md) |
 | Aura: Föli buses, AIS ships, Open-Meteo as Smart Data Models entities | `kaiku/aura` | [docs/aura.md](docs/aura.md) |
 | ngsi-ld-mcp: standalone MCP server, agents propose, humans approve | `ngsi-ld-mcp/` | [docs/mcp.md](docs/mcp.md) |
-| Call lane (ElevenLabs outbound Finnish call) | branch `task/call` | in progress, not on main |
+| Call lane (ElevenLabs outbound Finnish call) | `kaiku/contact/call.py` | on main; agent and number present, outbound call not yet connecting (SIP 488 on the last attempt), see DISCLOSURE.md |
 
 Submission texts: [docs/SUBMISSION.md](docs/SUBMISSION.md). Data sources: [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md). Cold start: [docs/COLD_START.md](docs/COLD_START.md). Final customer messages: [docs/final_messages.md](docs/final_messages.md). Deck text: [docs/DECK.md](docs/DECK.md).
 

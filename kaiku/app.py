@@ -29,7 +29,9 @@ async def lifespan(app: FastAPI):
         await asyncio.to_thread(ensure_subscriptions)
     except Exception as exc:
         log.warning("broker start-up: %s", exc)
-    yield
+    from .mcp_bridge import running as _mcp_running
+    async with _mcp_running():
+        yield
 
 
 app = FastAPI(title="Kaiku", lifespan=lifespan)
@@ -66,6 +68,12 @@ for _m in ["broker", "contact", "decide", "voice", "map", "learn", "mcp_bridge",
             log.info("module %s not present", _m)
 
 
+try:
+    from .mcp_bridge import install as _install_mcp
+    _install_mcp(app, "/mcp")
+except Exception as _e:  # pragma: no cover
+    log.info("mcp bridge: %s", _e)
+
 try:  # importing the ladder registers its dict-based contact step; core then re-registers the Suggestion adapter
     import kaiku.contact.ladder  # noqa: F401
 except Exception as _e:  # pragma: no cover
@@ -80,7 +88,11 @@ def render(request: Request, name: str, **ctx):
 
 @app.get("/healthz")
 def healthz():
-    return {"ok": True, "broker": "unknown"}
+    try:
+        broker = chain.get_broker().name
+    except Exception:
+        broker = "fallback"
+    return {"ok": True, "broker": broker}
 
 
 @app.get("/", response_class=HTMLResponse)

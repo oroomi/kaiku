@@ -11,7 +11,7 @@ On screen: Detect, Suggest, Contact, Decide, Apply as five boxes with the Orion-
 Say: Connect suggests, the customer approves: five steps, no login, and the customer has the last word.
 
 ## 3. Live demo frames
-On screen: three screenshots. The home headline (Google 9-17, Kaiku 9-13) and the event strip; the phone decision page with Hyväksy, Muokkaa, Ei kiitos (Approve, Edit, No thanks); the Yext read-back saying verified.
+On screen: three screenshots. The home headline (Connect 9-17, Kaiku 9-13) and the event strip; the phone decision page with Hyväksy, Muokkaa, Ei kiitos (Approve, Edit, No thanks); the Yext read-back saying verified.
 Say: This is the real app on a phone: one tap writes to the team's Yext entity and we read it back.
 
 ## 4. Reliability

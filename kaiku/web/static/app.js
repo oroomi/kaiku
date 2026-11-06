@@ -99,8 +99,8 @@
         en = name + " is " + verbEn + " on " + di.en + ". Saved to Connect, owner approved.";
         fi = caps(di.fi) + " " + name + " on " + verbFi + ". Tallennettu Connectiin, omistaja hyväksyi.";
       } else {
-        en = name + " is " + (current ? "" : "likely ") + verbEn + " on " + di.en + ". Google still says " + oldV + ".";
-        fi = caps(di.fi) + " " + name + " on " + (current ? "" : "todennäköisesti ") + verbFi + ". Google näyttää yhä " + (reg && reg.length ? span(reg) : "suljettu") + ".";
+        en = name + " is " + (current ? "" : "likely ") + verbEn + " on " + di.en + ". Everywhere Connect publishes still says " + oldV + ".";
+        fi = caps(di.fi) + " " + name + " on " + (current ? "" : "todennäköisesti ") + verbFi + ". Kaikkialla, minne Connect julkaisee, lukee yhä " + (reg && reg.length ? span(reg) : "suljettu") + ".";
       }
     } else {
       nv = "ready"; en = "Run the chain to see what Kaiku proposes for " + di.en + " (" + di.d + ")."; fi = "Käynnistä ketju: Kaiku ehdottaa aukioloajat " + di.fi + " (" + di.d + ").";
@@ -257,6 +257,20 @@
         $("reset-msg").textContent = err && err.message === "key" ? "Avain puuttuu, avaa sivu ?key=... / key needed, open the page with ?key=..." : "Nollaus epäonnistui / reset failed";
       });
   });
+
+  /* ---------- run state comes from the server, never from stale client state ---------- */
+  function syncRunState() {
+    jget("/api/suggestions?business=furry-paw&limit=1").then(function (l) {
+      var st = l.length ? l[0].status : null;
+      if (st === "applied" || st === "declined" || st === "expired") {
+        if (arc.running) { setRunning(false); showSuggestion(l[0], st !== "expired"); }
+      } else if (st === "sent" && arc.running && Object.keys(seenSteps).length <= 3) {
+        $("run").textContent = "Waiting for the owner";
+      } else if (!l.length && arc.running && !runSid) { setRunning(false); }
+    }).catch(function () {});
+  }
+  setTimeout(syncRunState, 1500);        /* after the replayed events: a finished run must not look running */
+  setInterval(function () { if (arc.running) syncRunState(); }, 5000);
 
   /* ---------- boot ---------- */
   loadStatus();

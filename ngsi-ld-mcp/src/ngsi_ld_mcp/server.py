@@ -44,6 +44,8 @@ def build_server(gateway: Gateway | None = None, cfg: Config | None = None, *, n
                  streamable_path: str = "/mcp", open_hosts: bool = False) -> FastMCP:
     gw = gateway or Gateway(cfg)
     kw: dict[str, Any] = {"streamable_http_path": streamable_path}
+    if open_hosts:  # mounted/public use: stateless, so a plain POST tools/list works without a handshake
+        kw["stateless_http"] = True
     if open_hosts:
         kw["transport_security"] = TransportSecuritySettings(enable_dns_rebinding_protection=False)
     mcp = FastMCP(

@@ -21,7 +21,7 @@ written after that commit.
 
 ## Mocked or not live
 - WhatsApp: the Cloud API client is tested with a fake transport; no real message has been sent from the build box (no token configured on 6 Nov). Without a token the contact step produces the decision link instead.
-- Call lane (ElevenLabs outbound Finnish call): in progress on branch task/call, not on main. It needs a phone number and trunk that were not verified.
+- Call lane (ElevenLabs outbound Finnish call): on main (`kaiku/contact/call.py`): ElevenLabs Conversational AI agent created, phone number present on the existing account, decision webhook `/webhooks/call`. The outbound call is NOT yet working: the latest attempt (6 Nov 20:12Z, `data/call_log.jsonl`) failed with `dial failed with 488 Not Acceptable Here (SIP 488)` after earlier 422/400 attempts, so no call has reached a phone. The WhatsApp or decision-link rung is what the demo relies on.
 - Google signal (Serper): no key on the build box, so `google_now` is unknown.
 - Peer priors (`data/peer_priors.json`) are hand-made; website parsing is tested on a mocked page.
 - Yext sandbox has no publisher listings: the write is real, the syndication to Google and others is not.

@@ -4,8 +4,7 @@
 
 ## How Kaiku uses it
 
-Status (6 Nov 2026, checked): the package is built and tested standalone. It is NOT mounted in the running app (`/mcp` returns 404, there is no `kaiku/mcp_bridge`) and it is not installed in the app's Python environment, so the voice agent's broker tools are off unless you `pip install ./ngsi-ld-mcp`. The text below describes the intended wiring; the wiring below is the contract Kaiku's voice and chain modules are
-built against (the voice builder owns `kaiku/voice/tools.py`, the broker builder owns the notify route). Check those modules for what landed.
+Status (6 Nov 2026): mounted at `/mcp` by `kaiku/mcp_bridge` (stateless streamable HTTP, `approve`/`reject` hidden via `NGSI_LD_MCP_HIDE_DECISIONS=1`; plain `POST /mcp` with `tools/list` works). The voice agent's `list_entities`, `get_entity` and `propose_update` go through the same Gateway (`kaiku/voice/tools.py`). Both `ngsi-ld-mcp` and `mcp>=1.2,<2` are in requirements.txt.
 
 - **The voice tool loop.** Kaiku's voice assistant gets the MCP tools as its tool list. When the owner (or a Fonecta judge) asks
   "what hours do we have for Christmas Eve?" the model calls `get_entity` on the business and reads every instance: the live

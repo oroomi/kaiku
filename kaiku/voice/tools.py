@@ -99,7 +99,9 @@ class Tools:
                 from ngsi_ld_mcp.config import Config
                 from ngsi_ld_mcp.core import Gateway
                 from ..config import settings
-                cfg = Config(url=settings.BROKER_URL, hide_decisions=True)
+                from ..broker.models import SDM_CONTEXT as _sdm_ctx
+                _sdm = lambda: _sdm_ctx  # noqa: E731
+                cfg = Config(url=settings.BROKER_URL, hide_decisions=True, context=_sdm())
                 self._gw = Gateway(cfg)
             except Exception as e:  # noqa: BLE001
                 log.info("ngsi-ld-mcp not available (%s)", type(e).__name__)

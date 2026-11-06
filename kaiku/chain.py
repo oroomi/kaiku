@@ -129,10 +129,10 @@ def suggest(business: Business, detection: Detection) -> Suggestion:
         reasons.append(Reason(source="regular", dataset_id="urn:kaiku:src:regular",
                               text_fi="Ei viime vuoden poikkeusta, tavalliset aukioloajat.", text_en="No exception last year, regular hours."))
     when = ess if detection.holiday_date[5:] in HOLIDAYS else FI_WD[d.weekday()]
-    fi = (f"{when} {business.name} on auki klo {fmt_span(proposed)}. Google näyttää vielä {fmt_span(reg)}."
+    fi = (f"{when} {business.name} on auki klo {fmt_span(proposed)}. Connect julkaisee vielä {fmt_span(reg)}."
           if kind == "hours" else f"{when} {business.name} on suljettu." if kind == "closed"
           else f"{business.name} on {FI_WD[d.weekday()].lower()} {'suljettu' if not reg else 'auki klo ' + fmt_span(reg)} kuten aina. Ei muutosta.")
-    en = (f"On {name_en}, {business.name} is open {fmt_span(proposed)}. Google still shows {fmt_span(reg)}."
+    en = (f"On {name_en}, {business.name} is open {fmt_span(proposed)}. Connect still publishes {fmt_span(reg)}."
           if kind == "hours" else f"On {name_en}, {business.name} is closed." if kind == "closed" else f"{business.name} keeps its regular hours that day. No change.")
     return Suggestion(id=uuid.uuid4().hex[:10], business_id=business.id, holiday_date=detection.holiday_date, kind=kind,
                       proposed=proposed, confidence=conf, reasons=reasons, message_fi=fi, message_en=en)

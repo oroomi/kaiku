@@ -92,7 +92,7 @@ def test_place_call_payload_and_log(env, tmp_path, monkeypatch):
     r = C.place_call(SUG, "+358 45 129 1684", api=C.Api("secretkey", f))
     assert r == {"ok": True, "conversation_id": "conv_1"}
     p = f.calls[0][3]
-    assert f.calls[0][1].endswith("/v1/convai/twilio/outbound-call")
+    assert f.calls[0][1].endswith(("/v1/convai/twilio/outbound-call", "/v1/convai/sip-trunk/outbound-call"))
     assert p["to_number"] == "+358451291684" and p["agent_id"] == "ag_1" and p["agent_phone_number_id"] == "ph1"
     dv = p["conversation_initiation_client_data"]["dynamic_variables"]
     assert dv["holiday_date_fi"] == "24.12." and dv["proposed_hours"] == "9-13" and dv["suggestion_id"] == "sg-1"

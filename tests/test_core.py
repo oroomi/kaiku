@@ -49,7 +49,7 @@ def test_store_seed():
 
 
 def test_healthz_and_home(client):
-    assert client.get("/healthz").json() == {"ok": True, "broker": "unknown"}
+    assert client.get("/healthz").json() == {"ok": True, "broker": client.get("/api/status").json()["broker"]}
     html = client.get("/").text
     for t in ["hero", "event-strip", "business-card", "run-chain"]:
         assert f'data-pilot="{t}"' in html
