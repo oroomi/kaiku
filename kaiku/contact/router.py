@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import inspect
 import json
+import logging
 import os
 import re
 import secrets
@@ -19,6 +20,7 @@ from fastapi.responses import PlainTextResponse
 from . import messages as M
 from . import whatsapp as W
 
+log = logging.getLogger(__name__)
 router = APIRouter()
 _lock = threading.RLock()
 
@@ -171,6 +173,11 @@ def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _known(d: dict, sid: str) -> bool:
+    return (sid in d["decided"] or sid in d["business"] or sid in d["messages"].values()
+            or sid in d["latest"].values() or sid in d["awaiting_edit"].values())
+
+
 def make_decision(sid: str, action: str, edited=None, via: str = "whatsapp") -> dict:
     return {"suggestion_id": sid, "action": action, "edited": edited, "reason_chip": None,
             "standing_permission": False, "via": via, "at": _now()}
@@ -214,7 +221,7 @@ async def _forward(decision: dict) -> None:
 async def handle_payload(payload: dict, client: W.WhatsAppClient | None = None) -> dict:
     """Process one webhook body. Returns {'decisions': [...], 'statuses': [...], 'ignored': n, 'replies': n}."""
     client = client or W.get_client()
-    out = {"decisions": [], "statuses": [], "ignored": 0, "replies": 0, "edit_requested": []}
+    out = {"decisions": [], "statuses": [], "ignored": 0, "replies": 0, "edit_requested": [], "unknown": []}
     for it in parse_inbound(payload):
         if it["kind"] == "status":
             out["statuses"].append({k: it.get(k) for k in ("message_id", "status", "to", "errors")})
@@ -247,6 +254,13 @@ async def handle_payload(payload: dict, client: W.WhatsAppClient | None = None) 
         if it["kind"] == "button":
             act, bsid = _split_button_id(it.get("button_id", ""))
             sid = bsid or sid
+            with _lock:
+                known = _known(_load(), sid)
+            if not known:
+                log.warning("button %r for unknown suggestion %r from %s", it.get("button_id"), sid, phone)
+                client.send_text(phone, M.unknown_suggestion_text()); out["replies"] += 1
+                out["unknown"].append(sid)
+                continue
             if act == "approve":
                 decision = make_decision(sid, "approve")
             elif act == "decline":

@@ -49,14 +49,48 @@ def client(fake):
 
 # ---------------------------------------------------------------- messages
 
-def test_suggestion_snapshot():
+ENGINE = {**SUG, "message_fi": "Hei Furry Paw Vet Clinic! Jouluaatto on torstaina 24.12. Viime vuonna olitte auki 9-13. Ehdotus: to 24.12. klo 9-13.",
+          "message_en": "Hi Furry Paw Vet Clinic! Christmas Eve is on Thursday 24.12. Last year you were open 09:00-13:00. We suggest: Thu 24.12. 09:00-13:00.",
+          "decide_url": None}
+
+
+def test_suggestion_snapshot_fallback():
     assert M.suggestion_text(SUG) == (
         "Hei, Furry Paw Vet Clinic!\n\n"
         "Jouluaatto on torstaina 24.12.\n"
         "Viime vuonna aukioloaikanne tuona päivänä oli 9-13.\n"
         "Googlessa näkyy nyt 9-17, mikä ei vastaa ehdotustamme, joten asiakas voi saapua suljetun oven eteen.\n\n"
-        "Ehdotamme, että jouluaattona (24.12.) aukioloaika on 9-13.\n"
-        "Voit hyväksyä yhdellä napautuksella, muokata aikaa tai jättää ehdotuksen väliin. Päätös on aina sinun.")
+        "Ehdotamme, että jouluaattona (24.12.) aukioloaikanne on 9-13.\n"
+        "Voitte hyväksyä yhdellä napautuksella, muokata aikaa tai jättää ehdotuksen väliin. Päätös on aina teidän.")
+
+
+def test_engine_message_used_verbatim_and_url_line():
+    t = M.suggestion_text(ENGINE)
+    assert t.startswith(ENGINE["message_fi"]) and "Pyhäpäivä" not in t and "sinun" not in t
+    assert "Voitte myös päättää" not in t
+    u = M.suggestion_text(dict(ENGINE, decide_url="https://x.example/d/1"))
+    assert u.endswith("Voitte myös päättää selaimessa: https://x.example/d/1")
+    assert M.suggestion_text_en(dict(ENGINE, decide_url="https://x.example/d/1")).endswith(
+        "You can also decide in the browser: https://x.example/d/1")
+    ask = dict(ENGINE, kind="ask", decide_url="https://x.example/d/1")
+    assert "https://x.example/d/1" in M.ask_text(ask) and "https://x.example/d/1" in M.ask_text_en(ask)
+
+
+def test_fallback_never_claims_missing_facts():
+    bare = {"id": "s", "kind": "hours", "holiday_date": "2026-12-24", "proposed": [{"start": "09:00", "end": "13:00"}]}
+    t = M.suggestion_text(bare)
+    assert "Viime vuonna" not in t and "Googlessa" not in t and "Hakukoneissa" not in t and "Pyhäpäivä" not in t
+    assert "24.12." in t
+    assert "Viime vuonna" not in M.suggestion_text(dict(SUG, last_year_hours=None))
+
+
+def test_register_is_polite_plural():
+    ask = dict(SUG, kind="ask", proposed=None)
+    closed = dict(SUG, kind="closed", proposed=None)
+    for t in (M.suggestion_text(SUG), M.suggestion_text(closed), M.ask_text(ask), M.edit_prompt_text(),
+              M.decline_thanks_text(), M.unknown_reply_text()):
+        for bad in (" sinun", " sinä", "Voit ", "olet ", "Kirjoita ", "Kerro "):
+            assert bad not in t, (bad, t)
 
 
 def test_receipt_snapshot():
@@ -64,6 +98,8 @@ def test_receipt_snapshot():
          "publishers": ["Google", "Apple Maps"]}
     assert M.receipt_text(r) == ("Kiitos! Jouluaaton aukioloajat 9-13 on nyt tallennettu. "
                                  "Ne näkyvät Googlessa, Apple Mapsissa ja Fonectan palveluissa.")
+    c = M.receipt_text({"holiday_name_fi": "Joulupäivä", "hours": "closed", "publishers": ["Google"]})
+    assert "Se näkyy" in c and "Ne näkyvät" not in c
 
 
 def test_other_messages_and_no_em_dash():
@@ -72,7 +108,7 @@ def test_other_messages_and_no_em_dash():
     closed = dict(SUG, kind="closed", proposed=None)
     assert "esimerkiksi \"9-13\"" in M.ask_text(ask)
     assert "Mitään ei tarvitse tehdä" in M.no_change_text(nc)
-    assert "olette suljettu" in M.suggestion_text(closed)
+    assert "olette suljettuna." in M.suggestion_text(closed) and "olette suljettu." not in M.suggestion_text(closed)
     for t in (M.edit_prompt_text(), M.decline_thanks_text(), M.unknown_reply_text(), M.suggestion_text_en(SUG),
               M.ask_text_en(ask), M.no_change_text_en(nc), M.receipt_text_en({"hours": "closed"})):
         assert "\u2014" not in t and "\u2013" not in t
@@ -82,7 +118,7 @@ def test_other_messages_and_no_em_dash():
 
 def test_final_messages_export(tmp_path):
     md = M.all_final_messages(tmp_path / "f.md")
-    assert (tmp_path / "f.md").exists() and "Kiitos! Jouluaaton aukioloajat 9-13" in md and "\u2014" not in md
+    assert (tmp_path / "f.md").exists() and "Kiitos! Jouluaaton aukioloajat 9-13" in md and "olette suljettu." not in md and "Pyhäpäivä" not in md and "\u2014" not in md
 
 
 # ---------------------------------------------------------------- payloads and errors
@@ -191,8 +227,23 @@ def test_button_approve_uses_context_message_map():
 
 def test_button_id_carries_suggestion_id():
     R.register_sent(PHONE, "other", "wamid.Z")
+    R.register_sent("358409999999", "sg9", "wamid.Y")
     res = run(R.handle_payload(button_payload("decline:sg9", ctx="wamid.unknown"), client(Fake())))
     assert res["decisions"][0]["suggestion_id"] == "sg9" and res["decisions"][0]["action"] == "decline"
+
+
+def test_button_unknown_suggestion_replies_no_decision(monkeypatch):
+    got = []
+    import types, sys
+    mod = types.ModuleType("kaiku.chain"); mod.on_decision = lambda d: got.append(d)
+    monkeypatch.setitem(sys.modules, "kaiku.chain", mod)
+    import kaiku; monkeypatch.setattr(kaiku, "chain", mod, raising=False)
+    R.register_sent(PHONE, "sg1", "wamid.CTX")
+    f = Fake()
+    res = run(R.handle_payload(button_payload("approve:nonexistent"), client(f)))
+    assert res["decisions"] == [] and got == [] and res["unknown"] == ["nonexistent"]
+    assert any("En löytänyt ehdotusta, johon tämä vastaus liittyy." in str(c[3]) for c in f.calls)
+    assert not R.is_decided("nonexistent")
 
 
 def test_edit_flow_then_free_text():
@@ -200,7 +251,7 @@ def test_edit_flow_then_free_text():
     R.register_sent(PHONE, "sg1", "wamid.CTX")
     r1 = run(R.handle_payload(button_payload("edit"), client(f)))
     assert r1["decisions"] == [] and r1["edit_requested"] == ["sg1"]
-    assert any("Kirjoita uusi aukioloaika" in str(c[3]) for c in f.calls)
+    assert any("Kirjoittakaa uusi aukioloaika" in str(c[3]) for c in f.calls)
     r2 = run(R.handle_payload(text_payload("klo 10-15"), client(f)))
     assert r2["decisions"][0]["action"] == "edit" and r2["decisions"][0]["edited"] == [{"start": "10:00", "end": "15:00"}]
 

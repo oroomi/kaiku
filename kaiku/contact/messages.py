@@ -60,7 +60,12 @@ def en_hours(hours) -> str:
 
 
 def holiday_name(s: dict) -> str:
-    return (s.get("holiday_name_fi") or s.get("name_fi") or "Pyhäpäivä").strip()
+    """Holiday name from the engine; the generic 'Kyseinen päivä' (that day) only when no name is known."""
+    return (s.get("holiday_name_fi") or s.get("name_fi") or "Kyseinen päivä").strip()
+
+
+def _has_name(s: dict) -> bool:
+    return bool(s.get("holiday_name_fi") or s.get("name_fi"))
 
 
 def holiday_name_genitive(s: dict) -> str:
@@ -122,15 +127,31 @@ def _when_en(s: dict) -> str:
     return f"{WEEKDAY_EN[_weekday(d)]} {fi_date(d)}"
 
 
-def _why_wrong_fi(s: dict, proposed_txt: str) -> str:
+def _why_wrong_fi(s: dict, proposed_txt: str) -> str | None:
     g = _hours_of(_google_now(s))
     if g is None:
-        return "Hakukoneissa ei ole vielä tälle päivälle erillisiä aukioloaikoja, joten asiakkaat näkevät tavalliset aukioloajat."
+        return None  # unknown: state nothing we cannot back up
     g_txt = fi_hours(g)
     if g_txt == proposed_txt:
         return f"Googlessa näkyy jo {g_txt}, joten ehdotus vain varmistaa sen."
     return (f"Googlessa näkyy nyt {g_txt}, mikä ei vastaa ehdotustamme, "
             f"joten asiakas voi saapua suljetun oven eteen.")
+
+
+DECIDE_FI = "Voitte hyväksyä yhdellä napautuksella, muokata aikaa tai jättää ehdotuksen väliin. Päätös on aina teidän."
+DECIDE_EN = "Approve with one tap, edit the hours, or skip it. The decision is always yours."
+
+
+def _url_line_fi(s: dict) -> str | None:
+    return f"Voitte myös päättää selaimessa: {s['decide_url']}" if s.get("decide_url") else None
+
+
+def _url_line_en(s: dict) -> str | None:
+    return f"You can also decide in the browser: {s['decide_url']}" if s.get("decide_url") else None
+
+
+def _join_lines(lines) -> str:
+    return "\n".join(l for l in lines if l is not None)
 
 
 def suggestion_text(s: dict) -> str:
@@ -139,23 +160,32 @@ def suggestion_text(s: dict) -> str:
         return ask_text(s)
     if kind == "no_change":
         return no_change_text(s)
+    if s.get("message_fi"):  # the engine's own facts, verbatim
+        return _join_lines([s["message_fi"], "", DECIDE_FI, _url_line_fi(s)])
     name = business_name(s)
     hol = holiday_name(s)
     proposed = "closed" if kind == "closed" else s.get("proposed")
     p_txt = fi_hours(proposed)
     ly = _hours_of(_last_year(s))
+    d = fi_date(s["holiday_date"])
     parts = [f"Hei, {name}!", ""]
-    parts.append(f"{_cap(hol)} on {_when_fi(s)}")
+    if _has_name(s):
+        parts.append(f"{_cap(hol)} on {_when_fi(s)}")
+    else:
+        parts.append(f"{_cap(_when_fi(s))} on poikkeuspäivä.")
     if ly is not None:
         parts.append(f"Viime vuonna aukioloaikanne tuona päivänä oli {fi_hours(ly)}.")
-    parts.append(_why_wrong_fi(s, p_txt))
+    why = _why_wrong_fi(s, p_txt)
+    if why:
+        parts.append(why)
     parts.append("")
+    when = f"{essive(hol)} ({d})" if _has_name(s) else f"{d}"
     if proposed == "closed":
-        parts.append(f"Ehdotamme, että {essive(hol)} ({fi_date(s['holiday_date'])}) olette suljettu.")
+        parts.append(f"Ehdotamme, että {when} olette suljettuna.")
     else:
-        parts.append(f"Ehdotamme, että {essive(hol)} ({fi_date(s['holiday_date'])}) aukioloaika on {p_txt}.")
-    parts.append("Voit hyväksyä yhdellä napautuksella, muokata aikaa tai jättää ehdotuksen väliin. Päätös on aina sinun.")
-    return "\n".join(parts)
+        parts.append(f"Ehdotamme, että {when} aukioloaikanne on {p_txt}.")
+    parts += [DECIDE_FI, _url_line_fi(s)]
+    return _join_lines(parts)
 
 
 def suggestion_text_en(s: dict) -> str:
@@ -164,48 +194,71 @@ def suggestion_text_en(s: dict) -> str:
         return ask_text_en(s)
     if kind == "no_change":
         return no_change_text_en(s)
-    hol = s.get("holiday_name_en") or "the holiday"
+    if s.get("message_en"):
+        return _join_lines([s["message_en"], "", DECIDE_EN, _url_line_en(s)])
+    named = bool(s.get("holiday_name_en"))
+    hol = s.get("holiday_name_en") or "that day"
     proposed = "closed" if kind == "closed" else s.get("proposed")
     ly = _hours_of(_last_year(s))
     g = _hours_of(_google_now(s))
-    lines = [f"Hi, {business_name(s)}!", "", f"{_cap(hol)} falls on {_when_en(s)}"]
+    lines = [f"Hi, {business_name(s)}!", "", f"{_cap(hol)} falls on {_when_en(s)}" if named else f"{_when_en(s)} is an exception day."]
     if ly is not None:
         lines.append(f"Last year your hours that day were {en_hours(ly)}.")
     if g is not None:
         lines.append(f"Google currently shows {en_hours(g)}, which does not match our suggestion, so customers may arrive at a closed door.")
-    else:
-        lines.append("Search engines have no special hours for that day yet, so customers see your regular hours.")
     lines.append("")
-    lines.append(f"We suggest {'being closed' if proposed == 'closed' else 'hours of ' + en_hours(proposed)} on {hol} ({fi_date(s['holiday_date'])}).")
-    lines.append("Approve with one tap, edit the hours, or skip it. The decision is always yours.")
-    return "\n".join(lines)
+    lines.append(f"We suggest {'that you are closed' if proposed == 'closed' else 'your hours are ' + en_hours(proposed)} on {hol if named else 'that day'} ({fi_date(s['holiday_date'])}).")
+    lines += [DECIDE_EN, _url_line_en(s)]
+    return _join_lines(lines)
 
 
 def ask_text(s: dict) -> str:
-    return (f"Hei, {business_name(s)}!\n\n"
-            f"{_cap(holiday_name(s))} on {_when_fi(s)} Emme ole varmoja, mitkä aukioloaikanne silloin ovat, "
-            f"emmekä halua arvata väärin.\n\n"
-            f"Kerro vastaamalla tähän viestiin, esimerkiksi \"9-13\" tai \"suljettu\". "
-            f"Tallennamme ajan vasta kun olet vahvistanut sen.")
+    if s.get("message_fi"):
+        return _join_lines([s["message_fi"], "", _url_line_fi(s)] if s.get("decide_url") else [s["message_fi"]])
+    return _join_lines([
+        f"Hei, {business_name(s)}!", "",
+        (f"{_cap(holiday_name(s))} on {_when_fi(s)} " if _has_name(s) else f"{_cap(_when_fi(s))} ") +
+        "Emme ole varmoja, mitkä aukioloaikanne silloin ovat, emmekä halua arvata väärin.", "",
+        "Kertokaa vastaamalla tähän viestiin, esimerkiksi \"9-13\" tai \"suljettu\". "
+        "Tallennamme ajan vasta kun olette vahvistaneet sen.",
+        _url_line_fi(s)])
 
 
 def ask_text_en(s: dict) -> str:
-    return (f"Hi, {business_name(s)}!\n\n"
-            f"{_cap(s.get('holiday_name_en') or 'The holiday')} falls on {_when_en(s)} We are not sure what your hours are then, "
-            f"and we do not want to guess wrong.\n\n"
-            f"Reply to this message, for example \"9-13\" or \"closed\". We only save the time after you confirm it.")
+    if s.get("message_en"):
+        return _join_lines([s["message_en"], "", _url_line_en(s)] if s.get("decide_url") else [s["message_en"]])
+    return _join_lines([
+        f"Hi, {business_name(s)}!", "",
+        (f"{_cap(s.get('holiday_name_en') or 'That day')} falls on " if s.get("holiday_name_en") else "") + f"{_when_en(s)} " +
+        "We are not sure what your hours are then, and we do not want to guess wrong.", "",
+        "Reply to this message, for example \"9-13\" or \"closed\". We only save the time after you confirm it.",
+        _url_line_en(s)])
 
 
 def no_change_text(s: dict) -> str:
+    if s.get("message_fi"):
+        return s["message_fi"]
+    lead = f"{_cap(holiday_name(s))} on {_when_fi(s)}" if _has_name(s) else f"{_cap(_when_fi(s))}"
     return (f"Hei, {business_name(s)}!\n\n"
-            f"{_cap(holiday_name(s))} on {_when_fi(s)}, mutta tavalliset aukioloaikanne pätevät silloinkin. "
+            f"{lead}, mutta tavalliset aukioloaikanne pätevät silloinkin. "
             f"Mitään ei tarvitse tehdä, eikä aukioloaikoihinne ole tulossa muutoksia.")
 
 
 def no_change_text_en(s: dict) -> str:
+    if s.get("message_en"):
+        return s["message_en"]
+    lead = f"{_cap(s['holiday_name_en'])} falls on {_when_en(s)}" if s.get("holiday_name_en") else _when_en(s)
     return (f"Hi, {business_name(s)}!\n\n"
-            f"{_cap(s.get('holiday_name_en') or 'The holiday')} falls on {_when_en(s)}, but your regular hours apply then too. "
+            f"{lead}, but your regular hours apply then too. "
             f"Nothing to do, and no changes are coming to your hours.")
+
+
+def unknown_suggestion_text() -> str:
+    return "En löytänyt ehdotusta, johon tämä vastaus liittyy."
+
+
+def unknown_suggestion_text_en() -> str:
+    return "I could not find the suggestion this reply belongs to."
 
 
 def _hours_from_result(r: dict):
@@ -218,11 +271,11 @@ def receipt_text(r: dict) -> str:
     h_txt = h if isinstance(h, str) and h != "closed" else fi_hours(h)
     pubs = r.get("publishers") or PUBLISHERS_DEFAULT
     pub_txt = _join_fi(pubs)
-    gen = holiday_name_genitive(r)
+    gen = holiday_name_genitive(r) if _has_name(r) else "Poikkeuspäivän"
     if h_txt == "suljettu":
         what = f"{gen} sulkeutuminen on nyt tallennettu."
-    else:
-        what = f"{gen} aukioloajat {h_txt} on nyt tallennettu."
+        return f"Kiitos! {what} Se näkyy {pub_txt}."
+    what = f"{gen} aukioloajat {h_txt} on nyt tallennettu."
     return f"Kiitos! {what} Ne näkyvät {pub_txt}."
 
 
@@ -230,7 +283,9 @@ def receipt_text_en(r: dict) -> str:
     h = _hours_from_result(r)
     h_txt = h.replace("-", " to ") if isinstance(h, str) and h != "closed" else en_hours(h)
     pubs = r.get("publishers") or PUBLISHERS_DEFAULT
-    hol = r.get("holiday_name_en") or "holiday"
+    hol = r.get("holiday_name_en") or "exception day"
+    if h_txt == "closed":
+        return f"Thank you! The {hol} closure is now saved. It shows on {_join_en(pubs)}."
     return f"Thank you! The {hol} hours ({h_txt}) are now saved. They show on {_join_en(pubs)}."
 
 
@@ -254,7 +309,7 @@ def _join_en(items) -> str:
 
 
 def edit_prompt_text() -> str:
-    return "Selvä. Kirjoita uusi aukioloaika vastaamalla tähän viestiin, esimerkiksi \"9-13\" tai \"suljettu\"."
+    return "Selvä. Kirjoittakaa uusi aukioloaika vastaamalla tähän viestiin, esimerkiksi \"9-13\" tai \"suljettu\"."
 
 
 def edit_prompt_text_en() -> str:
@@ -262,7 +317,7 @@ def edit_prompt_text_en() -> str:
 
 
 def decline_thanks_text() -> str:
-    return "Selvä, aukioloaikoihin ei tehdä muutoksia. Kiitos vastauksesta! Voit muuttaa päätöstä milloin tahansa."
+    return "Selvä, aukioloaikoihin ei tehdä muutoksia. Kiitos vastauksesta! Voitte muuttaa päätöstä milloin tahansa."
 
 
 def decline_thanks_text_en() -> str:
@@ -270,7 +325,7 @@ def decline_thanks_text_en() -> str:
 
 
 def unknown_reply_text() -> str:
-    return "En ymmärtänyt vastausta. Voit painaa jotakin painikkeista tai kirjoittaa esimerkiksi \"9-13\" tai \"suljettu\"."
+    return "En ymmärtänyt vastausta. Voitte painaa jotakin painikkeista tai kirjoittaa esimerkiksi \"9-13\" tai \"suljettu\"."
 
 
 def unknown_reply_text_en() -> str:
@@ -279,35 +334,52 @@ def unknown_reply_text_en() -> str:
 
 # ---------------------------------------------------------------- export
 
-_SAMPLE_BASE = {
-    "id": "sample", "business_name": "Furry Paw Vet Clinic", "holiday_date": "2026-12-24",
-    "holiday_name_fi": "Jouluaatto", "holiday_name_en": "Christmas Eve",
-    "last_year_hours": [{"start": "09:00", "end": "13:00"}],
-    "google_now": [{"start": "09:00", "end": "17:00"}],
-}
+def _engine_cases() -> dict:
+    """Real Suggestion dicts from the suggest engine for the Furry Paw demo business (no network)."""
+    import dataclasses
+    import json
+
+    from kaiku.suggest.cli import ROOT, load_business, run
+
+    path = str(ROOT / "data" / "furry_paw.json")
+    biz = load_business(path)
+    cold = json.loads((ROOT / "data" / "furry_paw.json").read_text(encoding="utf-8"))
+    cold["last_year_exceptions"] = []
+    from kaiku.suggest.schema import Business
+    cold_biz = Business.from_dict(cold)
+
+    def sug(b, d, today):
+        o = run(b, d, today, network=False)[1]
+        return o if isinstance(o, dict) else (o.to_dict() if hasattr(o, "to_dict") else dataclasses.asdict(o))
+
+    return {"hours": sug(biz, "2026-12-24", "2026-12-17"), "closed": sug(biz, "2026-12-25", "2026-12-17"),
+            "ask": sug(cold_biz, "2026-12-24", "2026-12-17"), "nochg": sug(biz, "2026-11-08", "2026-11-01")}
 
 
 def all_final_messages(path: str | Path | None = None) -> str:
     """Write docs/final_messages.md: every customer-facing message as text, with English glosses. Returns the markdown."""
-    hours = {**_SAMPLE_BASE, "kind": "hours", "proposed": [{"start": "09:00", "end": "13:00"}]}
-    closed = {**_SAMPLE_BASE, "kind": "closed", "proposed": None}
-    ask = {**_SAMPLE_BASE, "kind": "ask", "proposed": None, "last_year_hours": None, "google_now": None}
-    nochg = {**_SAMPLE_BASE, "kind": "no_change", "holiday_date": "2026-11-08", "holiday_name_fi": "Isänpäivä",
-             "holiday_name_en": "Father's Day"}
+    c = _engine_cases()
+    hours, closed, ask, nochg = c["hours"], c["closed"], c["ask"], c["nochg"]
     rec = {"holiday_name_fi": "Jouluaatto", "holiday_name_en": "Christmas Eve", "hours": [{"start": "09:00", "end": "13:00"}],
            "publishers": ["Google", "Apple Maps", "Bing"]}
+    rec_closed = {"holiday_name_fi": "Joulupäivä", "holiday_name_en": "Christmas Day", "hours": "closed",
+                  "publishers": ["Google", "Apple Maps", "Bing"]}
+    with_url = dict(hours, decide_url="https://kaiku.example/decide/sug-furry-paw-2026-12-24")
     items = [
         ("1. Suggestion with proposed hours (WhatsApp buttons: Hyväksy / Muokkaa / Ei kiitos)", suggestion_text(hours), suggestion_text_en(hours)),
         ("2. Suggestion, proposal is closed", suggestion_text(closed), suggestion_text_en(closed)),
         ("3. Ask instead of guess (low confidence or cold start)", ask_text(ask), ask_text_en(ask)),
         ("4. No change needed (reliability: we do not invent work)", no_change_text(nochg), no_change_text_en(nochg)),
-        ("5. Receipt after apply", receipt_text(rec), receipt_text_en(rec)),
+        ("5. Receipt after apply (hours)", receipt_text(rec), receipt_text_en(rec)),
+        ("5b. Receipt after apply (closed day, singular)", receipt_text(rec_closed), receipt_text_en(rec_closed)),
+        ("5c. Suggestion when a decide link exists (example URL)", suggestion_text(with_url), suggestion_text_en(with_url)),
+        ("5d. Button for a suggestion we do not know", unknown_suggestion_text(), unknown_suggestion_text_en()),
         ("6. Edit prompt after Muokkaa", edit_prompt_text(), edit_prompt_text_en()),
         ("7. Thanks after Ei kiitos", decline_thanks_text(), decline_thanks_text_en()),
         ("8. Reply not understood", unknown_reply_text(), unknown_reply_text_en()),
     ]
     out = ["# Final customer messages", "",
-           "Demo business: Furry Paw Vet Clinic (fictional Yext sandbox entity). Text as sent over WhatsApp, with English glosses.", ""]
+           "Demo business: Furry Paw Vet Clinic (fictional Yext sandbox entity). Items 1 to 4 are the exact Suggestion texts from `python3 -m kaiku.suggest.cli --business data/furry_paw.json` (no network): 24.12. hours, 25.12. closed, 24.12. with no history (ask), 8.11. no change. Text as sent over WhatsApp, with English glosses.", ""]
     for title, fi, en in items:
         out += [f"## {title}", "", "Finnish:", "", *["> " + l if l else ">" for l in fi.split("\n")], "",
                 "English gloss:", "", *["> " + l if l else ">" for l in en.split("\n")], ""]
