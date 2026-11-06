@@ -57,10 +57,10 @@ async def _decide_one(business_id: str, item: dict, action: str, edited) -> dict
         except Exception as exc:
             log.warning("on_decision: %s", exc)
         if resolved:
-            for _ in range(60):  # up to ~12 s for the run to finish apply
+            for _ in range(75):  # up to ~15 s for the waiting run to finish apply (status "applied") or the decline
                 await asyncio.sleep(0.2)
                 cur = store.get_suggestion(s.id)
-                if cur and cur.status in ("applied", "declined", "approved", "edited"):
+                if cur and (cur.status in ("applied", "declined") or _apply_event(s.id).get("yext_status", "ok") != "ok"):
                     break
         else:
             await chain.post_decision(b, s, dec)

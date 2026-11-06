@@ -37,7 +37,7 @@ def _bubble(i: dict) -> dict:
     if i["kind"] != "no_change" and is_pending(i) and i.get("proposed") and "suggest" not in body.lower():
         body += f" I suggest {hours_text(i['proposed'])}."
     return {"role": "kaiku", "kind": "note" if i["kind"] == "no_change" else "suggestion", "suggestion_id": i["id"],
-            "item_kind": i["kind"], "text": body.replace("..", "."), "status": i.get("status", "proposed"),
+            "item_kind": i["kind"], "holiday_date": i.get("holiday_date"), "text": body.replace("..", "."), "status": i.get("status", "proposed"),
             "proposed": hours_text(i.get("proposed")) or None}
 
 

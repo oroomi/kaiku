@@ -24,9 +24,8 @@
     var d = e.detail || {};
     if (!d.hours && d.yext_status !== "ok") return;
     var day = (e.title_en.match(/\((\d+\.\d+\.)\)/) || [])[1] || "";
-    $("readback-t").textContent = (d.yext_status === "ok" ? (d.verified ? "Verified: " : "Written, not read back: ") : "Not written: ") +
-      (d.entity || "SinceAI07") + (d.entity_version ? " version " + d.entity_version : "") + (d.environment ? ", " + d.environment : "") +
-      (day ? ", " + day : "") + (d.hours ? " " + hrs(d.hours) : "") + ".";
+    $("readback-t").textContent = (d.yext_status === "ok" ? (d.verified ? "Read back and verified at " : "Written, not read back, at ") : "Not written, ") + hhmmss(e.ts) + ": " +
+      (d.entity || "SinceAI07") + (d.environment ? " (" + d.environment + ")" : "") + (day ? ", " + day : "") + (d.hours ? " " + hrs(d.hours) : "") + ".";
   }
   function add(e, live) {
     $("rows-empty").hidden = true;

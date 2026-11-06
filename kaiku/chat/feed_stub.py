@@ -52,7 +52,14 @@ def _item_for(b, h, stored) -> dict | None:
         kind = {"hours": "holiday_hours", "closed": "holiday_hours", "no_change": "no_change"}.get(st.kind, "holiday_hours")
         prop = "closed" if st.kind == "closed" else ([x.model_dump() for x in st.proposed] if st.proposed else None)
         status = {"approved": "approved", "edited": "approved", "applied": "approved", "declined": "declined"}.get(st.status, "proposed")
-        return {"id": st.id, "kind": kind, "title_en": f"{name} {d_short(iso)}", "text_en": st.message_en or "",
+        if kind == "no_change":
+            text = st.message_en or f"{name} {d_short(iso)}: nothing to change."
+        elif ly is not None:
+            text = (f"Last year you were {'closed' if ly == 'closed' else 'open ' + hours_text(ly)}. "
+                    f"Connect still publishes {hours_text(reg) or 'closed'} for that day.")
+        else:
+            text = st.reasons[0].text_en if st.reasons else (st.message_en or "")
+        return {"id": st.id, "kind": kind, "title_en": f"{name} {d_short(iso)}" + (" hours are missing" if kind != "no_change" else ""), "text_en": text,
                 "proposed": prop, "confidence": st.confidence, "status": status,
                 "reasons": [{"source": r.source, "text_en": r.text_en} for r in st.reasons], **base}
     if not h.public_holiday and not reg:

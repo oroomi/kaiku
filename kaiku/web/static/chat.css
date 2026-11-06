@@ -67,10 +67,14 @@
 @media (max-width:560px){.drawer{top:auto;width:100%;border-radius:22px 22px 0 0;max-height:86vh}}
 
 /* judge view */
-.judge{display:grid;gap:14px;max-width:900px;margin:0 auto}
+.judge{display:flex;flex-direction:column;gap:14px;max-width:900px;width:100%;margin:0 auto}
 .judge .strip{padding:16px}
 .readback{padding:14px 16px}
 .readback .mono{color:var(--cyan);font-size:10px}
 .readback p{margin:6px 0 0;font-size:15px;color:var(--ink)}
 .chip.back{text-decoration:none;color:var(--cyan)}
 .judge .statusbar .chip{display:inline-block}.judge .statusbar{align-items:center}
+.owner-view .clock{margin-left:auto}
+body.drawer-open .kv,body.drawer-open .composer{visibility:hidden}
+.judge .row .ttl a{word-break:normal}
+.judge .statusbar{grid-column:auto}

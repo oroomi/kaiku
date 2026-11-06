@@ -55,12 +55,18 @@
         first = false; var i = 0;
         (function next() {
           if (i >= ms.length) { logCount = ms.filter(function (m) { return m.kind === "chat"; }).length; return; }
-          var m = ms[i++]; add(m, true, true); setTimeout(next, i < 5 ? (reduce() ? 0 : 420) : 0);
+          var m = ms[i++]; add(m, true, true); setTimeout(next, i < 5 ? (reduce() ? 0 : 280) : 0);
         })();
         return;
       }
       ms.forEach(function (m) {
-        if (m.suggestion_id) { if (shown[m.suggestion_id]) { if (shown[m.suggestion_id]._m.status !== m.status) setStatus(m.suggestion_id, m.status); } else add(m, true); }
+        if (!m.suggestion_id) return;
+        if (shown[m.suggestion_id]) { if (shown[m.suggestion_id]._m.status !== m.status) setStatus(m.suggestion_id, m.status); return; }
+        var twin = m.holiday_date && Object.keys(shown).map(function (k) { return shown[k]; }).filter(function (el) { return el._m.holiday_date === m.holiday_date && el._m.item_kind === m.item_kind; })[0];
+        if (twin) { /* the chain run gave the same holiday a stored id: same bubble, new id */
+          delete shown[twin._m.suggestion_id]; twin._m = m; twin.setAttribute("data-sid", m.suggestion_id); shown[m.suggestion_id] = twin;
+          twin.querySelector(".b").innerHTML = nb(esc(m.text)) + tagFor(m);
+        } else add(m, true);
       });
     }).catch(function () {
       if (first) { first = false; add({ role: "kaiku", kind: "intro", text: "I cannot reach my notes right now. Please try again in a moment." }); }
@@ -100,10 +106,12 @@
         var b = $("demo-btn"); b.hidden = false;
         b.addEventListener("click", function () { openDrawer(true); });
         $("today").hidden = false;
+        if (location.hash === "#drawer") openDrawer(true);
       });
     }).catch(function () {});
   }
   function openDrawer(on) {
+    document.body.classList.toggle("drawer-open", on);
     $("drawer").hidden = !on; $("drawer-back").hidden = !on; $("demo-btn").setAttribute("aria-expanded", on ? "true" : "false");
     if (on) $("drawer-close").focus();
   }
