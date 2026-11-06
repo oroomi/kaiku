@@ -80,6 +80,8 @@ async def decide(business_id: str, suggestion_id: str, action: str, edited_hours
         return {"ok": False, "error": f"already {item.get('status')}"}
     if action not in ("approve", "edit", "decline"):
         return {"ok": False, "error": "action must be approve, edit or decline"}
+    if action == "approve" and not item.get("proposed"):
+        return {"ok": False, "needs_hours": True, "error": "this suggestion has no hours to approve; ask the owner which hours they want"}
     edited = None
     if action == "edit":
         edited = validate_hours(edited_hours)

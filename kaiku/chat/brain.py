@@ -194,7 +194,7 @@ async def fallback_reply(items, sess, message, lang, turn: Turn) -> str:
     args = {"suggestion_id": f["id"], "action": p["action"], "edited_hours": p.get("edited")}
     r = await turn.run("decide", args)
     if not r.get("ok"):
-        return M["error"]
+        return M["which"] if r.get("needs_hours") else M["error"]
     if p["action"] == "decline":
         return M["declined"]
     what = f"{f.get('holiday_name_en') or f['title_en']} {r.get('final_hours')}"

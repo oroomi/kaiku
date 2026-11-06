@@ -51,10 +51,14 @@ def test_store_seed():
 def test_healthz_and_home(client):
     assert client.get("/healthz").json() == {"ok": True, "broker": client.get("/api/status").json()["broker"]}
     html = client.get("/").text
-    for t in ["hero", "event-strip", "business-card", "run-chain"]:
+    for t in ["hero", "business-card"]:  # the owner's home is one conversation: no events feed, no demo controls
         assert f'data-pilot="{t}"' in html
-    assert "Furry Paw Vet Clinic" in html and "SAMPLE HISTORY" in html
+    for t in ["event-strip", "run-chain", "reset", "drawer"]:
+        assert f'data-pilot="{t}"' not in html
+    assert "Furry Paw Vet Clinic" in html and 'id="composer"' in html and "SAMPLE HISTORY" not in html
     assert "—" not in html
+    keyed = client.get("/judge", headers={"x-kaiku-key": "testkey"}).text
+    assert 'data-pilot="event-strip"' in keyed and 'data-pilot="today"' in keyed and "—" not in keyed
     assert client.get("/static/horizon.css").status_code == 200
     assert client.get("/static/fonts/Newsreader.ttf").status_code == 200
     assert client.get("/api/today").json()["label_fi"].startswith("Tänään:")

@@ -17,7 +17,8 @@ _LEAD = re.compile(r"^(?:please\s+)?(?:make it|set it to|set it|change it to|cha
 def normalize(text: str) -> str:
     t = (text or "").strip().lower().replace("–", "-").replace("—", "-")
     t = re.sub(r"[!?]+", "", t)
-    t = re.sub(r"[,;:]+", " ", t)
+    t = re.sub(r"[,;]+", " ", t)
+    t = re.sub(r"(?<!\d):|:(?!\d)", " ", t)  # keep the colon in 8:30
     t = re.sub(r"\s+", " ", t).strip(" .")
     return t
 
