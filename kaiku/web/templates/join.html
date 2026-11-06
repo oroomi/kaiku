@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Kaiku, you own a business{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/map.css?v={{ asset_v() }}">{% endblock %}
+{% block content %}
+<div class="joinpage" data-pilot="join">
+{% if not biz %}
+  <section class="glass jcard"><h1 lang="fi">Kaikki yritykset on jo otettu.</h1><p class="men">Every business has an owner already.</p></section>
+{% else %}
+  <section class="glass jcard" id="jcard" data-biz="{{ biz.id }}">
+    <div class="mono mcap">OLET NYT / YOU ARE NOW</div>
+    <h1 lang="fi">Olet nyt: {{ biz.name }}, {{ address }}</h1>
+    <p class="men">You are now the owner of {{ biz.name }}, {{ address }}. A real Turku business from OpenStreetMap; the answers are a demo.</p>
+    <div id="ask" {% if answered %}hidden{% endif %}>
+      <p class="jq" lang="fi">{{ q.fi if q else "Oletteko auki jouluaattona 24.12.?" }}</p>
+      <p class="men">{{ q.en if q else "Are you open on Christmas Eve, 24 Dec?" }}</p>
+      {% if q and q.kind == "ask" %}<p class="jwhy" lang="fi">Kaiku ei tiedä aukioloaikojanne, joten se kysyy eikä arvaa.</p>
+      <p class="men">Kaiku has no hours for you, so it asks instead of guessing.</p>{% endif %}
+      <div class="chips" role="group" aria-label="Answer">
+        <button class="chip" data-a="9-13">9-13</button>
+        <button class="chip" data-a="10-14">10-14</button>
+        <button class="chip" data-a="Suljettu">Suljettu <small>closed</small></button>
+        <button class="chip" data-a="Normaalisti">Normaalisti <small>as usual</small></button>
+      </div>
+      <form id="jform" class="jfree"><input id="jtext" maxlength="40" placeholder="Muu, esim. 8-15" aria-label="Free text answer" autocomplete="off"><button class="primary" type="submit">Lähetä <small>send</small></button></form>
+    </div>
+    <div id="thanks" {% if not answered %}hidden{% endif %} class="jthanks">
+      <p class="jq" lang="fi">Kiitos. Pisteesi on nyt vihreä.</p>
+      <p class="men">Thank you. Your dot is now green on the big screen.</p>
+      <p class="mono" id="jans">{% if answered %}jouluaatto {{ answer }}{% endif %}</p>
+    </div>
+  </section>
+{% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function(){var c=document.getElementById('jcard');if(!c)return;var id=c.dataset.biz,busy=false;
+function send(a){if(busy||!a)return;busy=true;
+ fetch('/api/room/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({business_id:id,answer:a})})
+ .then(r=>r.json()).then(j=>{if(!j.ok)throw 0;document.getElementById('ask').hidden=true;document.getElementById('thanks').hidden=false;document.getElementById('jans').textContent='jouluaatto '+j.answer})
+ .catch(()=>{busy=false;alert('Ei onnistunut, yritä uudelleen. / Did not work, try again.')})}
+document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>send(b.dataset.a)));
+document.getElementById('jform').addEventListener('submit',e=>{e.preventDefault();send(document.getElementById('jtext').value)})})();
+</script>
+{% endblock %}
