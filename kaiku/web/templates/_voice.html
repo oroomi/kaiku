@@ -1,0 +1,24 @@
+{# Kaiku voice: push-to-talk orb + caption strip. Included on every page from base.html. #}
+<link rel="stylesheet" href="/static/voice.css?v={{ asset_v() }}">
+<div id="kv" class="kv" data-state="idle">
+  <div id="kv-cap" class="kv-cap" role="status" aria-live="polite" hidden>
+    <p class="kv-you mono" id="kv-you-l">Sinä <span lang="en">You</span></p>
+    <p class="kv-you-t" id="kv-you"></p>
+    <p class="kv-ai mono" id="kv-ai-l">Kaiku</p>
+    <p class="kv-ai-t" id="kv-ai"></p>
+  </div>
+  <div class="kv-dock">
+    <span class="kv-hint mono" id="kv-hint" aria-hidden="true">Pidä välilyöntiä <span lang="en">Hold space</span></span>
+    <button type="button" class="kv-mute" id="kv-mute" aria-pressed="false" aria-label="Mykistä Kaiku / Mute Kaiku" title="Mykistä / Mute">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path class="kv-on" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path class="kv-off" d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+    <button type="button" class="kv-orb" id="kv-orb" aria-label="Puhu Kaikulle: pidä pohjassa / Talk to Kaiku: press and hold" aria-pressed="false">
+      <svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+        <circle class="kv-ring" cx="32" cy="32" r="29" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1.5"/>
+        <path class="kv-arc" d="M17 40a15 15 0 0 1 30 0" fill="none" stroke="#8fd3e8" stroke-width="3" stroke-linecap="round"/>
+        <circle class="kv-dot" cx="40" cy="27" r="4" fill="#fff"/>
+      </svg>
+    </button>
+  </div>
+</div>
+<script src="/static/voice.js?v={{ asset_v() }}" defer></script>
