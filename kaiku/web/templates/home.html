@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Kaiku, holiday hours that ask once{% endblock %}
+{% block content %}
+<div class="home">
+  <section class="hero glass" data-pilot="hero" id="hero" aria-live="polite">
+    <div class="arc-wrap">
+      <svg class="arc" viewBox="0 0 440 250" role="img" aria-label="Chain progress arc">
+        <defs>
+          <linearGradient id="arcg" x1="0" x2="1"><stop offset="0" stop-color="#8fd3e8" stop-opacity=".25"/><stop offset="1" stop-color="#8fd3e8"/></linearGradient>
+          <filter id="blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
+        </defs>
+        <path id="arc-track" d="M 30 230 A 190 190 0 0 1 410 230" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="3" stroke-linecap="round"/>
+        <path id="arc-fill" d="M 30 230 A 190 190 0 0 1 410 230" fill="none" stroke="url(#arcg)" stroke-width="4" stroke-linecap="round" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1"/>
+        <circle id="dot-halo" r="16" fill="#8fd3e8" opacity=".5" filter="url(#blur)" cx="30" cy="230"/>
+        <circle id="dot" r="6.5" fill="#fff" cx="30" cy="230"/>
+      </svg>
+      <div class="figure">
+        <div class="big" id="big">&ndash;</div>
+        <div class="mono cap" id="big-cap">READY</div>
+      </div>
+    </div>
+    <p class="sentence" id="sentence" lang="fi">Käynnistä ketju, niin näet ehdotuksen.</p>
+    <p class="gloss" id="gloss" lang="en">Run the chain to see a suggestion.</p>
+    <div class="actions">
+      <label class="pick"><span class="mono">HOLIDAY</span>
+        <select id="date" aria-label="Holiday date">
+          <option value="2026-12-24">24.12.2026 Jouluaatto</option>
+          <option value="2026-11-08">8.11.2026 Isänpäivä (ei vapaapäivä)</option>
+        </select>
+      </label>
+      <button class="primary" id="run" data-pilot="run-chain" type="button">Run the chain</button>
+    </div>
+  </section>
+
+  <section class="strip glass" data-pilot="event-strip" id="strip" aria-label="Live events">
+    <div class="strip-head"><span class="mono">LIVE EVENTS</span><span class="mono live" id="conn"><i></i>connecting</span></div>
+    <ol id="rows" class="rows"></ol>
+    <p class="empty" id="rows-empty">Nothing has happened yet. Each step of the chain lands here as it happens.</p>
+  </section>
+
+  <section class="card glass" data-pilot="business-card" id="business">
+    <div class="card-top"><span class="mono tag">SAMPLE HISTORY</span><span class="mono tag soft">YEXT SANDBOX</span></div>
+    <h2 id="b-name">{{ business.name if business else "no data" }}</h2>
+    <p class="addr" id="b-addr">{{ business.address if business else "" }}</p>
+    <dl class="hours" id="b-hours"></dl>
+    <p class="note" id="b-note">{{ business.note if business and business.note else "" }}</p>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% block title %}Kaiku{% endblock %}</title>
+<meta name="description" content="Kaiku suggests holiday hours; the owner decides with one tap.">
+<meta name="theme-color" content="#0c1418">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230c1418'/%3E%3Cpath d='M6 22a10 10 0 0 1 20 0' fill='none' stroke='%238fd3e8' stroke-width='2.5' stroke-linecap='round'/%3E%3Ccircle cx='21' cy='13' r='2.6' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preload" href="/static/fonts/Inter.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="preload" href="/static/fonts/Newsreader.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="/static/horizon.css">
+{% block head %}{% endblock %}
+</head>
+<body>
+<div class="stage" aria-hidden="true"><i class="glow g1"></i><i class="glow g2"></i></div>
+<header class="top">
+  <a class="brand" href="/" aria-label="Kaiku"><svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><path d="M5 23a11 11 0 0 1 22 0" fill="none" stroke="#8fd3e8" stroke-width="2.4" stroke-linecap="round"/><circle cx="21.5" cy="12.5" r="2.7" fill="#fff"/></svg><span>Kaiku</span></a>
+  <div class="clock mono" id="today" data-pilot="today">Tänään: ...</div>
+</header>
+<main data-pilot-root>
+{% block content %}{% endblock %}
+</main>
+<script src="/static/app.js" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
