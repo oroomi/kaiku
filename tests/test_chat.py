@@ -174,7 +174,7 @@ def test_drawer_and_judge_keyed(stub_feed):
     from kaiku.app import app
     c = TestClient(app)
     home = c.get("/").text
-    for word in ("Run the chain", "Reset demo", "time travel", "Today (time travel)"):
+    for word in ("Run the chain", "time travel", "Today (time travel)"):
         assert word not in home
     assert c.get("/owner/drawer").status_code == 403 and c.get("/judge").status_code == 403
     assert "Owner view" not in c.get("/judge").text.replace("Back to the owner view", "")
@@ -186,3 +186,18 @@ def test_drawer_and_judge_keyed(stub_feed):
     j = k.get("/judge")
     assert j.status_code == 200 and 'data-pilot="event-strip"' in j.text and 'href="/"' in j.text and "YEXT READ-BACK" in j.text
     assert c.get("/judge?key=testkey").status_code == 200 and c.get("/owner").status_code == 200
+
+
+def test_feed_overlay_shows_recorded_decisions(stub_feed, fake_yext):
+    """The engine builds every card 'proposed'; the owner's recorded decisions are laid over a copy (cards, chat and /api/feed agree)."""
+    from kaiku.chat.feed import with_decisions
+    from kaiku.schema import Suggestion
+    feed = {"business_id": "furry-paw", "suggestions": [
+        {"id": "a", "kind": "holiday_hours", "holiday_date": "2026-12-24", "status": "proposed"},
+        {"id": "b", "kind": "conflict", "holiday_date": "2026-12-24", "status": "proposed"},
+        {"id": "c", "kind": "period", "status": "proposed", "proposed": [{"date": "2026-12-24"}, {"date": "2026-12-25"}]}]}
+    assert [i["status"] for i in with_decisions(feed)["suggestions"]] == ["proposed"] * 3
+    store.save_suggestion(Suggestion(id="a", business_id="furry-paw", holiday_date="2026-12-24", kind="hours", status="applied", confidence=.7,
+                                     reasons=[], message_fi="", message_en=""))
+    out = [i["status"] for i in with_decisions(feed)["suggestions"]]
+    assert out == ["approved", "proposed", "proposed"] and feed["suggestions"][0]["status"] == "proposed"

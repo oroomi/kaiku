@@ -51,11 +51,14 @@ def test_store_seed():
 def test_healthz_and_home(client):
     assert client.get("/healthz").json() == {"ok": True, "broker": client.get("/api/status").json()["broker"]}
     html = client.get("/").text
-    for t in ["hero", "business-card"]:  # the owner's home is one conversation: no events feed, no demo controls
+    for t in ["hero", "suggestions", "chat", "thread", "status"]:  # hero, chat, conversation thread, suggestions widget
         assert f'data-pilot="{t}"' in html
-    for t in ["event-strip", "run-chain", "reset", "drawer"]:
+    for t in ["event-strip", "run-chain", "drawer"]:  # no events strip, no chain controls on the home page
         assert f'data-pilot="{t}"' not in html
-    assert "Furry Paw Vet Clinic" in html and 'id="composer"' in html and "SAMPLE HISTORY" not in html
+    for word in ("SAMPLE HISTORY", "LIVE EVENTS", "Run the chain", "data-say", 'id="quick"'):
+        assert word not in html
+    assert "Furry Paw Vet Clinic" in html and 'id="composer"' in html and "SUGGESTIONS FOR FURRY PAW VET CLINIC" in html
+    assert "Tell Kaiku: yes, change the hours, or no" in html and "MESSAGE TO THE OWNER" in html and "Nothing sent yet." in html
     assert "—" not in html
     keyed = client.get("/judge", headers={"x-kaiku-key": "testkey"}).text
     assert 'data-pilot="event-strip"' in keyed and 'data-pilot="today"' in keyed and "—" not in keyed

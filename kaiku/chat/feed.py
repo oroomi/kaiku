@@ -23,12 +23,13 @@ def with_decisions(feed: dict) -> dict:
     by_id, by_date = {}, {}
     for s in stored:                      # newest first
         if s.status in _TERMINAL:
-            by_id.setdefault(s.id, s.status)
-            by_date.setdefault(s.holiday_date, s.status)
+            st = "declined" if s.status == "declined" else "approved"   # edited and applied are approvals too
+            by_id.setdefault(s.id, st)
+            by_date.setdefault(s.holiday_date, st)
     out = []
     for i in feed.get("suggestions", []):
         st = by_id.get(i.get("id")) or by_id.get(i.get("suggestion_id"))
-        if not st and i.get("kind") in ("holiday_hours", "conflict"):
+        if not st and i.get("kind") == "holiday_hours":
             st = by_date.get(i.get("holiday_date"))
         if not st and i.get("kind") == "period" and isinstance(i.get("proposed"), list):
             ds = [by_date.get(m.get("date")) for m in i["proposed"] if isinstance(m, dict) and m.get("date")]

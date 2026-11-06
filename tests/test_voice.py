@@ -195,8 +195,8 @@ def test_every_page_has_orb_and_nav(client, monkeypatch):
     from kaiku import store
     monkeypatch.setattr(store, "get_business", lambda bid: None)
     html = client.get("/").text
-    assert 'id="kv-orb"' in html and "/static/voice.js" in html  # the owner's home has the orb but no nav: only the conversation
-    assert 'href="/map"' not in html
+    assert 'id="kv-orb"' in html and "/static/voice.js" in html  # the home has the orb and the nav
+    assert 'href="/map"' in html
     j = client.get("/judge", headers={"x-kaiku-key": "testkey"}).text
     assert 'id="kv-orb"' in j and 'href="/map"' in j and 'href="/room"' in j
     assert SECRET_A not in html and SECRET_E not in html
