@@ -65,3 +65,18 @@ same author as the rules). They prove the logic runs, not accuracy, and are not 
 - Peer priors are the author's judgement, labelled as such in the file.
 - Nager.Date has no uudenvuodenaatto (not a public holiday); we add it as a non-public day.
 - Finnish inflection is a lookup table (`ESSIVE` in explain.py); an unknown holiday name falls back to "päivänä 24.12.".
+
+## Suggestions feed (the owner's first screen: "Kaiku noticed N things")
+Code: `kaiku/suggest/feed.py` (`build_feed(business_id, today=None)`), `kaiku/suggest/router.py` (`router = APIRouter()`, needs `"suggest"` in the module list of `kaiku/app.py` to be mounted).
+`GET /api/feed/{business_id}?date=YYYY-MM-DD[&network=0]` returns
+`{business_id, today, count, suggestions:[{id, kind, title_en, text_en, title_fi, text_fi, proposed, confidence, reasons:[{source, dataset_id, text_en, text_fi}], status, holiday_date?, period?}]}`.
+`date` defaults to the time-travel clock. Field names are stable and machine-readable on purpose: this is the surface a scoring script
+(Fonecta's hidden test data) can read directly, one card per suggestion, each with its reasons and the datasetId of every source.
+
+Kinds, each only when real data supports it (no data, no card; nothing is invented):
+- `holiday_hours`: the engine's suggestion for holidays within 45 days of `today` (in a period, the nearest date).
+- `conflict`: two or more sources (last year, website, Google via Serper) returned different hours for the same day. Lists each value with its datasetId; `proposed` and `confidence` are the engine's. Needs live signals: with no website or Google data there is nothing to disagree.
+- `period`: several holidays in one period (Christmas period 24.12. to 6.1.). One bundle with a per-date proposal in `proposed`, `standing_permission_offered` and the question "Want me to handle this period every year?" (not offered if the business already gave standing permission).
+- `no_change`: the engine says no change (Father's Day 8.11., not a public holiday and closed on Sundays) shown as a reliability card with its reason.
+- `description`, `review`: pluggable loaders (`register_loader`) reading the Yext entity description and the reviews endpoint. Sandbox 6.11.2026: `GET /reviews` returns 200 with 0 reviews, the entity has no description, so neither card appears.
+`ask` suggestions (not enough data) are not feed cards; they go through the chain as before.

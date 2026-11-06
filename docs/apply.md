@@ -45,3 +45,12 @@ The sandbox has no publisher listings, so nothing syncs anywhere. The demo says:
 
 ## Revert and reset
 `revert()` always sends `holidayHours` (as `[]` when the snapshot had none) and verifies by read-back, so rows written after the snapshot are removed. `reset_demo(entity_id)` removes all holiday rows, keeps regular hours, verifies, and returns the hours (for a demo-reset endpoint).
+
+## Yext Suggestions API: not permitted for the sandbox key (probed 6.11.2026)
+Base `https://sbx-api.yextapis.com/v2/accounts/me`, `v=20261106` (same result on `api-sandbox.yext.com`). Responses, key never shown:
+- `GET /suggestions` -> HTTP 403, error code 20 `INSUFFICIENT_APP_ACCESS`, "App does not have access to this endpoint".
+- `POST /suggestions` (upsert holidayHours for SinceAI07) -> HTTP 403, same error. `GET /suggestions/{id}` -> 403 same. `PUT /suggestions` -> 405.
+- `POST /suggestions/{id}/actions` -> 404 (path does not exist; nothing was created, so nothing to clean up).
+- For contrast `GET /reviews` -> 200 `{"reviews":[],"count":0}`.
+Decision: the direct entity write stays (`apply_suggestion`, snapshot, PUT, read-back verify). No `kaiku/apply/suggestions.py` and no
+`KAIKU_YEXT_SUGGESTIONS` switch were built, because every call would 403. If Fonecta enables the Suggestions API for the app, re-run the probe: the plan is propose on chain suggestion, approve on owner approval, then the same read-back.
