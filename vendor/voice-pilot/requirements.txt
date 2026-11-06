@@ -1,0 +1,9 @@
+fastapi>=0.110
+uvicorn>=0.29
+jinja2>=3.1
+anthropic>=1.0
+httpx>=0.27,<1.0          # every provider brain (Gemini, OpenAI, Chat Completions) is plain HTTP over httpx; tested with 0.28.1
+# no Google or OpenAI SDK is needed; tested with anthropic 1.15.0, fastapi 0.142.2, starlette 1.7.0 (Python 3.12)
+# tests
+pytest>=8
+playwright>=1.45

@@ -1,0 +1,233 @@
+# voice-pilot
+
+A drop-in voice assistant for any web app. You talk to it ("Aava"), it answers out loud, and **it drives the website while it talks**:
+it opens pages, scrolls to sections, puts a spotlight on the thing it is talking about, applies filters and presses safe buttons, each
+action timed to the sentence that mentions it. Built for hackathon demos where the judges should watch the AI take someone on a tour.
+
+![The demo moment: "Aava, show me the best match and why", then the overlay docks and Aava opens pages and moves a spotlight sentence by sentence](docs/screens/demo.gif)
+
+*24 s recording of the real client (`tools/record_gif.py`); the answer is a scripted stream so the recording repeats. The live run with the real model and voice is the third screenshot below.*
+
+| Listening (full overlay) | Docked orb + spotlight | Phone, mid-tour | Live run, real Claude + ElevenLabs |
+|---|---|---|---|
+| ![overlay](docs/screens/desktop-overlay.png) | ![spotlight](docs/screens/desktop-spotlight.png) | ![phone](docs/screens/phone-spotlight.png) | ![live](docs/screens/live-tour.png) |
+
+- **Client** (`client/pilot.js` + `pilot.css`): zero dependencies, ES module or script tag (`pilot.global.js`). Mic button, translucent
+  full-screen overlay that docks to a floating glass orb while the page moves underneath, live transcript, streamed answer revealed word by
+  word, orb animated from the audio, 1.5 s pause before sending (configurable), tap the orb to send now or to interrupt, Escape to close,
+  "type instead", mobile audio unlock, reduced-motion support. Server voice (ElevenLabs) with automatic fallback to the browser voice.
+- **Actions**: `navigate` (page swap without killing the voice session, or your SPA router), `scroll_to`, `highlight` (dimmed spotlight +
+  caption), `click` (only `data-pilot-safe`), `fill`, `wait`. Targets are `data-pilot="id"` attributes, never CSS from the model.
+  Unknown targets are refused server-side, skipped client-side, and reported back to the model. See [docs/ACTIONS.md](docs/ACTIONS.md).
+- **Server** (`server/`, FastAPI, Python 3.12): `POST /pilot/chat` (SSE: status, delta, action, error, done), `POST /pilot/tts` (ElevenLabs
+  streaming proxy, daily character cap, cache of identical text), `GET /pilot/status`. Claude via the Anthropic SDK (default
+  `claude-sonnet-5-5`), a tool loop with pluggable read-only data tools plus the UI tools, short spoken answers, per-IP rate limits on
+  questions and on voice clips (socket address; forwarded headers only with `PILOT_TRUST_PROXY=1`), request size limits.
+- **Providers** (`server/providers/`): the brain and the voice switch by config. `PILOT_BRAIN=anthropic|gemini|gemini-live|openai|openai-realtime|local`
+  and `PILOT_VOICE=elevenlabs|browser|gemini-live|openai-realtime`; Claude + ElevenLabs stays the default and unchanged. The live voices
+  (Gemini Live, OpenAI Realtime) run one full-duplex session in the browser with a short-lived credential this server mints, and their tool
+  calls come back to the same validator and data tools. See [Providers](#providers).
+- **Next.js port** (`server-node/`): the same three routes as App Router route handlers in TypeScript (Anthropic only). See [server-node/README.md](server-node/README.md).
+- **Demo** (`demo/`): a 3-page sample site ("Matchboard", fictional ocean-tech startups and funders, clearly labelled as sample data).
+
+## 60-second demo
+
+```bash
+cd voice-pilot
+pip install -r requirements.txt                       # fastapi uvicorn jinja2 anthropic httpx (+ pytest playwright for tests)
+export ANTHROPIC_API_KEY=... ELEVENLABS_API_KEY=... ELEVENLABS_VOICE_ID=...    # or put them in .env and load it with your process manager
+python3 -m uvicorn server.app:app --host 127.0.0.1 --port 8151
+```
+
+Open http://127.0.0.1:8151 in Chrome, press **Talk to Aava** (or the mic button) and say *"Show me the best match and why"*, or click
+the chip with that question. In our last live run Aava said "Let me pull that up." while the model worked (first words after 4.4 s),
+opened Kelpforge's page, spotlighted the score, then "Why it fits", then "Next step", one sentence each (the model's words vary per run). No keys? `PILOT_REHEARSAL=1` runs the same loop with a scripted
+plan and shows a **Rehearsal** badge; without ElevenLabs keys the browser's voice speaks.
+
+Screenshots: `python3 tools/shots.py` (scripted stream), `python3 tools/live_check.py <url> "question"` (real model and voice), `python3 tools/record_gif.py` (the GIF).
+
+## Add it to any app in 30 minutes
+
+### (a) A server-rendered app (FastAPI, Flask, Django, Rails, PHP...)
+
+1. **Server.** With FastAPI, include the router and fill the registry with your read-only data tools:
+
+   ```python
+   from server.registry import Registry
+   from server.router import make_router, mount_client
+
+   registry = Registry()
+
+   @registry.tool("list_orders", "Recent orders, newest first.", {"type": "object", "properties": {"limit": {"type": "integer"}}},
+                  label="reading the orders")
+   def list_orders(args):                       # or (args, ctx): ctx.manifest, ctx.extra
+       return {"orders": db.orders(limit=args.get("limit", 10))}
+
+   app.include_router(make_router(registry, app_name="Acme Ops", app_description="One sentence on what the app does."))
+   mount_client(app)                            # serves /pilot/client/pilot.js, pilot.global.js, pilot.css
+   ```
+
+   Another backend: run this server next to it (it is one process) and proxy `/pilot/*` to it, or port the three routes; the protocol is
+   in [docs/ACTIONS.md](docs/ACTIONS.md#sse-protocol-for-porting-the-server).
+2. **Page.** Wrap the part that changes between pages in `<main data-pilot-main>` (and any other changing part, such as the nav, in
+   `data-pilot-region="nav"`), then load the client:
+
+   ```html
+   <link rel="stylesheet" href="/pilot/client/pilot.css">
+   <script type="module">
+     import VoicePilot from "/pilot/client/pilot.js";
+     VoicePilot.init({ manifest: "/pilot.manifest.json" });
+   </script>
+   <!-- or: <script src="/pilot/client/pilot.global.js"></script><script>VoicePilot.init({...})</script> -->
+   ```
+3. **Targets.** Mark what Aava may show: `data-pilot="top-customer" data-pilot-desc="The biggest customer this month"`. Filters are
+   `<select data-pilot="filter-region">`; buttons it may press get `data-pilot-safe`. Example questions can be chips:
+   `<button data-pilot-ask="Who is our biggest customer?">`.
+4. **Manifest.** `pilot.manifest.json` lists your pages so Aava can plan multi-page tours:
+   `{"app": {"name": "...", "description": "..."}, "pages": [{"path": "/", "title": "Home"}, {"path": "/customers/:id", "title": "Customer", "sample": "/customers/42"}]}`.
+   Targets are read from the pages themselves.
+5. **Keys.** `ANTHROPIC_API_KEY`, and for the voice `ELEVENLABS_API_KEY` + `ELEVENLABS_VOICE_ID`, in the environment (see `.env.example`).
+
+If your page scripts bind to elements directly (not by delegation), re-bind them on `document.addEventListener("pilot:navigated", ...)`.
+
+### (b) Next.js (App Router)
+
+1. Copy `server-node/lib/` and `server-node/app/pilot/` into your app, `npm i @anthropic-ai/sdk`, register your data tools in `lib/setup.ts`.
+2. Copy `client/` to `public/pilot/client/` and your manifest to `public/pilot.manifest.json`.
+3. In a client component mounted in `app/layout.tsx` (so it survives route changes):
+
+   ```tsx
+   "use client";
+   import { useEffect } from "react";
+   import { useRouter } from "next/navigation";
+   export default function Pilot() {
+     const router = useRouter();
+     useEffect(() => {
+       import(/* webpackIgnore: true */ /* turbopackIgnore: true */ "/pilot/client/pilot.js" as string).then(({ default: VoicePilot }) =>
+         VoicePilot.init({ manifest: "/pilot.manifest.json", navigate: async (path: string) => router.push(path) }));
+     }, [router]);
+     return null;
+   }
+   ```
+
+   With `navigate` set, Aava uses your router (no page swap) and waits for the DOM to settle before the next action. Add the
+   `data-pilot` attributes to your components and `<link rel="stylesheet" href="/pilot/client/pilot.css">` to the layout.
+4. Env vars as above (`.env.local`). Details in [server-node/README.md](server-node/README.md).
+
+## Settings
+
+Everything is an environment variable with a default; `.env.example` lists all of them. The ones you are likely to touch:
+`PILOT_MODEL` (`claude-sonnet-5-5`), `PILOT_THINKING` (`adaptive`; `between_tools` is faster on Sonnet 5.5), `PILOT_EFFORT` (`low`),
+`PILOT_FALLBACKS` (`default`: server-side refusal fallback on the Claude API; set `off` behind a proxy that rejects it; a 400 about it is
+retried once without it), `ELEVENLABS_MODEL_ID` (`eleven_multilingual_v2`; `eleven_flash_v2_5` starts faster), `PILOT_TTS_DAILY_CHARS`
+(20000), `PILOT_RATE_PER_MIN` (12), `PILOT_TTS_RATE_PER_MIN` (40), `PILOT_TRUST_PROXY` (0; set 1 behind your own proxy or tunnel so
+each visitor gets their own bucket), `PILOT_REHEARSAL`. Client options are listed at the top of `client/pilot.js` (`pauseMs`, `lang`,
+`voice`, `autoDock`, `listenAfterAnswer`, `navigate`, `onAction`, ...). Re-skin with the `--vp-*` custom properties in `client/pilot.css`.
+
+## Providers
+
+One app, any of these brains and voices, picked by environment variables (a restart picks them up). Nothing else changes: the page, the
+`data-pilot` targets, the registry of data tools, the validator and the client are the same for all of them. The provider code is plain HTTP
+(httpx) and WebSocket/WebRTC in the browser; no Google or OpenAI SDK is needed.
+
+| `PILOT_BRAIN` | The `/pilot/chat` turn | Default model (setting) | Key | Text streaming | Tool calls | Default `PILOT_VOICE` |
+|---|---|---|---|---|---|---|
+| `anthropic` (default) | Messages API (Anthropic SDK) | `claude-sonnet-5-5` (`PILOT_MODEL`) | `ANTHROPIC_API_KEY` | yes | parallel; actions timed to the sentence by `[[n]]` cues | `elevenlabs` |
+| `gemini` | `streamGenerateContent?alt=sse` | `gemini-3.8-flash` (`PILOT_GEMINI_MODEL`) | `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) | yes | parallel; parts (thought signatures) passed back unchanged | `elevenlabs` |
+| `gemini-live` | typed questions and rehearsal: as `gemini`; voice: the Live session | `gemini-3.8-live` (`PILOT_GEMINI_LIVE_MODEL`) | `GEMINI_API_KEY` | audio + live transcripts | yes; an action runs when the model calls it | `gemini-live` |
+| `openai` | Responses API (`/v1/responses`, SSE, `store: false`) | `gpt-6.1-sol` (`PILOT_OPENAI_MODEL`) | `OPENAI_API_KEY` | yes | parallel; reasoning items passed back | `elevenlabs` |
+| `openai-realtime` | typed questions and rehearsal: as `openai`; voice: the Realtime session | `gpt-realtime-2.1` (`PILOT_REALTIME_MODEL`) | `OPENAI_API_KEY` | audio + live transcripts | yes; an action runs when the model calls it | `openai-realtime` |
+| `local` | OpenAI-compatible Chat Completions (NVIDIA NIM / Nemotron, vLLM, llama.cpp, Ollama) | `nvidia/nemotron-3.5-lightning-30b-a3b` (`PILOT_LOCAL_MODEL`) at `PILOT_LOCAL_BASE_URL` (`http://127.0.0.1:8000/v1`) | none, or `PILOT_LOCAL_API_KEY` / `NVIDIA_API_KEY` (a key alone means build.nvidia.com's hosted `https://integrate.api.nvidia.com/v1`) | yes; `<think>` blocks are dropped | when the server supports tools (vLLM: `--enable-auto-tool-choice` and a tool parser); the last step sends no tools | `elevenlabs` |
+
+| `PILOT_VOICE` | Speech in | Speech out | Barge-in | Latency notes |
+|---|---|---|---|---|
+| `elevenlabs` (default) | Web Speech (Chrome, Edge), sent after a 1.5 s pause | ElevenLabs clip per sentence; the browser voice when the keys are missing or a clip fails | tap the orb | about 4 s to the first words on Claude (measured); one clip per beat |
+| `browser` | Web Speech | the browser's `speechSynthesis` (`/pilot/tts` answers 404) | tap the orb | no voice cost; robotic on most systems |
+| `gemini-live` | mic PCM 16 kHz over the Live WebSocket | native audio, 24 kHz PCM | by voice (the model's own voice activity detection) and by tap (ends the session) | no pause to wait for; audio sessions are capped at 15 min by Google; not measured (PENDING KEYS) |
+| `openai-realtime` | the mic over WebRTC | WebRTC audio | by voice (server VAD; WebRTC truncates what was not played) | not measured (PENDING KEYS) |
+
+A live voice needs a brain of its own family (`gemini-live` with `gemini` or `gemini-live`, `openai-realtime` with `openai` or
+`openai-realtime`); any other pairing is logged and falls back to `elevenlabs`. Other settings: `PILOT_GEMINI_VOICE` (`Kore`),
+`PILOT_REALTIME_VOICE` (`marin`), `PILOT_REALTIME_TRANSCRIBE` (`gpt-live-transcribe`; empty turns the input transcript off),
+`PILOT_GEMINI_THINKING` (`on`; `off` sends no `thinkingConfig`), `PILOT_EFFORT` (also sets Gemini's `thinkingLevel` and OpenAI's
+`reasoning.effort`), `PILOT_GEMINI_BASE_URL`, `PILOT_OPENAI_BASE_URL`, `PILOT_LIVE_START_S` (120: how long a minted credential may wait for
+the session to start), `PILOT_LIVE_TOOL_RATE_PER_MIN` (90), `PILOT_LIVE_MAX_CALLS` (300 per session), `PILOT_LIVE_DAILY_SESSIONS` (100: a
+live session is minutes of audio, so set a spend limit with the provider too). `NVIDIA_API_KEY` is only sent to `*.nvidia.com` hosts;
+`PILOT_LOCAL_API_KEY` goes to whatever `PILOT_LOCAL_BASE_URL` names. Each brain retries once without its
+optional parameters (thinking, reasoning, `stream_options`) when the API refuses them, as the Anthropic path does.
+
+**How a live session works.** The browser posts its page manifest to `POST /pilot/live/session`. The server builds the system prompt (with the
+page map) and the tool list, and mints a credential with both baked in: a one-use Gemini ephemeral token locked to that setup
+(`/v1beta/auth_tokens`, `liveConnectConstraints`), or an OpenAI Realtime client secret that carries the whole session
+(`/v1/realtime/client_secrets`; a browser holding it could still send `session.update`, so only Gemini's prompt is truly locked, and the
+tools are safe either way because every call is validated on the server). The API key never leaves the server; a session counts against the
+same per-IP and daily limits as a question, plus the daily session cap. Session ids are in memory, per process: run one worker.
+The browser then talks to the model directly (Gemini: `BidiGenerateContentConstrained` WebSocket; OpenAI: WebRTC to `/v1/realtime/calls`, data
+channel `oai-events`). Every batch of tool calls the model makes goes to `POST /pilot/live/tools` with the session id: UI calls are validated
+against the page exactly as in `/pilot/chat` (a `navigate` then `highlight` in one batch is checked against the destination page, and a
+`navigate` result lists the targets there), data tools run in the registry, and the browser runs each valid action through the same action
+runner before it answers the model. Any failure while starting (no key, rehearsal, a 4xx/5xx, no browser support) falls back to the classic
+path. Differences from the classic path: an action happens when the model calls it, not at the start of its sentence (the live prompt tells the
+model to call first and then talk); the answer text is the provider's live transcript, shown as it arrives rather than word by word; the
+Next.js port has no live routes.
+
+**Live verification: PENDING KEYS.** This server has no Gemini or OpenAI key, so no request has gone to a real Gemini, OpenAI or NIM endpoint.
+What is proven is the wire format against each provider's current docs, with fakes: every brain's request builder and stream parser
+(`tests/test_providers.py`), the credential requests, and the browser side of both live protocols with a fake WebSocket, RTCPeerConnection and
+microphone (`tests/test_live_client.py`). To verify live, with the keys in the environment: `python3 examples/two_providers.py anthropic gemini --live`
+(the text brains), then `python3 examples/two_providers.py anthropic gemini-live --serve` and the same with `openai-realtime` in Chrome (voice,
+barge-in, a tour), and `PILOT_BRAIN=local` against a NIM or vLLM server. Still unverified: model ids and defaults that may move (all are
+settings), whether Gemini accepts `systemInstruction` and `tools` inside `liveConnectConstraints`, Live audio quality and latency, the 15-minute
+session cap (no session resumption yet), and tool calling on any particular local model.
+
+`examples/two_providers.py` runs one question through two brains (rehearsal by default, so it works without keys) and shows that the page gets
+the same tour from both.
+
+## Tests
+
+```bash
+python3 -m pytest -q          # 82 tests: server unit tests, every provider against a fake of its API, browser tests (Playwright, Chromium)
+                              # for both the classic and the live voices, the Node port's suite + parity check
+```
+
+No network and no keys: the model is a fake Anthropic client (`server/fake.py`) or a fake of each provider's HTTP API (`server/providers/fakes.py`,
+answering the same scripts in Gemini's, OpenAI's and Chat Completions' stream formats), the voice upstream is a fake coroutine, and the browser
+tests load the demo from a fake origin answered in-process (Starlette TestClient), with a fake SpeechRecognition driven from the test and
+a recording speechSynthesis. They prove: the 1.5 s pause, tap-to-send, actions in order and each just before its sentence, navigation
+keeping the overlay and the conversation alive, unknown targets skipped and reported, cue-less actions spread over sentences, a lead-in
+that takes no action, the spotlight landing on its target and clear of the docked bubble, TTS failure falling back to the browser voice, Escape, errors spoken, and
+rehearsal mode end to end, closing mid-answer cancelling queued actions, off-site navigate paths refused on both sides,
+forwarded-header spoofing ignored, the voice rate limit and the request size limit. `python3 tools/build_client.py` rebuilds the script-tag file (a test fails if you forget).
+
+## Layout
+
+```
+client/      pilot.js (ES module), pilot.global.js (generated), pilot.css
+server/      router.py (HTTP), turn.py (tool loop), registry.py (data tools, UI tools, manifest checks), tts.py, limits.py, fake.py, app.py (demo app),
+             live.py (live sessions: credential, tool calls), providers/ (anthropic.py, gemini.py, openai.py, base.py: the interface, fakes.py)
+examples/    two_providers.py (one page, two brains)
+server-node/ lib/pilot.ts + app/pilot/{chat,tts,status}/route.ts (Next.js), tests
+demo/        site.py (pages, data tools, rehearsal plan), data.py (sample data), templates/, static/ (demo.css, demo.js, pilot.manifest.json)
+docs/        ACTIONS.md, DEMO_MOMENTS.md, screens/
+tools/       build_client.py, shots.py, live_check.py, record_gif.py
+tests/       test_server.py, test_providers.py, test_client.py, test_live_client.py, test_node_port.py, conftest.py
+```
+
+## Known limits
+
+- **Voice input needs Chrome or Edge** (Web Speech API; Safari's is unreliable, Firefox has none). Typing always works.
+- **Latency:** about 4 s to the first spoken words on the demo (a lead-in while the tools run), 6-7 s for the model's three steps
+  (data tool, UI tools, answer). Each TTS clip is downloaded whole before it plays; streaming playback would cut about a second.
+- **One spoken clip per beat** gives exact sentence timing but small prosody breaks between sentences.
+- **Page swap navigation** needs the server to render full pages with the same `[data-pilot-main]` region; inline scripts in the swapped
+  region are re-run, but code that ran once on `DOMContentLoaded` outside it is not (listen for `pilot:navigated`).
+- **Limits are in memory** (rate, daily turns, TTS characters, TTS cache): per process, reset on restart. Behind a proxy without
+  `PILOT_TRUST_PROXY=1` every visitor shares one bucket; the Next.js port has no socket address and always reads the forwarded headers.
+- **`navigate` accepts a query string** on a declared page, so do not give the model GET routes that change data.
+- **Voice clips are fetched one beat ahead**, so an interrupted answer has paid for the next sentence's characters.
+- **The Next.js routes were tested in Node 22 with fakes** (and typechecked), not inside a running `next dev`; the client snippet for
+  Next.js above is untested in a real Next app.
+- **Mobile:** the layout and the docked orb are checked at 390x844 in screenshots; real-device microphone and audio-unlock behaviour on
+  iOS Safari has not been tried.
+
+MIT licence, copyright The Mishakin Group. The demo's companies and funders are fictional.
