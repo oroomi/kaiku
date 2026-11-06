@@ -1,14 +1,19 @@
 """Feed client. Uses kaiku.suggest.feed (the real engine) when it imports, kaiku.chat.feed_stub otherwise."""
 from __future__ import annotations
 
+import importlib
 import logging
+import os
 
 log = logging.getLogger("kaiku.chat.feed")
 
 
 def get_feed(business_id: str) -> dict:
+    if os.environ.get("KAIKU_FEED_FIXTURE"):  # a fixed feed (tests, screenshots) wins over the engine
+        from .feed_stub import get_feed as stub
+        return stub(business_id)
     try:
-        from ..suggest import feed as real  # type: ignore
+        real = importlib.import_module("kaiku.suggest.feed")  # via sys.modules, so tests can swap or remove it
     except Exception:
         real = None
     if real is not None:
