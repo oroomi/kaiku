@@ -82,7 +82,7 @@ def test_other_messages_and_no_em_dash():
 
 def test_final_messages_export(tmp_path):
     md = M.all_final_messages(tmp_path / "f.md")
-    assert (tmp_path / "f.md").exists() and "Kiitos! Jouluaaton aukioloajat 9-13" in md and "—" not in md
+    assert (tmp_path / "f.md").exists() and "Kiitos! Jouluaaton aukioloajat 9-13" in md and "\u2014" not in md
 
 
 # ---------------------------------------------------------------- payloads and errors
