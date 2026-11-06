@@ -43,10 +43,10 @@ def _apply_event(sid: str) -> dict:
     return {}
 
 
-async def _decide_one(business_id: str, item: dict, action: str, edited) -> dict:
+async def _decide_one(business_id: str, item: dict, action: str, edited, via: str = "web") -> dict:
     s = materialize(business_id, item)
     b = store.get_business(business_id)
-    dec = Decision(suggestion_id=s.id, action=action, edited=edited if action == "edit" else None, via="web")
+    dec = Decision(suggestion_id=s.id, action=action, edited=edited if action == "edit" else None, via=via)
     async with _locks.setdefault(s.id, asyncio.Lock()):
         s = store.get_suggestion(s.id) or s
         if s.status in ("approved", "edited", "declined", "applied"):
@@ -70,7 +70,7 @@ async def _decide_one(business_id: str, item: dict, action: str, edited) -> dict
             "hours": hours_text(det.get("hours")) if det.get("hours") else None}
 
 
-async def decide(business_id: str, suggestion_id: str, action: str, edited_hours=None) -> dict:
+async def decide(business_id: str, suggestion_id: str, action: str, edited_hours=None, via: str = "web") -> dict:
     item = F.find(business_id, suggestion_id)
     if item is None:
         return {"ok": False, "error": "unknown suggestion"}
@@ -92,7 +92,7 @@ async def decide(business_id: str, suggestion_id: str, action: str, edited_hours
     for m in members:
         sub = item if m is None else (F.find(business_id, m) or {**item, "id": m, "members": None})
         sub = {**sub, "members": None}
-        results.append(await _decide_one(business_id, sub, action, edited))
+        results.append(await _decide_one(business_id, sub, action, edited, via))
     ok = all(r.get("ok") for r in results)
     first = next((r for r in results if r.get("ok")), results[0])
     out = {**first, "ok": ok, "suggestion_id": suggestion_id, "action": action,
@@ -113,7 +113,7 @@ def follow_up(item: dict, final: str) -> str:
     return f"Want me to do this every {name}?"
 
 
-async def set_standing_permission(business_id: str, suggestion_id: str, enabled: bool) -> dict:
+async def set_standing_permission(business_id: str, suggestion_id: str, enabled: bool, via: str = "web") -> dict:
     item = F.find(business_id, suggestion_id)
     if item is None:
         return {"ok": False, "error": "unknown suggestion"}
@@ -124,5 +124,5 @@ async def set_standing_permission(business_id: str, suggestion_id: str, enabled:
     s = store.get_suggestion(sid) or materialize(business_id, item)
     p = await asyncio.to_thread(prefs.record_decision, business_id, chain._s_dict(s),
                                 {"action": "approve", "standing_permission": True, "scope": "same",
-                                 "via": "web", "at": datetime.now(timezone.utc).isoformat()})
+                                 "via": via, "at": datetime.now(timezone.utc).isoformat()})
     return {"ok": True, "standing_permission": bool(p.get("standing_permission"))}

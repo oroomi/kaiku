@@ -21,7 +21,10 @@ def get_feed(business_id: str) -> dict:
             fn = getattr(real, name, None)
             if callable(fn):
                 try:
-                    r = fn(business_id)
+                    try:  # KAIKU_FEED_NETWORK=0 keeps the engine off the network (tests); the engine caches for 30 s anyway
+                        r = fn(business_id, use_network=os.environ.get("KAIKU_FEED_NETWORK", "1") != "0")
+                    except TypeError:
+                        r = fn(business_id)
                     if isinstance(r, dict) and "suggestions" in r:
                         return r
                 except Exception as exc:  # the chat must still open

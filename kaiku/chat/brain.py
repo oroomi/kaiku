@@ -126,7 +126,8 @@ class Turn:
             return {"suggestions": [{k: i.get(k) for k in ("id", "kind", "title_en", "text_en", "proposed", "last_year", "status")}
                                     for i in F.get_feed(self.bid).get("suggestions", [])]}
         if name == "decide":
-            r = await A.decide(self.bid, str(args.get("suggestion_id", "")), str(args.get("action", "")), args.get("edited_hours"))
+            r = await A.decide(self.bid, str(args.get("suggestion_id", "")), str(args.get("action", "")), args.get("edited_hours"),
+                               self.sess.get("via", "web"))
             if r.get("ok"):
                 self.last_decide = r
                 self.actions.append({"type": "decided", "suggestion_id": r["suggestion_id"], "action": r["action"], "status": r.get("status")})
@@ -135,7 +136,7 @@ class Turn:
             return r
         if name == "set_standing_permission":
             sid = str(args.get("suggestion_id", "")) or self.sess.get("followup") or ""
-            r = await A.set_standing_permission(self.bid, sid, bool(args.get("enabled")))
+            r = await A.set_standing_permission(self.bid, sid, bool(args.get("enabled")), self.sess.get("via", "web"))
             if r.get("ok"):
                 self.actions.append({"type": "standing", "suggestion_id": sid, "enabled": bool(args.get("enabled"))})
                 self.sess["followup"] = None

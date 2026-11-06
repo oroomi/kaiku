@@ -381,6 +381,7 @@ def test_post_webhook_and_signature(monkeypatch):
 # ---------------------------------------------------------------- ladder
 
 def test_ladder_sends_buttons_to_owner_and_logs(monkeypatch):
+    monkeypatch.setenv("WA_BUTTONS", "1")  # buttons are the opt-in path now
     monkeypatch.setattr(L.E, "owner_email", lambda s: "")  # no owner email: the ladder starts at WhatsApp
     f = Fake()
     s = dict(SUG, channel_log=[])
@@ -394,6 +395,7 @@ def test_ladder_sends_buttons_to_owner_and_logs(monkeypatch):
 
 
 def test_ladder_template_first_when_outside_window(monkeypatch):
+    monkeypatch.setenv("WA_BUTTONS", "1")  # buttons are the opt-in path now
     monkeypatch.setattr(L.E, "owner_email", lambda s: "")  # no owner email: the ladder starts at WhatsApp
     f = Fake([(400, {"error": {"code": 131047, "message": "x"}}), (200, {"messages": [{"id": "wamid.T"}]}),
               (200, {"messages": [{"id": "wamid.B"}]}), (200, {})])
@@ -462,6 +464,7 @@ def test_ladder_template_switch(monkeypatch):
 
 
 def test_ladder_english_ignores_finnish_template(monkeypatch):
+    monkeypatch.setenv("WA_BUTTONS", "1")  # buttons are the opt-in path now
     monkeypatch.setenv("KAIKU_ENV", "/nonexistent/.env")
     monkeypatch.setenv("WA_TEMPLATE_NAME", "kaiku_hours_fi")
     monkeypatch.delenv("WA_TEMPLATE_NAME_EN", raising=False)
@@ -481,7 +484,8 @@ def test_ladder_english_ignores_finnish_template(monkeypatch):
         "Furry Paw Vet Clinic", "24.12.", "9-13", "Last Christmas Eve you were open 9-13"]
 
 
-def test_ladder_default_stays_interactive(monkeypatch):
+def test_ladder_buttons_when_wa_buttons_set(monkeypatch):
+    monkeypatch.setenv("WA_BUTTONS", "1")  # buttons are the opt-in path now
     monkeypatch.setenv("KAIKU_ENV", "/nonexistent/.env")
     monkeypatch.delenv("WA_TEMPLATE_NAME", raising=False)
     f = Fake([(200, {"messages": [{"id": "wamid.B"}]})])

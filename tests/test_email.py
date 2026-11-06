@@ -108,7 +108,7 @@ def test_ladder_order_email_whatsapp_call(env, ladder):
     t1 = FakeTimer.made[-1]
     assert t1.delay == 20
     t1.fire()
-    assert wa.sent == ["buttons"] and [c["channel"] for c in s["channel_log"]] == ["email", "whatsapp", "whatsapp"]
+    assert wa.sent == ["text"] and [c["channel"] for c in s["channel_log"]] == ["email", "whatsapp", "whatsapp"]
     t2 = FakeTimer.made[-1]
     assert t2.delay == 50 and ladder == []
     t2.fire()
@@ -137,7 +137,7 @@ def test_no_email_goes_straight_to_whatsapp(env, ladder, monkeypatch):
     wa = FakeWA()
     s = dict(SUG, id="sgl5", channel_log=[])
     L.contact(s, client=wa, escalate_s=50)
-    assert wa.sent == ["buttons"] and s["channel_log"][0]["channel"] == "whatsapp"
+    assert wa.sent == ["text"] and s["channel_log"][0]["channel"] == "whatsapp"
 
 
 def test_event_titles(env, ladder, monkeypatch):

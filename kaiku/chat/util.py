@@ -23,17 +23,18 @@ def hours_text(h) -> str:
         return h
     if isinstance(h, dict):
         h = [h]
-    parts = []
+    parts, members = [], False
     for s in h:
         if not isinstance(s, dict):
             parts.append(str(s))
         elif "start" in s and "end" in s:
             parts.append(f"{_t(s['start'])}-{_t(s['end'])}")
         elif "date" in s:  # period member
+            members = True
             inner = s.get("proposed")
             txt = "closed" if s.get("kind") == "closed" or inner in (None, [], "closed") else hours_text(inner)
             parts.append(f"{d_short(s['date'])} {txt}")
-    return ", ".join(parts)
+    return ("; " if members else ", ").join(parts)  # dates read better with semicolons: '24.12. 9-13; 25.12. closed'
 
 
 def d_short(iso: str) -> str:
