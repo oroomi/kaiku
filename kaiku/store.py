@@ -1,6 +1,7 @@
 """SQLite app state (WAL). JSON columns. Seed loader for data/furry_paw.json."""
 from __future__ import annotations
 
+import os
 import json
 import sqlite3
 import threading
@@ -62,6 +63,7 @@ def seed(force: bool = False) -> Business:
     """Load data/furry_paw.json; owner_whatsapp comes from env, never from the file."""
     raw = json.loads((settings.DATA_DIR / "furry_paw.json").read_text())
     raw["owner_whatsapp"] = settings.OWNER_WHATSAPP or None
+    raw["owner_email"] = os.getenv("OWNER_EMAIL") or raw.get("owner_email")
     b = Business.model_validate(raw)
     if force or not _q("SELECT 1 FROM businesses WHERE id=?", (b.id,)):
         save_business(b)

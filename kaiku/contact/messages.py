@@ -295,6 +295,25 @@ def receipt_text_en(r: dict) -> str:
     return f"Done. {day} hours {h_txt} are saved and will show on {CHANNELS_EN}."
 
 
+def standing_question_text_en(s: dict) -> str:
+    """Asked after an approval: offer to repeat the change every year."""
+    hol = (s.get("holiday_name_en") or "this day").strip()
+    ly = en_hours(_hours_of(_last_year(s)))
+    pr = en_hours("closed" if s.get("kind") == "closed" else s.get("proposed"))
+    return f"Last year {ly}, this year {pr} again. Want me to do this every {hol}?"
+
+
+def standing_question_text_fi(s: dict) -> str:
+    hol = holiday_name(s).lower()
+    ly = fi_hours(_hours_of(_last_year(s)))
+    pr = fi_hours("closed" if s.get("kind") == "closed" else s.get("proposed"))
+    return f"Viime vuonna {ly}, tänä vuonna taas {pr}. Tehdäänkö näin joka {hol}?"
+
+
+def standing_question_text(s: dict) -> str:
+    return standing_question_text_fi(s) if owner_lang(s) == "fi" else standing_question_text_en(s)
+
+
 def _join_fi(items) -> str:
     # Finnish: "Googlessa, Apple Mapsissa ja Fonectan palveluissa" needs inflection, so use fixed forms for known ones.
     forms = {"google": "Googlessa", "apple maps": "Apple Mapsissa", "apple": "Apple Mapsissa", "bing": "Bingissä",
@@ -443,6 +462,10 @@ def all_final_messages(path: str | Path | None = None) -> str:
            "publishers": ["Google", "Apple Maps", "Bing"]}
     rec_closed = {"holiday_name_fi": "Joulupäivä", "holiday_name_en": "Christmas Day", "hours": "closed",
                   "publishers": ["Google", "Apple Maps", "Bing"]}
+    from . import email as _E
+    em_s = dict(hours, decide_url="https://kaiku.example/d/EXAMPLE-TOKEN")
+    em_fi = _E.build_message(dict(em_s, owner_language="fi"), "owner@example.com")[1]
+    em_en = _E.build_message(dict(em_s, owner_language="en"), "owner@example.com")[1]
     with_url = dict(hours, decide_url="https://kaiku.example/decide/sug-furry-paw-2026-12-24")
     items = [
         ("1. Suggestion with proposed hours (WhatsApp buttons: Approve / Edit / No thanks)", suggestion_text_fi(hours), suggestion_text_en(hours)),
@@ -453,6 +476,8 @@ def all_final_messages(path: str | Path | None = None) -> str:
         ("5b. Receipt after apply (closed day, singular)", receipt_text_fi(rec_closed), receipt_text_en(rec_closed)),
         ("5c. Suggestion when a decide link exists (example URL)", suggestion_text_fi(with_url), suggestion_text_en(with_url)),
         ("5d. Button for a suggestion we do not know", unknown_suggestion_text_fi(), unknown_suggestion_text_en()),
+        ("0. Step 1 email (subject, then body)", em_fi["subject"] + "\n\n" + em_fi["text"], em_en["subject"] + "\n\n" + em_en["text"]),
+        ("5e. Standing-permission question after an approval", standing_question_text_fi(hours), standing_question_text_en(hours)),
         ("6. Edit prompt after Edit", edit_prompt_text_fi(), edit_prompt_text_en()),
         ("7. Thanks after No thanks", decline_thanks_text_fi(), decline_thanks_text_en()),
         ("8. Reply not understood", unknown_reply_text_fi(), unknown_reply_text_en()),

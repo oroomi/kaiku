@@ -1,13 +1,22 @@
-# Contact step (WhatsApp first, then a call)
+# Contact step (email first, then WhatsApp, then a call)
 
 Step 3 of the chain. The owner is reached without a login; the message explains why, and one tap decides.
 
 ## The ladder
 **Language: English is the default** for the demo business (`owner_language: "en"` in `data/furry_paw.json`); Finnish stays available per owner with `owner_language: "fi"`. Every outbound text (WhatsApp, receipt, decision page, call) picks the language with `messages.owner_lang(business_or_suggestion)`.
 
-1. WhatsApp message with three reply buttons: **Approve / Edit / No thanks** (Finnish owners: Hyväksy / Muokkaa / Ei kiitos; kind `ask`: **Tell my hours / No thanks**, Finnish Kerron aikani / Ei kiitos; kind `no_change`: plain reassurance, no buttons).
-2. (Call lane: `kaiku/contact/call.py` is on main and the outbound call connects over an ElevenLabs SIP trunk, proven end to end 6 Nov: call at 21:46:53Z to the team's own phone, owner approved on the call, webhook created the Decision, Yext got 24.12. 9-13, read back and verified.) If there is no decision after `WA_ESCALATE_AFTER_S` (default 120 s, demo config 600 s, production 24 h, the length of the WhatsApp window), `kaiku.contact.call.place_call(suggestion)` places a call (English by default, Finnish per owner). If the call lane is not configured the ladder logs `call lane not configured` in `channel_log`.
-3. No email, by decision.
+1. **Email** (`kaiku/contact/email.py`, owner decision 7 Nov 00:30): a short plain-text + HTML email with the one-tap decision link (no login). Sent when the business has an `owner_email` (seed `data/furry_paw.json` carries the fictional `owner@example.com`; a real address is set with env `OWNER_EMAIL`, which wins). Subject: "Furry Paw Vet Clinic: Christmas Eve hours, one question" (Finnish owners: "...: Jouluaaton aukioloajat, yksi kysymys"). Event: "Email sent with the decision link" only when really sent, "Email drafted (dry run, no SMTP configured)" otherwise.
+2. After `EMAIL_ESCALATE_AFTER_S` (default 120 s; demo may use 20) with no decision: **WhatsApp** message with three reply buttons: **Approve / Edit / No thanks** (Finnish owners: Hyväksy / Muokkaa / Ei kiitos; kind `ask`: **Tell my hours / No thanks**; kind `no_change`: plain reassurance, no buttons, sent directly, no email). Event: "No reply by email, WhatsApp sent". Without an owner email the ladder starts here, as before.
+3. After `WA_ESCALATE_AFTER_S` (default 120 s, production 24 h, the WhatsApp window) with no decision: **the call** by Kaiku (`kaiku.contact.call.place_call(suggestion)`, ElevenLabs, English by default, Finnish per owner). Event: "No reply on WhatsApp, Kaiku is calling". If the call lane is not configured the ladder logs `call lane not configured`.
+
+A decision from any channel (WhatsApp reply, web link, call, voice) cancels the pending step: every timer re-checks `ladder.is_decided(sid)` (WhatsApp router state, stored decisions, suggestion status) when it fires, `ladder.cancel(sid)` cancels one suggestion and `ladder.cancel_pending()` cancels all (the demo reset calls it).
+
+### Email transport and env
+SMTP over STARTTLS: `SMTP_HOST`, `SMTP_PORT` (default 587), `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_FROM_NAME` (default "Kaiku, Fonecta Connect"); also `OWNER_EMAIL`, `EMAIL_ESCALATE_AFTER_S`, `WA_ESCALATE_AFTER_S`. With `SMTP_HOST`/`SMTP_FROM` unset nothing leaves: the full message is written to `data/email_outbox/<ts>_<sid>.eml` and `send_decision_email` returns `{"ok": true, "dry_run": true}`. Every attempt is logged to `data/email_log.jsonl` (no secrets, recipient masked to `***@domain`, errors as exception class only).
+
+Standing permission, asked after an approval: "Last year {last_year_hours}, this year {proposed} again. Want me to do this every {holiday}?" (`messages.standing_question_text`). The exact final messages are in `docs/final_messages.md`.
+
+Wiring note: `kaiku.chain.contact_step` only calls the ladder when WhatsApp is configured; for email-first it must call `ladder.contact` when an owner email exists too (chain.py is outside this task).
 
 Entry point: `kaiku.contact.ladder.contact(suggestion)`, registered as `kaiku.chain.register("contact", contact)` when core exists. Every send appends to `suggestion["channel_log"]` and emits a `contact` event. Demo rule: the recipient is always `OWNER_WHATSAPP` from `.env` (Dayo's own phone).
 
