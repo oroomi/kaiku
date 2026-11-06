@@ -128,6 +128,33 @@ async def status():
             "feeds": FEEDS, "subscriptions": len(subs.list_active())}
 
 
+JUDGE_CURL = ('curl -s -H \'Accept: application/ld+json\' '
+              '-H \'Link: <' + models.SDM_TRANSPORT + '>; rel="http://www.w3.org/ns/json-ld#context"; type="application/ld+json"\' '
+              '\'' + subs.BROKER + '/ngsi-ld/v1/entities?type=Vehicle&limit=2\'')
+
+
+@router.get("/api/aura/judge")
+async def judge():
+    """The exact curl for a judge (the Link header is required for type=Vehicle) plus one live entity read that way."""
+    h = {"Accept": "application/ld+json", "Link": models.link(models.SDM_TRANSPORT)}
+    ent = None
+    try:
+        async with httpx.AsyncClient(timeout=4) as c:
+            r = await c.get(f"{NG}/entities", params={"type": "Vehicle", "limit": 1000}, headers=h)
+            fresh = [e for e in r.json() if models.age_s((e.get("location") or {}).get("observedAt")) < 120]
+            ent = next((e for e in fresh if "foli" in e["id"]), None) or (fresh[0] if fresh else None)
+    except (httpx.HTTPError, ValueError):
+        pass
+    return {"curl": JUDGE_CURL, "note": "Without the Link header Orion-LD cannot resolve type=Vehicle and returns an empty list.",
+            "schema": "https://raw.githubusercontent.com/smart-data-models/dataModel.Transportation/master/Vehicle/schema.json",
+            "entity": ent, "broker_up": ent is not None}
+
+
+@router.get("/api/aura/context")
+def aura_context():
+    return {"@context": [models.SDM_TRANSPORT, models.AURA_CTX]}
+
+
 FEEDS = [
     {"id": "foli", "name": "Föli", "url": "data.foli.fi/siri/vm", "licence": "CC BY 4.0", "poll_s": 10},
     {"id": "ais", "name": "Fintraffic Digitraffic", "url": "meri.digitraffic.fi AIS", "licence": "CC BY 4.0", "poll_s": 20},

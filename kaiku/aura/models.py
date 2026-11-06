@@ -9,6 +9,11 @@ SDM_WEATHER = "https://raw.githubusercontent.com/smart-data-models/dataModel.Wea
 CORE_CTX = "https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld"
 
 
+AURA_NS = "https://themishakingroup.com/aura/ns#"
+AURA_CTX = {k: AURA_NS + k for k in ("lineRef", "destination", "delay", "nextStop", "mmsi")}
+KNOT_KMH = 1.852
+
+
 def link(ctx: str) -> str:
     return f'<{ctx}>; rel="http://www.w3.org/ns/json-ld#context"; type="application/ld+json"'
 
@@ -97,14 +102,28 @@ def _geo(lon, lat, observed):
     return {"type": "GeoProperty", "value": {"type": "Point", "coordinates": [round(lon, 6), round(lat, 6)]}, "observedAt": observed}
 
 
-def bus_entity(b: dict, heading: float | None, now: str) -> dict:
-    e = {"id": f"urn:ngsi-ld:Vehicle:foli:{b['ref']}", "type": "Vehicle",
-         "vehicleType": _prop("bus"), "name": _prop(f"Linja {b['line']}" if b["line"] else f"Bus {b['ref']}"),
+def _motion(e: dict, speed_kmh: float | None, heading: float | None, now: str) -> None:
+    """SDM Vehicle: speed in km/h (-1 = unknown); heading 0..359, and -1 when stationary (speed 0)."""
+    if speed_kmh is None:
+        e["speed"] = _prop(-1, now, "KMH")
+    else:
+        e["speed"] = _prop(round(max(speed_kmh, 0.0), 1), now, "KMH")
+        if speed_kmh <= 0:
+            e["heading"] = _prop(-1, now, "DD")
+            return
+    if heading is not None:
+        e["heading"] = _prop(int(round(heading)) % 360, now, "DD")
+
+
+def bus_entity(b: dict, heading: float | None, now: str, speed_kmh: float | None = None) -> dict:
+    e = {"@context": [SDM_TRANSPORT, AURA_CTX],
+         "id": f"urn:ngsi-ld:Vehicle:foli:{b['ref']}", "type": "Vehicle",
+         "vehicleType": _prop("bus"), "category": _prop(["public", "tracked"]),
+         "name": _prop(f"Linja {b['line']}" if b["line"] else f"Bus {b['ref']}"),
          "location": _geo(b["lon"], b["lat"], now),
          "lineRef": _prop(b["line"]), "destination": _prop(b["dest"]),
          "source": _prop(SRC_FOLI, now)}
-    if heading is not None:
-        e["heading"] = _prop(round(heading), now, "DD")
+    _motion(e, speed_kmh, heading, now)
     if b.get("delay_s") is not None:
         e["delay"] = _prop(b["delay_s"], now, "SEC")
     if b.get("next_stop"):
@@ -113,13 +132,14 @@ def bus_entity(b: dict, heading: float | None, now: str) -> dict:
 
 
 def ship_entity(s: dict, now: str) -> dict:
-    e = {"id": f"urn:ngsi-ld:Vehicle:ais:{s['mmsi']}", "type": "Vehicle",
-         "vehicleType": _prop("ship"), "name": _prop(s["name"] or f"MMSI {s['mmsi']}"),
+    # SDM vehicleType has "vessel"; category: AIS-tracked, no claim about private or public service
+    e = {"@context": [SDM_TRANSPORT, AURA_CTX],
+         "id": f"urn:ngsi-ld:Vehicle:ais:{s['mmsi']}", "type": "Vehicle",
+         "vehicleType": _prop("vessel"), "category": _prop(["tracked"]), "name": _prop(s["name"] or f"MMSI {s['mmsi']}"),
          "location": _geo(s["lon"], s["lat"], now), "mmsi": _prop(s["mmsi"]), "source": _prop(SRC_AIS, now)}
-    if s.get("heading") is not None:
-        e["heading"] = _prop(round(s["heading"]), now, "DD")
-    if s.get("sog") is not None:
-        e["speed"] = _prop(round(s["sog"] * 0.514444, 2), now, "MTS")  # knots to m/s
+    sog = s.get("sog")
+    kmh = None if sog is None or sog >= 102.3 else sog * KNOT_KMH  # AIS 102.3 kn = "not available"
+    _motion(e, kmh, s.get("heading"), now)
     return e
 
 
@@ -154,8 +174,9 @@ def compact(e: dict) -> dict | None:
     if not loc or "coordinates" not in loc:
         return None
     kind = _val(e, "vehicleType") or "bus"
+    kind = "ship" if kind in ("vessel", "ship") else kind
     return {"id": e["id"], "kind": kind, "lon": loc["coordinates"][0], "lat": loc["coordinates"][1],
-            "heading": _val(e, "heading"), "name": _val(e, "name"), "line": _val(e, "lineRef"), "dest": _val(e, "destination"),
+            "heading": (lambda h: None if h is None or h < 0 else h)(_val(e, "heading")), "name": _val(e, "name"), "line": _val(e, "lineRef"), "dest": _val(e, "destination"),
             "delay": _val(e, "delay"), "obs": obs}
 
 
@@ -179,7 +200,7 @@ def subscription_body(p: dict, notify_uri: str) -> dict:
             "throttling": 20,
             "notification": {"format": "normalized", "attributes": ["location", "name", "lineRef", "vehicleType", "destination"],
                              "endpoint": {"uri": notify_uri, "accept": "application/json"}}}
-    vt = {"bus": "bus", "ship": "ship"}.get(p.get("entity_type"))
+    vt = {"bus": "bus", "ship": "vessel", "vessel": "vessel"}.get(p.get("entity_type"))
     if vt:
         body["q"] = f'vehicleType=="{vt}"'
     if p.get("attribute_condition"):
