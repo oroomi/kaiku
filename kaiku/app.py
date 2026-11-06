@@ -62,7 +62,7 @@ app.include_router(events.router)
 app.include_router(chain.router)
 
 # Module routers: broker, contact, decide, voice, map, learn, mcp_bridge, aura. A missing module is fine.
-for _m in ["broker", "contact", "decide", "voice", "map", "learn", "mcp_bridge", "aura"]:
+for _m in ["broker", "contact", "decide", "voice", "map", "learn", "suggest", "chat", "mcp_bridge", "aura"]:
     try:
         app.include_router(importlib.import_module(f"kaiku.{_m}.router").router)
     except ImportError:
