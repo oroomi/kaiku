@@ -37,10 +37,18 @@ const Chip: React.FC<{small?: boolean}> = ({small}) => (
   <div style={{position: 'absolute', right: small ? 10 : 18, top: small ? 10 : 18, padding: '6px 16px', borderRadius: 14, background: 'rgba(255,210,122,0.92)', color: '#1a1405', fontWeight: 800, fontSize: small ? 22 : 26, letterSpacing: 0.5}}>SAMPLE DATA</div>
 );
 
+// slow push-in on a region of the page (the voice placeholder zooms to the orb)
+const Zoomed: React.FC<{s: Scene; children: React.ReactNode}> = ({s, children}) => {
+  const f = useCurrentFrame();
+  if (!s.zoom) return <>{children}</>;
+  const k = interpolate(f, [0, Math.round(s.dur * FPS)], [1, s.zoom.s], {extrapolateRight: 'clamp', easing: Easing.inOut(Easing.cubic)});
+  return <div style={{width: 1664, height: 936, transformOrigin: `${s.zoom.ox * 100}% ${s.zoom.oy * 100}%`, transform: `scale(${k})`}}>{children}</div>;
+};
+
 const Desk: React.FC<{s: Scene}> = ({s}) => (
   <Pop>
     <div style={{position: 'absolute', left: 128, top: 22, width: 1664, height: 936, borderRadius: 22, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.16)', background: '#000'}}>
-      <OffthreadVideo src={staticFile(s.src!)} startFrom={Math.round((s.from ?? 0) * FPS)} muted playbackRate={s.rate ?? 1} style={{width: 1664, height: 936, objectFit: 'contain'}} />
+      <Zoomed s={s}><OffthreadVideo src={staticFile(s.src!)} startFrom={Math.round((s.from ?? 0) * FPS)} muted playbackRate={s.rate ?? 1} style={{width: 1664, height: 936, objectFit: 'contain'}} /></Zoomed>
       {s.sample && <Chip />}
     </div>
     <div style={{position: 'absolute', left: 0, right: 0, top: 976, display: 'flex', justifyContent: 'center'}}>
@@ -82,7 +90,7 @@ const Trailer: React.FC<{s: Scene}> = ({s}) => (
 const End: React.FC<{qr: string}> = ({qr}) => {
   const f = useCurrentFrame();
   const {fps} = useVideoConfig();
-  const p = (d: number) => spring({frame: f - d, fps, config: {damping: 14, stiffness: 160}});
+  const p = (_d: number) => 1; // v3: the end card is held completely still from its first frame (no entrance motion)
   const row = (d: number, node: React.ReactNode) => <div style={{opacity: p(d), transform: `translateY(${(1 - p(d)) * 24}px)`}}>{node}</div>;
   return (
     <AbsoluteFill style={{background: BG, color: '#fff', fontWeight: 700}}>

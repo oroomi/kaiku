@@ -1,0 +1,411 @@
+{
+ "id": "proofroom",
+ "name": "Proofroom",
+ "palette": "krock",
+ "lines": {
+  "l1": {
+   "text": "Get notes on",
+   "fit": 900,
+   "cy": 540,
+   "stops": [
+    [
+     0,
+     "#ffc4a4"
+    ],
+    [
+     0.3,
+     "#ffe6e6"
+    ],
+    [
+     0.6,
+     "#ffffff"
+    ],
+    [
+     1,
+     "#b8c8ff"
+    ]
+   ],
+   "blobs": [
+    "#ff8a2a",
+    "#9db4ff"
+   ]
+  },
+  "l2": {
+   "text": "Any file, any cut",
+   "fit": 845,
+   "cy": 497,
+   "stops": [
+    [
+     0,
+     "#ffc8e4"
+    ],
+    [
+     0.35,
+     "#ffffff"
+    ],
+    [
+     0.7,
+     "#e8ecff"
+    ],
+    [
+     1,
+     "#b4c4ff"
+    ]
+   ],
+   "blobs": [
+    "#ff6ac8",
+    "#7aa8ff"
+   ]
+  },
+  "l3": {
+   "text": "Just drop it in",
+   "fit": 920,
+   "cy": 540,
+   "stops": [
+    [
+     0,
+     "#cfe0ff"
+    ],
+    [
+     0.4,
+     "#ffffff"
+    ],
+    [
+     0.75,
+     "#ffd6ec"
+    ],
+    [
+     1,
+     "#ff8aa6"
+    ]
+   ],
+   "glow": [
+    "rgba(255,255,255,0.7)",
+    "rgba(255,100,150,0.5)",
+    "rgba(90,110,255,0.4)"
+   ],
+   "blobs": [
+    "#b4d0ff",
+    "#ff4a6a"
+   ]
+  }
+ },
+ "pills": [
+  {
+   "icon": "page",
+   "label": ".pdf"
+  },
+  {
+   "icon": "play",
+   "label": ".mp4"
+  },
+  {
+   "icon": "wave",
+   "label": ".wav"
+  }
+ ],
+ "particles": {
+  "icons": [
+   "page",
+   "wave",
+   "play"
+  ]
+ },
+ "screen": {
+  "name": "Proofroom",
+  "breadcrumb": "Spring campaign",
+  "searchPlaceholder": "Search…",
+  "actionButton": "Share",
+  "uploadChip": "+",
+  "flyer": {},
+  "loadingLabel": "Loading",
+  "flipLabel": "Approved",
+  "flips": [
+   {
+    "card": 0,
+    "t": 14.4
+   },
+   {
+    "card": 1,
+    "t": 14.55
+   },
+   {
+    "card": 2,
+    "t": 14.7
+   },
+   {
+    "card": 3,
+    "t": 14.85
+   }
+  ],
+  "cards": [
+   {
+    "title": "Launch Teaser",
+    "sub": [
+     "Round ",
+     "1",
+     "  |  v",
+     "1"
+    ],
+    "date": [
+     "14",
+     " Oct, 2026"
+    ],
+    "status": "Needs review",
+    "thumb": "thumbs/t3.jpg",
+    "pos": "50% 50%",
+    "zoom": 1,
+    "hue": 0
+   },
+   {
+    "title": "Voice Take 2",
+    "sub": [
+     "Round ",
+     "2",
+     "  |  v",
+     "2"
+    ],
+    "date": [
+     "13",
+     " Oct, 2026"
+    ],
+    "status": "In review",
+    "thumb": "thumbs/t9.jpg",
+    "pos": "50% 40%",
+    "zoom": 1.1,
+    "hue": 70
+   },
+   {
+    "title": "Brand Guide v4",
+    "sub": [
+     "Round ",
+     "3",
+     "  |  v",
+     "1"
+    ],
+    "date": [
+     "12",
+     " Oct, 2026"
+    ],
+    "status": "No status",
+    "thumb": "thumbs/t15.jpg",
+    "pos": "40% 50%",
+    "zoom": 1.1,
+    "hue": 165
+   },
+   {
+    "title": "Poster Draft",
+    "sub": [
+     "Round ",
+     "1",
+     "  |  v",
+     "2"
+    ],
+    "date": [
+     "11",
+     " Oct, 2026"
+    ],
+    "status": "Needs review",
+    "thumb": "thumbs/t27.jpg",
+    "pos": "60% 50%",
+    "zoom": 1.2,
+    "hue": 200
+   },
+   {
+    "title": "Colour Pass",
+    "sub": [
+     "Round ",
+     "2",
+     "  |  v",
+     "1"
+    ],
+    "date": [
+     "10",
+     " Oct, 2026"
+    ],
+    "status": "Approved",
+    "thumb": "thumbs/t39.jpg",
+    "pos": "50% 50%",
+    "zoom": 1.05,
+    "hue": 330
+   },
+   {
+    "title": "Sound Mix",
+    "sub": [
+     "Round ",
+     "3",
+     "  |  v",
+     "2"
+    ],
+    "date": [
+     "14",
+     " Oct, 2026"
+    ],
+    "status": "In progress",
+    "thumb": "thumbs/t21.jpg",
+    "pos": "30% 50%",
+    "zoom": 1.3,
+    "hue": 0
+   },
+   {
+    "title": "Opening Titles",
+    "sub": [
+     "Round ",
+     "1",
+     "  |  v",
+     "1"
+    ],
+    "date": [
+     "13",
+     " Oct, 2026"
+    ],
+    "status": "In review",
+    "thumb": "thumbs/t33.jpg",
+    "pos": "50% 50%",
+    "zoom": 1.15,
+    "hue": 305
+   },
+   {
+    "title": "Final Cut",
+    "sub": [
+     "Round ",
+     "2",
+     "  |  v",
+     "2"
+    ],
+    "date": [
+     "12",
+     " Oct, 2026"
+    ],
+    "status": "Needs review",
+    "thumb": "thumbs/t45.jpg",
+    "pos": "50% 50%",
+    "zoom": 1.0,
+    "hue": 20
+   },
+   {
+    "title": "Storyboard",
+    "sub": [
+     "Round ",
+     "3",
+     "  |  v",
+     "1"
+    ],
+    "date": [
+     "11",
+     " Oct, 2026"
+    ],
+    "status": "No status",
+    "thumb": "thumbs/t51.jpg",
+    "pos": "50% 50%",
+    "zoom": 1.0,
+    "hue": 120
+   },
+   {
+    "title": "Interview A",
+    "sub": [
+     "Round ",
+     "1",
+     "  |  v",
+     "2"
+    ],
+    "date": [
+     "10",
+     " Oct, 2026"
+    ],
+    "status": "In review",
+    "thumb": "thumbs/t57.jpg",
+    "pos": "50% 50%",
+    "zoom": 1.2,
+    "hue": 250
+   },
+   {
+    "title": "Scene Notes",
+    "sub": [
+     "Round ",
+     "2",
+     "  |  v",
+     "1"
+    ],
+    "date": [
+     "14",
+     " Oct, 2026"
+    ],
+    "status": "Needs review",
+    "thumb": "thumbs/t63.jpg",
+    "pos": "60% 40%",
+    "zoom": 1.1,
+    "hue": 40
+   },
+   {
+    "title": "Trailer v2",
+    "sub": [
+     "Round ",
+     "3",
+     "  |  v",
+     "2"
+    ],
+    "date": [
+     "13",
+     " Oct, 2026"
+    ],
+    "status": "In progress",
+    "thumb": "thumbs/t69.jpg",
+    "pos": "50% 50%",
+    "zoom": 1.0,
+    "hue": 180
+   }
+  ]
+ },
+ "tagline": {
+  "text": "Send. Review. Approve.",
+  "fit": 1170,
+  "cy": 540,
+  "stops": [
+   [
+    0,
+    "#6aa8ff"
+   ],
+   [
+    0.26,
+    "#d8e8ff"
+   ],
+   [
+    0.5,
+    "#ffffff"
+   ],
+   [
+    0.78,
+    "#ffc0ee"
+   ],
+   [
+    1,
+    "#ffa070"
+   ]
+  ],
+  "blobs": [
+   "#3b7bff",
+   "#ff7a3a"
+  ]
+ },
+ "logo": {
+  "text": "PROOFROOM",
+  "fit": 700,
+  "stops": [
+   [
+    0,
+    "#ffffff"
+   ],
+   [
+    1,
+    "#ffe4f6"
+   ]
+  ],
+  "glow": [
+   "rgba(255,255,255,0.8)",
+   "rgba(255,90,210,0.75)",
+   "rgba(130,70,255,0.6)"
+  ],
+  "blob": "#7a3cff"
+ }
+}

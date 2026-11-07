@@ -1,0 +1,331 @@
+{
+ "id": "kaiku",
+ "name": "Kaiku",
+ "palette": "krock",
+ "lines": {
+  "l1": {
+   "text": "Christmas Eve hours missing",
+   "fit": 1180,
+   "cy": 540,
+   "stops": [
+    [
+     0,
+     "#ffc4a4"
+    ],
+    [
+     0.3,
+     "#ffe6e6"
+    ],
+    [
+     0.6,
+     "#ffffff"
+    ],
+    [
+     1,
+     "#b8c8ff"
+    ]
+   ],
+   "blobs": [
+    "#ff8a2a",
+    "#9db4ff"
+   ]
+  },
+  "l2": {
+   "text": "Connect still says 9-17",
+   "fit": 1180,
+   "cy": 497,
+   "stops": [
+    [
+     0,
+     "#ffc8e4"
+    ],
+    [
+     0.35,
+     "#ffffff"
+    ],
+    [
+     0.7,
+     "#e8ecff"
+    ],
+    [
+     1,
+     "#b4c4ff"
+    ]
+   ],
+   "blobs": [
+    "#ff6ac8",
+    "#7aa8ff"
+   ]
+  },
+  "l3": {
+   "text": "Kaiku asks, they tap",
+   "fit": 900,
+   "cy": 540,
+   "stops": [
+    [
+     0,
+     "#cfe0ff"
+    ],
+    [
+     0.4,
+     "#ffffff"
+    ],
+    [
+     0.75,
+     "#ffd6ec"
+    ],
+    [
+     1,
+     "#ff8aa6"
+    ]
+   ],
+   "glow": [
+    "rgba(255,255,255,0.7)",
+    "rgba(255,100,150,0.5)",
+    "rgba(90,110,255,0.4)"
+   ],
+   "blobs": [
+    "#b4d0ff",
+    "#ff4a6a"
+   ]
+  }
+ },
+ "pills": [
+  {
+   "icon": "page",
+   "label": "FIWARE"
+  },
+  {
+   "icon": "receipt",
+   "label": "Yext sandbox"
+  },
+  {
+   "icon": "wave",
+   "label": "WhatsApp"
+  }
+ ],
+ "particles": {
+  "icons": [
+   "page",
+   "anchor",
+   "wave"
+  ]
+ },
+ "screen": {
+  "name": "Kaiku",
+  "breadcrumb": "Live room · Turku · OpenStreetMap",
+  "searchPlaceholder": "Pick a holiday…",
+  "actionButton": "Run the chain",
+  "uploadChip": "+",
+  "emptyLabel": "Ask every owner one question",
+  "flyer": {
+   "chip": "24.12. Christmas Eve"
+  },
+  "loadingLabel": "Waiting for the owner",
+  "flipLabel": "Answered",
+  "flips": [
+   {
+    "card": 0,
+    "t": 14.4
+   },
+   {
+    "card": 1,
+    "t": 14.55
+   },
+   {
+    "card": 2,
+    "t": 14.7
+   }
+  ],
+  "cards": [
+   {
+    "title": "Café Eino",
+    "sub": "Cafe",
+    "date": "24 Dec, 2026",
+    "status": "Unknown",
+    "thumb": "products/kaiku/thumbs/cafe-eino.jpg",
+    "pos": "50% 50%",
+    "zoom": 1,
+    "source": "https://kaiku.hankintaviikko.fi/room",
+    "provenance": "name + category: /api/room/state (OpenStreetMap, ODbL), id osm-n6784950719; date: the room's holiday 24.12.; status: the room's own word 'unknown'; flips to 'answered' because the room run recorded the owner answer '10-14' (3 scripted demo answers, reset afterwards); thumbnail: crop of the real /room map at its dot (Playwright, DSF 2)"
+   },
+   {
+    "title": "Torikahvila Kisälli",
+    "sub": "Cafe",
+    "date": "24 Dec, 2026",
+    "status": "Unknown",
+    "thumb": "products/kaiku/thumbs/torikahvila-kisalli.jpg",
+    "pos": "50% 50%",
+    "zoom": 1,
+    "source": "https://kaiku.hankintaviikko.fi/room",
+    "provenance": "name + category: /api/room/state (OpenStreetMap, ODbL), id osm-n10800555767; date: the room's holiday 24.12.; status: the room's own word 'unknown'; flips to 'answered' because the room run recorded the owner answer 'closed' (3 scripted demo answers, reset afterwards); thumbnail: crop of the real /room map at its dot (Playwright, DSF 2)"
+   },
+   {
+    "title": "Torio",
+    "sub": "Restaurant",
+    "date": "24 Dec, 2026",
+    "status": "Unknown",
+    "thumb": "products/kaiku/thumbs/torio.jpg",
+    "pos": "50% 50%",
+    "zoom": 1,
+    "source": "https://kaiku.hankintaviikko.fi/room",
+    "provenance": "name + category: /api/room/state (OpenStreetMap, ODbL), id osm-n10091005738; date: the room's holiday 24.12.; status: the room's own word 'unknown'; flips to 'answered' because the room run recorded the owner answer '9-13' (3 scripted demo answers, reset afterwards); thumbnail: crop of the real /room map at its dot (Playwright, DSF 2)"
+   },
+   {
+    "title": "Café Tiljan",
+    "sub": "Restaurant",
+    "date": "24 Dec, 2026",
+    "status": "Unknown",
+    "thumb": "products/kaiku/thumbs/cafe-tiljan.jpg",
+    "pos": "50% 50%",
+    "zoom": 1,
+    "source": "https://kaiku.hankintaviikko.fi/room",
+    "provenance": "name + category: /api/room/state (OpenStreetMap, ODbL), id osm-n11847173055; date: the room's holiday 24.12.; status: the room's own word 'unknown'; stays unknown: no answer was given; thumbnail: crop of the real /room map at its dot (Playwright, DSF 2)"
+   },
+   {
+    "title": "Hua Du",
+    "sub": "Restaurant",
+    "date": "24 Dec, 2026",
+    "status": "Unknown",
+    "thumb": "products/kaiku/thumbs/hua-du.jpg",
+    "pos": "50% 50%",
+    "zoom": 1,
+    "source": "https://kaiku.hankintaviikko.fi/room",
+    "provenance": "name + category: /api/room/state (OpenStreetMap, ODbL), id osm-n12994277552; date: the room's holiday 24.12.; status: the room's own word 'unknown'; stays unknown: no answer was given; thumbnail: crop of the real /room map at its dot (Playwright, DSF 2)"
+   },
+   {
+    "title": "Naantalin Aurinkoinen",
+    "sub": "Cafe",
+    "date": "24 Dec, 2026",
+    "status": "Unknown",
+    "thumb": "products/kaiku/thumbs/naantalin-aurinkoinen.jpg",
+    "pos": "50% 50%",
+    "zoom": 1,
+    "source": "https://kaiku.hankintaviikko.fi/room",
+    "provenance": "name + category: /api/room/state (OpenStreetMap, ODbL), id osm-n10147557153; date: the room's holiday 24.12.; status: the room's own word 'unknown'; stays unknown: no answer was given; thumbnail: crop of the real /room map at its dot (Playwright, DSF 2)"
+   },
+   {
+    "title": "Seco",
+    "sub": "Cafe",
+    "date": "24 Dec, 2026",
+    "status": "Unknown",
+    "thumb": "products/kaiku/thumbs/seco.jpg",
+    "pos": "50% 50%",
+    "zoom": 1,
+    "source": "https://kaiku.hankintaviikko.fi/room",
+    "provenance": "name + category: /api/room/state (OpenStreetMap, ODbL), id osm-n14099360215; date: the room's holiday 24.12.; status: the room's own word 'unknown'; stays unknown: no answer was given; thumbnail: crop of the real /room map at its dot (Playwright, DSF 2)"
+   },
+   {
+    "title": "Trattoria Wiklund",
+    "sub": "Restaurant",
+    "date": "24 Dec, 2026",
+    "status": "Unknown",
+    "thumb": "products/kaiku/thumbs/trattoria-wiklund.jpg",
+    "pos": "50% 50%",
+    "zoom": 1,
+    "source": "https://kaiku.hankintaviikko.fi/room",
+    "provenance": "name + category: /api/room/state (OpenStreetMap, ODbL), id osm-n7417170646; date: the room's holiday 24.12.; status: the room's own word 'unknown'; stays unknown: no answer was given; thumbnail: crop of the real /room map at its dot (Playwright, DSF 2)"
+   },
+   {
+    "title": "Coffee House",
+    "sub": "Cafe",
+    "date": "24 Dec, 2026",
+    "status": "Unknown",
+    "thumb": "products/kaiku/thumbs/coffee-house.jpg",
+    "pos": "50% 50%",
+    "zoom": 1,
+    "source": "https://kaiku.hankintaviikko.fi/room",
+    "provenance": "name + category: /api/room/state (OpenStreetMap, ODbL), id osm-n7417213985; date: the room's holiday 24.12.; status: the room's own word 'unknown'; stays unknown: no answer was given; thumbnail: crop of the real /room map at its dot (Playwright, DSF 2)"
+   },
+   {
+    "title": "Cosmic Comic Cafe",
+    "sub": "Pub",
+    "date": "24 Dec, 2026",
+    "status": "Unknown",
+    "thumb": "products/kaiku/thumbs/cosmic-comic-cafe.jpg",
+    "pos": "50% 50%",
+    "zoom": 1,
+    "source": "https://kaiku.hankintaviikko.fi/room",
+    "provenance": "name + category: /api/room/state (OpenStreetMap, ODbL), id osm-n301262642; date: the room's holiday 24.12.; status: the room's own word 'unknown'; stays unknown: no answer was given; thumbnail: crop of the real /room map at its dot (Playwright, DSF 2)"
+   },
+   {
+    "title": "Dublin",
+    "sub": "Pub",
+    "date": "24 Dec, 2026",
+    "status": "Unknown",
+    "thumb": "products/kaiku/thumbs/dublin.jpg",
+    "pos": "50% 50%",
+    "zoom": 1,
+    "source": "https://kaiku.hankintaviikko.fi/room",
+    "provenance": "name + category: /api/room/state (OpenStreetMap, ODbL), id osm-w103351236; date: the room's holiday 24.12.; status: the room's own word 'unknown'; stays unknown: no answer was given; thumbnail: crop of the real /room map at its dot (Playwright, DSF 2)"
+   },
+   {
+    "title": "Centro",
+    "sub": "Hairdresser",
+    "date": "24 Dec, 2026",
+    "status": "Unknown",
+    "thumb": "products/kaiku/thumbs/centro.jpg",
+    "pos": "50% 50%",
+    "zoom": 1,
+    "source": "https://kaiku.hankintaviikko.fi/room",
+    "provenance": "name + category: /api/room/state (OpenStreetMap, ODbL), id osm-n3219088722; date: the room's holiday 24.12.; status: the room's own word 'unknown'; stays unknown: no answer was given; thumbnail: crop of the real /room map at its dot (Playwright, DSF 2)"
+   }
+  ]
+ },
+ "tagline": {
+  "text": "Detect. Ask. Apply.",
+  "fit": 1000,
+  "cy": 540,
+  "stops": [
+   [
+    0,
+    "#6aa8ff"
+   ],
+   [
+    0.26,
+    "#d8e8ff"
+   ],
+   [
+    0.5,
+    "#ffffff"
+   ],
+   [
+    0.78,
+    "#ffc0ee"
+   ],
+   [
+    1,
+    "#ffa070"
+   ]
+  ],
+  "blobs": [
+   "#3b7bff",
+   "#ff7a3a"
+  ]
+ },
+ "logo": {
+  "text": "KAIKU",
+  "fit": 700,
+  "stops": [
+   [
+    0,
+    "#ffffff"
+   ],
+   [
+    1,
+    "#ffe4f6"
+   ]
+  ],
+  "glow": [
+   "rgba(255,255,255,0.8)",
+   "rgba(255,90,210,0.75)",
+   "rgba(130,70,255,0.6)"
+  ],
+  "blob": "#7a3cff",
+  "url": "kaiku.hankintaviikko.fi"
+ },
+ "capture": {
+  "note": "thumbnails are crops of /room (scripts/capture_thumbs.py in /root/hack/kaiku)"
+ },
+ "pillLabelSize": 44
+}

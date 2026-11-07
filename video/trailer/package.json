@@ -1,0 +1,20 @@
+{
+  "name": "ocean-radar-family",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Family-style character film for Ocean Opportunity Radar (Remotion 4.x)",
+  "type": "module",
+  "scripts": {
+    "render": "node render.mjs"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.537",
+    "@remotion/cli": "4.0.537",
+    "@remotion/renderer": "4.0.537",
+    "@types/react": "18.3.12",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.537",
+    "typescript": "5.6.3"
+  }
+}
