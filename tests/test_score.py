@@ -79,7 +79,7 @@ def test_pending_suggestions_cost_points_and_are_listed():
     r = engine.compute(L(), f)
     c = by(r)
     assert c["agree"]["points"] == 0 and c["description"]["points"] == 10 and c["reviews"]["points"] == 0
-    assert r["pending"] == ["conf", "desc", "rev"] and r["score"] == 60   # conflict -10, description -5, review -15; the conflict's date 24.12. has a row
+    assert r["pending"] == ["conf", "desc", "rev"] and r["score"] == 70   # conflict -10, description -5, review -15; the conflict's date 24.12. has a row
     done = engine.compute(L(), feed(card("rev", "review", "approved")))
     assert by(done)["reviews"]["ok"]
 

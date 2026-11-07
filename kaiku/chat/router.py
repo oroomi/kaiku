@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 
 from fastapi import APIRouter, HTTPException, Request
@@ -140,7 +141,8 @@ async def accept(suggestion_id: str, body: AcceptIn | None = None):
             reply = "That one is already decided."
         return {"ok": False, "error": r.get("error"), "reply": reply, "status": (item or {}).get("status"), "actions": []}
     what = f"{(item or {}).get('holiday_name_en') or (item or {}).get('title_en') or 'that'} {r.get('final_hours') or ''}".strip()
-    reply = (brain.EN["saved"].format(what=what) + " " + (r.get("follow_up_question") or "")).strip()
+    fu = re.sub(r" \d{1,2}\.\d{1,2}\.(?=[?.])", "", r.get("follow_up_question") or "")   # "every Christmas Eve 24.12.?" reads as "every Christmas Eve?"
+    reply = (brain.EN["saved"].format(what=what) + " " + fu).strip()
     s["followup"] = suggestion_id if r.get("follow_up_question") else None
     s["focus"] = None
     s["log"].append({"role": "kaiku", "kind": "chat", "text": reply})
