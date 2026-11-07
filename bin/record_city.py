@@ -12,7 +12,6 @@ Usage: /usr/bin/python3 bin/record_city.py [--base http://127.0.0.1:8230] [--out
 Run against a TEST server (PUBLIC_URL=http://127.0.0.1:82xx). Room answers are demo data and labelled so on the page.
 """
 import argparse
-import datetime
 import http.cookiejar
 import json
 import re
@@ -55,12 +54,13 @@ def frames_mode(a, w, h, tmp: Path) -> dict:
         page = browser.new_page(viewport={"width": w, "height": h})
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
-        page.clock.install(time=datetime.datetime.now())
+        page.clock.install()
         sep = "&" if "?" in a.path else "?"
         page.goto(a.base + a.path + sep + "hold=1", wait_until="load", timeout=60000)
-        page.wait_for_function("window.__city && window.__city.ready", timeout=120000, polling=500)
-        page.wait_for_timeout(4000)  # globe tiles (wall time)
-        page.clock.pause_at(datetime.datetime.now() + datetime.timedelta(seconds=1))
+        page.wait_for_function("window.__city && window.__city.ready", timeout=120000)
+        # pause first, then let the globe tiles arrive in wall time (pausing after a natural run hung the first screenshot)
+        page.clock.pause_at(int(time.time() * 1000) + 1000)
+        page.wait_for_timeout(4000)
         page.evaluate("window.__city.start()")
         plan = {int((18 + 2 * i) * 1000): ans for i, ans in enumerate(ANSWERS)}  # virtual ms -> answer
         end_ms = 18000 + 2000 * len(ANSWERS) + 10000
@@ -72,7 +72,7 @@ def frames_mode(a, w, h, tmp: Path) -> dict:
                 th.start()
                 threads.append(th)
             page.clock.run_for(step)
-            page.screenshot(path=str(tmp / f"f{n:05d}.jpg"), type="jpeg", quality=88)
+            page.screenshot(path=str(tmp / f"f{n:05d}.jpg"), type="jpeg", quality=88, timeout=120000)
             t += step
             n += 1
             if n % 100 == 0:

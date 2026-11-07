@@ -12,7 +12,8 @@ First commit: e2f7382, the bell commit, Fri 6 Nov 2026 18:49:59Z, a fresh repo w
 
 ## Brought (declared)
 - voice-pilot, github.com/oroomi/voice-pilot (our own, MIT, published 18 Oct 2026), vendored under `vendor/voice-pilot` with its licence. The design is reused; the server code was rewritten during the event.
-- maplibre-gl 4.7.1, vendored (BSD-3-Clause). Fonts Inter, Newsreader, IBM Plex Mono (SIL OFL), vendored.
+- maplibre-gl 4.7.1, vendored (BSD-3-Clause). maplibre-gl 5.9.0, vendored for /city only (globe projection; BSD-3-Clause, licence kept in `kaiku/web/static/vendor/maplibre5/`).
+- OpenFreeMap "dark" style: fetched at runtime from tiles.openfreemap.org; an unmodified copy is bundled as the offline fallback (`kaiku/web/static/city/dark_style.json`, OpenFreeMap / OpenMapTiles / OpenStreetMap attribution shown on the page).
 - Map tiles: OpenFreeMap. Map data: OpenStreetMap via Overpass (ODbL).
 - Live feeds: Föli SIRI VM, Fintraffic Digitraffic AIS, Open-Meteo (all CC BY 4.0).
 - Nager.Date public holidays API; Smart Data Models contexts.
@@ -56,6 +57,8 @@ First commit: e2f7382, the bell commit, Fri 6 Nov 2026 18:49:59Z, a fresh repo w
 - Promise wording: every message says "We'll update your information everywhere" and does not list publishers. This is a statement of what Connect does in production. In the sandbox the write is real but nothing is syndicated (no publisher listings), and the receipts say "saved" because the Yext read-back matched.
 - The Yext Suggestions API returns 403 for the sandbox key; Apply writes the entity through the Management API instead (`docs/apply.md`). The sandbox key cannot post review replies, so an approved reply is stored, not posted.
 - Security: the public events feed and suggestion endpoints do not carry the owner's decision link unless the viewer holds the demo key. `/judge` and `/console` need the demo key. httpx request logging is off so API keys never reach the journal. Test servers and the test suite are silent by design (no email, WhatsApp or call leaves except from the production URL).
+- Room answers on `/map` are demo data and are not written to Yext.
+- /city: the 813 businesses and their positions are real OpenStreetMap data; their Christmas Eve status is "missing" unless public data had it (2 businesses). Green dots are room answers (demo data, written to Orion-LD as `holidayHoursStatus` approved via "room", never to Yext). The demo film `city_demo.mp4` was rendered frame by frame on Playwright's virtual clock because software WebGL runs at about 1-4 fps on our 2-core VPS; the room answers, the Orion-LD notifications and the SSE pushes in it are real, but vehicle motion is time-compressed (broker positions refresh in wall time while frames render).
 
 ## GenAI in the product
 - Anthropic claude-sonnet-5-5: the chat brain (three tools: decide, standing permission, ask; 40-word cap; keyword parser fallback), the voice tool loop on the website, the drafted review replies and description corrections (applied only after the owner approves), and the Aura subscription proposals.
