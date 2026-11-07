@@ -49,6 +49,18 @@ def notify_url() -> str:
     return base.rstrip("/") + "/city/notify"
 
 
+def sub_name() -> str:
+    """Production owns the plain name; a test server (PUBLIC_URL http://127.0.0.1:82xx) gets its own, suffixed by port, so
+    starting or restarting one never re-points production's subscription (7 Nov: a production restart took the test
+    server's subscription mid-film and 7 of 8 approvals never reached the page)."""
+    base = os.environ.get("PUBLIC_URL") or "http://127.0.0.1:8210"
+    if base.startswith("https://"):
+        return SUB_NAME
+    from urllib.parse import urlparse
+    port = urlparse(base).port or 80
+    return f"{SUB_NAME}-{port}"
+
+
 def _val(e: dict, k: str):
     v = e.get(k)
     if isinstance(v, list):
@@ -312,8 +324,9 @@ def ensure_subscription(http: httpx.Client | None = None) -> str:
     """Idempotent by subscriptionName. If the stored endpoint differs (a test server made it), recreate it for us."""
     from kaiku.broker import get_broker
     br = get_broker()
+    name = sub_name()
     if getattr(br, "using_fallback", False):
-        return br.create_subscription(SUB_NAME, ["holidayHoursStatus"], handle_notification)
+        return br.create_subscription(name, ["holidayHoursStatus"], handle_notification)
     own = http is None
     http = http or httpx.Client(timeout=4)
     want = notify_url()
@@ -322,14 +335,14 @@ def ensure_subscription(http: httpx.Client | None = None) -> str:
         r = http.get(f"{ng()}/subscriptions", params={"limit": 1000}, headers={"Accept": "application/json"})
         r.raise_for_status()
         for s in r.json():
-            if s.get("subscriptionName") != SUB_NAME:
+            if s.get("subscriptionName") != name:
                 continue
             uri = ((s.get("notification") or {}).get("endpoint") or {}).get("uri")
             if uri == want and s.get("isActive", True) is not False and s.get("status") != "paused":
                 return s["id"]
             http.delete(f"{ng()}/subscriptions/{s['id']}")
             log.info("city subscription endpoint %s -> %s: recreated", uri, want)
-        body = {"type": "Subscription", "subscriptionName": SUB_NAME, "entities": [{"type": "Store"}],
+        body = {"type": "Subscription", "subscriptionName": name, "entities": [{"type": "Store"}],
                 "watchedAttributes": ["holidayHoursStatus"],
                 "description": "Kaiku /city: a Turku Store's Christmas Eve status changed",
                 "notification": {"format": "normalized", "attributes": NOTIFY_ATTRS,

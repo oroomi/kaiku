@@ -146,4 +146,4 @@ state, so production creates its own subscription on its next start.
   answer also produces its "hours resolved" broker event in the event feed. Left as is (not our module).
 - Seeding the 813 Stores also triggers the two broker-module subscriptions once per created entity; their handler ignores
   `seed: true` values, so nothing is shown, but it is 813 HTTP deliveries on first seed.
-- Test servers re-point the `kaiku-city-store-status` subscription to their own URL; production takes it back on start.
+- A test server (PUBLIC_URL http://127.0.0.1:82xx) creates its own subscription `kaiku-city-store-status-<port>`; production's plain-named one is never touched (added after the 7 Nov film: a production restart took the shared name mid-film and 7 of 8 approvals never reached the test page). Stop a test server with `fuser -k <port>/tcp` and delete its subscription afterwards.

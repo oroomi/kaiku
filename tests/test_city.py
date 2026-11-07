@@ -218,3 +218,11 @@ def test_page_renders_with_hooks(client):
         assert s in r.text, s
     assert "—" not in r.text
     assert 'href="/city"' in client.get("/fiware").text
+
+
+def test_sub_name_is_per_test_server(monkeypatch):
+    from kaiku.city import router as cr
+    monkeypatch.setenv("PUBLIC_URL", "https://kaiku.hankintaviikko.fi")
+    assert cr.sub_name() == cr.SUB_NAME
+    monkeypatch.setenv("PUBLIC_URL", "http://127.0.0.1:8230")
+    assert cr.sub_name() == cr.SUB_NAME + "-8230"
