@@ -375,6 +375,8 @@ def finish(bid: str, sess: dict, item: dict, action: str, r: dict) -> str:
     if r.get("follow_up_question") and r.get("yext") == "ok":
         return f"{say} {r['follow_up_question']}".strip()
     sess["followup"] = None
+    if say.startswith("I could not save"):      # the apply failed: no preference question on top of bad news
+        return say
     nxt = handoff_text(bid, sess, {item["id"]}) or ask_channel(bid, sess)
     return f"{say} {nxt}".strip()
 

@@ -184,15 +184,40 @@ def test_decision_page_holds_the_question_and_the_endpoint_stores_it(page, fake_
     c, tok = page
     html = c.get("/d/" + tok).text
     assert QUESTION in html and 'data-channel="email"' in html and 'data-channel="whatsapp"' in html and 'data-channel="call"' in html
+    before, inside = html.split('id="chpref"')                             # the buttons live inside the question card, nowhere else
+    assert "data-channel" not in before
+    card = inside.split("</section>")[0]
+    assert all(f'data-channel="{ch}"' in card for ch in ("email", "whatsapp", "call")) and card.count("data-channel=") == 3
+    assert 'id="ch-got"' in card and "</section>" not in inside.split('id="ch-got"')[0]
     r = c.post(f"/api/decide/{tok}/channel", json={"channel": "whatsapp"})
     assert r.status_code == 409                                             # the decision comes first
     assert c.post(f"/api/decide/{tok}", json={"action": "approve"}).status_code == 200
-    assert QUESTION in c.get("/d/" + tok).text and "hidden" not in c.get("/d/" + tok).text.split('id="chpref"')[1].split(">")[0]
+    after = c.get("/d/" + tok).text
+    assert QUESTION in after and "hidden" not in after.split('id="chpref"')[1].split(">")[0]
     r = c.post(f"/api/decide/{tok}/channel", json={"channel": "whatsapp"})
     assert r.status_code == 200 and r.json()["message"] == "Got it, WhatsApp it is. I'll start there next time."
     assert prefs.get_contact_channel(BID) == "whatsapp"
     assert c.post(f"/api/decide/{tok}/channel", json={"channel": "sms"}).status_code == 422
     assert c.post("/api/decide/nope/channel", json={"channel": "call"}).status_code == 404
+    assert "data-channel" not in c.get("/d/nope").text and 'id="chpref"' not in c.get("/d/nope").text      # missing state
+
+
+def test_expired_token_has_no_channel_buttons_and_the_endpoint_returns_410(page, fake_yext):
+    c, tok = page
+    from kaiku.decide import tokens
+    db = tokens._read()
+    db[tok]["expires"] = 0
+    tokens._write(db)
+    html = c.get("/d/" + tok).text
+    assert "data-channel" not in html and 'id="chpref"' not in html
+    assert c.post(f"/api/decide/{tok}/channel", json={"channel": "email"}).status_code == 410
+
+
+def test_failed_apply_does_not_ask_the_channel_question(fake_yext):
+    item = {"id": "t-hours", "kind": "hours", "holiday_date": "2026-12-24", "title_en": "Hours"}
+    sess = {}
+    out = flow.finish(BID, sess, item, "approve", {"ok": True, "yext": "failed"})
+    assert out.startswith("I could not save it") and QUESTION not in out and sess.get("stage") != "channel"
 
 
 # ---------------------------------------------------------------- the ladder honours it

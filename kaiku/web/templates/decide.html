@@ -53,7 +53,8 @@
 .dc .vis .pend i{width:8px;height:8px;border-radius:50%;background:var(--cyan);animation:pulse 1.4s infinite}
 .dc .vis .seen{font:400 16px/1.4 var(--sans);color:var(--green)}
 .dc .chq .q{font:300 21px/1.3 var(--serif);margin:6px 0 0}
-.dc .chq .row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.dc .chq .row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}
+@media (max-width:339px){.dc .chq .row{grid-template-columns:1fr}}
 .dc .chq .row .btn{min-height:50px;padding:0 8px;font-size:15px}
 .dc .chq .row .btn[aria-pressed=true]{background:var(--cyan);color:#06222c;border-color:var(--cyan)}
 .dc .chq .got{color:var(--green);font:400 15px/1.4 var(--sans);margin:12px 0 0}
@@ -189,14 +190,6 @@
   </section>
   {% endif %}
 
-    <div class="row" id="ch-row">
-      <button class="btn" type="button" data-channel="email">{{ "Sähköposti" if fi else "Email" }}</button>
-      <button class="btn" type="button" data-channel="whatsapp">WhatsApp</button>
-      <button class="btn" type="button" data-channel="call">{{ "Puhelu" if fi else "Call" }}</button>
-    </div>
-    <p class="got" id="ch-got" hidden></p>
-  </section>
-  {% endif %}
 
   <section class="glass miss" id="expired-live" hidden aria-live="polite" data-pilot="decide-expired-live">
     {% if fi %}
@@ -226,6 +219,14 @@
     {% else %}
     <p class="q" lang="en">Next time something about your listing needs a decision, how do you want me to reach you?</p>
     {% endif %}
+    <div class="row" id="ch-row">
+      <button class="btn" type="button" data-channel="email">{{ "Sähköposti" if fi else "Email" }}</button>
+      <button class="btn" type="button" data-channel="whatsapp">WhatsApp</button>
+      <button class="btn" type="button" data-channel="call">{{ "Puhelu" if fi else "Call" }}</button>
+    </div>
+    <p class="got" id="ch-got" hidden></p>
+  </section>
+  {% endif %}
 {% endif %}
 </div>
 {% endblock %}
