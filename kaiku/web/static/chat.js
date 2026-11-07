@@ -91,6 +91,41 @@
   form.addEventListener("submit", function (e) { e.preventDefault(); send(msg.value); });
   window.kaikuChatAsk = function (t) { return send(t, true); };   /* the voice orb hands its transcript to the chat */
 
+
+  /* ---------- the cards talk to the chat: Accept, Suggest a change, and the contact-ladder system line ---------- */
+  function post(u, body) {
+    return fetch(u, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
+  }
+  window.addEventListener("kaiku:accept", function (m) {
+    var d = m.detail || {}; if (!d.id || busy) { if (d.done) d.done(); return; }
+    busy = true; typing(true); busyEv(true);
+    post("/api/suggestions/" + encodeURIComponent(d.id) + "/accept", { business_id: BIZ, session: SID })
+      .then(function (j) { typing(false); add({ role: "kaiku", kind: "chat", text: j.reply }); tell("kaiku", j.reply); })
+      .catch(function () { typing(false); var t = "That did not go through. Please try again."; add({ role: "kaiku", kind: "chat", text: t }); tell("kaiku", t); })
+      .then(function () { busyEv(false); busy = false; if (d.done) d.done(); try { window.dispatchEvent(new CustomEvent("kaiku:decided")); } catch (e) {} });
+  });
+  window.addEventListener("kaiku:change", function (m) {
+    var d = m.detail || {}; if (!d.id) return;
+    root.scrollIntoView({ behavior: reduce() ? "auto" : "smooth", block: "center" });
+    setTimeout(function () { try { msg.focus({ preventScroll: true }); } catch (e) {} }, reduce() ? 0 : 350);
+    post("/api/suggestions/" + encodeURIComponent(d.id) + "/change", { business_id: BIZ, session: SID })
+      .then(function (j) { add({ role: "kaiku", kind: "chat", text: j.reply }); tell("kaiku", j.reply); root.classList.add("ctx"); })
+      .catch(function () { /* nothing pending to change: stay quiet */ });
+  });
+  var sys = null;
+  function placeSys() {
+    if (!sys) return;
+    var intro = thread.querySelector(".intro");
+    if (intro) { if (intro.nextSibling !== sys) thread.insertBefore(sys, intro.nextSibling); } else if (sys.parentNode !== thread) thread.insertBefore(sys, thread.firstChild);
+  }
+  window.addEventListener("kaiku:sysline", function (m) {
+    var t = (m.detail && m.detail.text) || ""; if (!t) return;
+    if (!sys) { sys = document.createElement("div"); sys.className = "sys mono"; sys.setAttribute("data-pilot", "ladder"); }
+    sys.textContent = t; placeSys();
+  });
+  setInterval(placeSys, 1500);
+
   /* ---------- demo drawer: only for the key holder ---------- */
   function initDrawer() {
     jget("/api/chat/keyed", hdr()).then(function (k) {

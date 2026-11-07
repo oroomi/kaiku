@@ -1,5 +1,5 @@
-/* Kaiku owner home: the hero (headline, arc, before/after), the SUGGESTIONS widget (GET /api/feed) and the conversation THREAD (events + web chat).
-   Vanilla JS, no build step. The chat widget itself lives in chat.js and talks to this file through window events. */
+/* Kaiku owner home: the hero (listing score, GET /api/score) and the SUGGESTIONS widget (GET /api/feed, Accept / Suggest a change).
+   Vanilla JS, no build step. The chat lives in chat.js, ON FONECTA NOW in listing.js; they talk through window events. */
 (function () {
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
@@ -22,9 +22,9 @@
   var DECIDED = { approved: 1, edited: 1, applied: 1 };
 
   /* ---------- state ---------- */
-  var biz = null, items = [], evs = {}, steps = {}, chainRunning = false, chainTimer = 0, chatBusy = false;
+  var biz = null, items = [], evs = {}, steps = {}, chainRunning = false, chainTimer = 0, chatBusy = false, sc = null, loaded = false;
 
-  /* ---------- hero ---------- */
+  /* ---------- hero: the listing score ---------- */
   var track = $("arc-track"), fill = $("arc-fill"), dot = $("dot"), halo = $("dot-halo");
   var LEN = track.getTotalLength(), arc = { t: 0, target: 0 };
   function place(t) {
@@ -33,58 +33,45 @@
     fill.setAttribute("stroke-dashoffset", 1 - Math.max(0.001, t));
   }
   var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var shownN = 0, numTarget = 0;
   function loop(ts) {
     requestAnimationFrame(loop);
-    if ((chainRunning || chatBusy) && !reduce) { arc.t = 0.5 - 0.5 * Math.cos(ts / 2400 * Math.PI * 2); place(arc.t); }
-    else if (Math.abs(arc.target - arc.t) > 0.002) { arc.t += (arc.target - arc.t) * 0.08; place(arc.t); }
-  }
-  var HOL = { "12-24": "Christmas Eve", "12-25": "Christmas Day", "12-26": "Boxing Day", "12-31": "New Year's Eve", "01-01": "New Year's Day", "01-06": "Epiphany", "11-08": "Father's Day" };
-  function dayLabel(date) { return HOL[date.slice(5)] || (parseInt(date.slice(8), 10) + "." + parseInt(date.slice(5, 7), 10) + "."); }
-  function dm(date) { return parseInt(date.slice(8), 10) + "." + parseInt(date.slice(5, 7), 10) + "."; }
-  function regularFor(date) {
-    if (!biz || !biz.regular_hours) return null;
-    var wd = (new Date(date + "T12:00:00Z").getUTCDay() + 6) % 7;
-    var h = biz.regular_hours[DAYS[wd][0]] || [];
-    return hoursOf(h.length ? h : "closed");
-  }
-  function lead() {
-    var act = items.filter(function (i) { return i.kind !== "no_change"; });
-    return act.filter(function (i) { return i.kind === "holiday_hours" || i.kind === "conflict"; })[0] || act[0] || null;
-  }
-  function idsOf(i) { return [i.id, i.suggestion_id].filter(Boolean); }
-  function stepCount(i) { var n = 0; ORDER.forEach(function (s) { if (steps[s] && i && idsOf(i).indexOf(steps[s]) >= 0) n++; }); return n; }
-  function setCap(t) { $("big-cap").textContent = t; }
-  function paint() {
-    var name = (biz && biz.name) || "Furry Paw Vet Clinic", L = lead(), nc = items.filter(function (i) { return i.kind === "no_change"; })[0];
-    var oldEl = $("ba-old"), newEl = $("ba-new"), en, nv, oldV = "–", done = false;
-    if (L) {
-      var date = L.holiday_date || "", st = L.status || "proposed", hrs = hoursOf(L.proposed);
-      var reg = date ? regularFor(date) : null;
-      done = !!DECIDED[st]; oldV = reg || "–";
-      var when = date ? dayLabel(date) : L.title_en;
-      if (st === "declined") { nv = "no change"; en = name + " keeps its regular hours on " + when + ". The owner said no thanks."; }
-      else if (hrs === "closed") { nv = "closed"; en = name + " is closed on " + when + (done ? ". Saved to Connect, owner approved." : ". Everywhere Connect publishes still says " + oldV + "."); }
-      else if (hrs && L.kind !== "period") { nv = hrs; en = name + " is open " + hrs + " on " + when + (done ? ". Saved to Connect, owner approved." : ". Everywhere Connect publishes still says " + oldV + "."); }
-      else { nv = hrs || "ready"; en = name + ": " + (L.title_en || "a suggestion is ready") + "."; }
-      var pct = Math.round((L.confidence || 0) * 100), n = stepCount(L);
-      setCap(pct + " % sure" + (n ? " · " + n + "/6 steps" : "")); arc.target = L.confidence || 0;
-      var du = evs.decide_url && !done && st !== "declined" ? evs.decide_url : "";
-      $("decide-row").hidden = !du; if (du) $("decide-go").href = du;
-      newEl.className = "ba-new live";
-    } else if (nc) {
-      nv = "no change"; en = name + " keeps its regular hours" + (nc.holiday_date ? " on " + dayLabel(nc.holiday_date) : "") + ". Nothing to change.";
-      oldEl.hidden = true; setCap("No change needed"); arc.target = nc.confidence || 0; newEl.className = "ba-new live"; $("decide-row").hidden = true;
-    } else {
-      nv = "ready"; en = items.length || !loaded ? name + ": checking the next holiday." : name + ": nothing to suggest right now.";
-      setCap("READY"); arc.target = 0; newEl.className = "ba-new idle"; $("decide-row").hidden = true;
+    if ((chainRunning || chatBusy || !sc) && !reduce) { arc.t = 0.5 - 0.5 * Math.cos(ts / 2400 * Math.PI * 2); place(arc.t); }
+    else if (Math.abs(arc.target - arc.t) > 0.002) { arc.t += (arc.target - arc.t) * 0.06; place(arc.t); }
+    if (sc && shownN !== numTarget) {   /* the big number follows the dot */
+      shownN += (numTarget - shownN) * 0.12; if (Math.abs(numTarget - shownN) < 0.5) shownN = numTarget;
+      $("score-n").textContent = String(Math.round(shownN));
     }
-    if (L) oldEl.hidden = false;
-    $("ba-old-v").textContent = oldV; oldEl.className = "ba-old" + (done ? " struck" : "");
-    $("headline").textContent = nb(en); $("ba-new-v").textContent = nv;
+  }
+  var HOL = { "12-24": "Christmas", "12-25": "Christmas", "12-26": "Christmas", "12-31": "New Year's Eve", "01-01": "New Year", "01-06": "Epiphany" };
+  function dm(date) { return parseInt(date.slice(8), 10) + "." + parseInt(date.slice(5, 7), 10) + "."; }
+  function whenOf(list) {
+    var d = list.map(function (i) { return i.holiday_date; }).filter(Boolean).sort()[0];
+    return d ? (HOL[d.slice(5)] || dm(d)) : "";
+  }
+  function pendingItems() { return items.filter(function (i) { return i.kind !== "no_change" && (i.status || "proposed") !== "approved" && i.status !== "declined" && i.status !== "edited" && i.status !== "applied" && i.status !== "info"; }); }
+  function paint() {
+    var name = (biz && biz.name) || "Furry Paw Vet Clinic", en;
+    if (!sc) { $("headline").textContent = nb(name + ": reading the listing."); return; }
+    var pend = (sc.pending || []).length, list = pendingItems();
+    if (!pend) en = name + ": nothing to fix.";
+    else { var w = whenOf(list); en = name + ": " + pend + (pend === 1 ? " thing" : " things") + " to fix" + (w ? " before " + w : "") + "."; }
+    $("headline").textContent = nb(en);
+    arc.target = Math.max(0, Math.min(100, sc.score)) / 100; numTarget = sc.score;
+    if (reduce) { shownN = numTarget; $("score-n").textContent = String(numTarget); }
+    $("big-cap").textContent = (sc.label_en || "").toUpperCase() + " · " + sc.checks_ok + " OF " + sc.checks_total + " CHECKS";
+    $("score-n").setAttribute("title", "Listing score " + sc.score + " of 100. " + sc.checks.map(function (c) { return (c.ok ? "ok: " : "fix: ") + c.label_en; }).join("; "));
+    var du = evs.decide_url && pend ? evs.decide_url : "";
+    $("decide-row").hidden = !du; if (du) $("decide-go").href = du;
+  }
+  var scoreBusy = false;
+  function loadScore(fresh) {
+    if (scoreBusy && !fresh) return Promise.resolve(); scoreBusy = true;
+    return jget("/api/score/" + encodeURIComponent(BIZ) + (fresh ? "?fresh=1" : "")).then(function (j) { sc = j; paint(); window.dispatchEvent(new CustomEvent("kaiku:score", { detail: j })); })
+      .catch(function () { /* keep the last score on screen */ }).then(function () { scoreBusy = false; });
   }
 
   /* ---------- suggestions widget ---------- */
-  var loaded = false;
   var SRC = { lastyear: "last year", google: "Google", peers: "peers", website: "website", yext: "Yext", regular: "regular hours" };
   var KIND = { holiday_hours: "Holiday hours", conflict: "Conflict", period: "Period", no_change: "No change", description: "Description", review: "Review" };
   function statusOf(i) {
@@ -94,21 +81,43 @@
     return ["proposed", "proposed"];
   }
   function card(i) {
-    var st = statusOf(i), h = i.kind === "no_change" ? "no change" : hoursOf(i.proposed);
+    var st = statusOf(i), text = typeof i.proposed === "string" && i.proposed !== "closed" ? i.proposed : "";
+    var h = i.kind === "no_change" ? "no change" : text ? "" : hoursOf(i.proposed);
     var seen = {}, src = (i.reasons || []).map(function (r) { return r.source; }).filter(function (s) { if (!s || seen[s]) return false; seen[s] = 1; return true; })
       .map(function (s) { return esc(SRC[s] || String(s).replace(/_/g, " ")); });
     var conf = i.confidence != null ? '<span class="mono sg-conf">' + Math.round(i.confidence * 100) + " % sure</span>" : "";
-    return '<article class="sg" data-kind="' + esc(i.kind) + '" data-status="' + st[0] + '" data-id="' + esc(i.id) + '">' +
+    var acts = st[0] === "proposed" ? '<div class="sg-acts"><button type="button" class="sg-accept" data-act="accept">Accept</button><button type="button" class="sg-change" data-act="change">Suggest a change</button></div>' : "";
+    return '<article class="sg" data-kind="' + esc(i.kind) + '" data-status="' + st[0] + '" data-id="' + esc(i.id) + '" id="sg-' + esc(i.id) + '">' +
       '<div class="sg-top"><span class="mono sg-kind">' + esc(KIND[i.kind] || String(i.kind).replace(/_/g, " ")) + '</span><span class="mono sg-st st-' + st[0] + '">' + st[1] + "</span></div>" +
       "<h3>" + nb(esc(i.title_en || "")) + "</h3>" + (i.text_en ? '<p class="sg-text">' + nb(esc(i.text_en)) + "</p>" : "") +
+      (text ? '<blockquote class="sg-quote">' + nb(esc(text)) + "</blockquote>" : "") +
       '<div class="sg-meta">' + (h ? '<span class="mono sg-hours">' + nb(esc(h)) + "</span>" : "") + conf + "</div>" +
-      (src.length ? '<p class="mono sg-src">' + src.join(" · ") + "</p>" : "") + "</article>";
+      (src.length ? '<p class="mono sg-src">' + src.join(" · ") + "</p>" : "") + acts + "</article>";
   }
   function renderSuggestions() {
+    var busy = {};   /* keep a card's "working" state across the 10 s refresh */
+    Array.prototype.forEach.call(document.querySelectorAll(".sg.working"), function (el) { busy[el.getAttribute("data-id")] = 1; });
     $("sug-grid").innerHTML = items.map(card).join("");
+    Object.keys(busy).forEach(function (id) { var el = document.querySelector('.sg[data-id="' + id.replace(/"/g, "") + '"]'); if (el) setWorking(el, true); });
     $("sug-empty").hidden = !(loaded && !items.length);
     $("sug-count").textContent = items.length ? items.length + (items.length === 1 ? " item" : " items") : "";
+    window.dispatchEvent(new CustomEvent("kaiku:feed", { detail: items }));
   }
+  function setWorking(el, on) {
+    el.classList.toggle("working", on);
+    Array.prototype.forEach.call(el.querySelectorAll("button"), function (b) { b.disabled = on; });
+    var a = el.querySelector(".sg-accept"); if (a) a.textContent = on ? "Saving..." : "Accept";
+  }
+  $("sug-grid").addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest("button[data-act]"); if (!b) return;
+    var el = b.closest(".sg"), id = el.getAttribute("data-id"), i = items.filter(function (x) { return x.id === id; })[0];
+    if (b.getAttribute("data-act") === "accept") {
+      setWorking(el, true);
+      window.dispatchEvent(new CustomEvent("kaiku:accept", { detail: { id: id, item: i, done: function () { setWorking(el, false); } } }));
+    } else {
+      window.dispatchEvent(new CustomEvent("kaiku:change", { detail: { id: id, item: i } }));
+    }
+  });
   var feedBusy = false;
   /* the first paint asks without the network signals (fast); the full feed follows and replaces it */
   function loadFeed(quick) {
@@ -117,68 +126,45 @@
       .catch(function () { /* keep what is on screen */ })
       .then(function () { feedBusy = false; loaded = true; renderSuggestions(); paint(); });
   }
+  function changed() { loadFeed(); loadScore(true); window.dispatchEvent(new CustomEvent("kaiku:refresh", { detail: { fresh: true } })); }
 
-  /* ---------- conversation thread ---------- */
-  var CH = { email: "EMAIL", whatsapp: "WHATSAPP", call: "CALL", web: "WEB", voice: "WEB" };
-  var seenEv = {}, ents = [], web = [];
-  try { web = JSON.parse(sessionStorage.getItem("kaikuWeb") || "[]"); } catch (e) { web = []; }
-  function saveWeb() { try { sessionStorage.setItem("kaikuWeb", JSON.stringify(web.slice(-60))); } catch (e) {} }
+  /* ---------- chain events: step tracking, the decision link, and the contact ladder lines for the chat ---------- */
+  var seenEv = {}, ladder = [];
   function pick(d, keys) { for (var i = 0; i < keys.length; i++) if (typeof d[keys[i]] === "string" && d[keys[i]].trim()) return d[keys[i]].trim(); return ""; }
   function chanOf(e, d) {
-    var c = String(d.channel || (d.decision && d.decision.via) || d.via || "").toLowerCase();
-    if (CH[c]) return c;
+    var c = String(d.channel || "").toLowerCase();
+    if (/^(email|whatsapp|call)$/.test(c)) return c;
     var t = (e.title_en || "").toLowerCase();
     return /^call|phon/.test(t) ? "call" : /email/.test(t) ? "email" : /whatsapp/.test(t) ? "whatsapp" : "";
   }
-  function toEntry(e) {
-    var d = e.detail || {}, ts = Date.parse(e.ts) || 0, c = chanOf(e, d);
-    if (e.step === "contact") {
-      var m = pick(d, ["message_en", "message", "text", "body"]);
-      if (!m && d.degraded) return null;                      /* nothing left the building: not a message */
-      return { id: e.id, ts: ts, who: "kaiku", ch: c || "whatsapp", text: m || e.title_en };
-    }
-    if (e.step === "decide") {
-      if (d.phase === "waiting") return null;
-      return { id: e.id, ts: ts, who: "owner", ch: c || "web", text: pick(d, ["answer", "reply", "text", "message"]) || e.title_en, decide: true };
-    }
-    if (e.step === "apply") return { id: e.id, ts: ts, who: "kaiku", ch: "", text: pick(d, ["receipt", "message_en", "text"]) || e.title_en, apply: true };
-    return null;
+  function hhmm(ts) {
+    try { return new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Helsinki", hour12: false }).format(new Date(ts)); } catch (e) { return ""; }
   }
   function addEvent(e) {
-    if (e.id != null) { if (seenEv[e.id]) return; seenEv[e.id] = 1; }
-    if (e.business_id && e.business_id !== BIZ) return;
-    if (e.suggestion_id && ORDER.indexOf(e.step) >= 0) { steps[e.step] = e.suggestion_id; }
-    if (e.step === "decide" && e.detail && e.detail.decide_url) evs.decide_url = e.detail.decide_url;
-    if (e.step === "contact" && e.detail && e.detail.decide_url) evs.decide_url = e.detail.decide_url;
-    var en = toEntry(e); if (en) ents.push(en);
-    return en;
+    if (e.id != null) { if (seenEv[e.id]) return false; seenEv[e.id] = 1; }
+    if (e.business_id && e.business_id !== BIZ) return false;
+    if (e.suggestion_id && ORDER.indexOf(e.step) >= 0) steps[e.step] = e.suggestion_id;
+    var d = e.detail || {};
+    if ((e.step === "decide" || e.step === "contact") && d.decide_url) evs.decide_url = d.decide_url;
+    if (e.step === "contact" && !d.degraded && d.phase !== "waiting") {   /* degraded = nothing left the building */
+      var c = chanOf(e, d);
+      if (c) { ladder.push({ ch: c, at: hhmm(e.ts), ts: Date.parse(e.ts) || 0 }); return true; }
+    }
+    return false;
   }
-  function render() {
-    var all = ents.concat(web.map(function (w) { return { ts: w.ts, who: w.role === "user" ? "owner" : "kaiku", ch: "web", text: w.text }; }));
-    all.forEach(function (x, i) { x._i = i; });
-    all.sort(function (a, b) { return a.ts - b.ts || a._i - b._i; });
-    /* a chat-made decision is already in the thread as the owner's WEB message */
-    all = all.filter(function (x) { return !(x.decide && x.ch === "web" && all.some(function (w) { return !w.decide && w.ch === "web" && w.who === "owner" && Math.abs(w.ts - x.ts) < 90000; })); });
-    var log = $("thread-log"), near = log.scrollHeight - log.scrollTop - log.clientHeight < 60, n = log.querySelectorAll(".tb").length;
-    var last = "web";
-    all.forEach(function (x) { if (x.ch) last = x.ch; else x.ch = last; });
-    var html = all.map(function (x) {
-      return '<div class="tb ' + (x.who === "owner" ? "tb-o" : "tb-k") + '"><span class="mono tb-ch">' + (x.who === "owner" ? "Owner · " : "Kaiku · ") + (CH[x.ch] || "WEB") +
-        '</span><div class="b">' + nb(esc(x.text)) + "</div></div>";
-    }).join("");
-    log.innerHTML = (all.length ? "" : '<p class="empty" id="thread-empty">Nothing sent yet.</p>') + html;
-    if (all.length !== n && (near || n === 0)) log.scrollTop = log.scrollHeight;
+  function sendLadder() {
+    ladder.sort(function (a, b) { return a.ts - b.ts; });
+    var txt = ladder.map(function (x) { return (x.ch === "call" ? "CALL" : x.ch.toUpperCase() + " SENT") + " " + x.at; }).join(" · ");
+    window.dispatchEvent(new CustomEvent("kaiku:sysline", { detail: { id: "ladder", text: txt } }));
   }
-
-  /* ---------- events: initial list, then live ---------- */
   var scheduled = 0;
-  function later() { if (scheduled) return; scheduled = setTimeout(function () { scheduled = 0; render(); paint(); }, 60); }
   function onEvent(e, live) {
-    addEvent(e); later();
+    var isLadder = addEvent(e);
+    if (isLadder && !scheduled) scheduled = setTimeout(function () { scheduled = 0; sendLadder(); }, 80);
     if (live) {
       if (e.step === "detect") { chainRunning = true; clearTimeout(chainTimer); chainTimer = setTimeout(function () { chainRunning = false; }, 60000); }
       if (e.step === "learn" || (e.detail && e.detail.error)) { chainRunning = false; clearTimeout(chainTimer); }
-      if (e.step === "suggest" || e.step === "decide" || e.step === "apply" || e.step === "learn") loadFeed();
+      if (e.step === "suggest" || e.step === "decide" || e.step === "apply" || e.step === "learn") { loadFeed(); if (e.step === "apply" || e.step === "decide" || e.step === "learn") { loadScore(true); window.dispatchEvent(new CustomEvent("kaiku:refresh", { detail: { fresh: true } })); } }
     }
   }
   jget("/api/events/recent?limit=200&business=" + encodeURIComponent(BIZ)).then(function (l) { l.forEach(function (e) { onEvent(e, false); }); }).catch(function () {})
@@ -189,17 +175,12 @@
     });
 
   /* ---------- the chat widget talks to us ---------- */
-  window.addEventListener("kaiku:chat", function (m) {
-    var d = m.detail || {};
-    if (d.replay) { if (web.length) return; }
-    web.push({ ts: Date.now(), role: d.role, text: d.text }); saveWeb(); render();
-  });
   window.addEventListener("kaiku:busy", function (m) { chatBusy = !!(m.detail && m.detail.on); });
-  window.addEventListener("kaiku:decided", function () { loadFeed(); setTimeout(loadFeed, 1500); });
+  window.addEventListener("kaiku:decided", function () { changed(); setTimeout(changed, 2500); });
 
   /* ---------- boot ---------- */
   jget("/api/business/" + encodeURIComponent(BIZ)).then(function (b) { biz = b; paint(); }).catch(function () {});
-  loadFeed(true).then(function () { return loadFeed(); });
-  setInterval(function () { if (!document.hidden) loadFeed(); }, 10000);
-  place(0); requestAnimationFrame(loop); paint(); render();
+  loadScore(); loadFeed(true).then(function () { return loadFeed(); });
+  setInterval(function () { if (!document.hidden) { loadFeed(); loadScore(); } }, 10000);
+  place(0); requestAnimationFrame(loop); paint();
 })();

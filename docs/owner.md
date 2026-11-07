@@ -1,17 +1,23 @@
 # Owner home (`/`, `/owner`)
 
-The home page is the original Kaiku home with four widgets replaced (owner's edits, 6 Nov). Template `owner.html`, scripts `app.js` (status chips, keyed reset, header date), `owner.js` (hero, suggestions, thread), `chat.js` (chat widget, keyed drawer), styles `horizon.css` + `owner.css` + `chat.css`.
+The owner home. Template `owner.html`; scripts `app.js`, `owner.js`, `listing.js`, `chat.js`; styles `horizon.css`, `owner.css`, `chat.css`.
 
-Kept as it was: status chips, hero (headline, arc with the sweeping dot, Connect vs Kaiku, cap), keyed Reset footer (shown only to the key holder). The voice orb stays; its transcript goes into the chat.
+Kept as it was: status chips and the small "i" toggle, keyed Reset footer (key holder only), the voice orb (its transcript goes into the chat).
+
+Layout (v3, owner's three edits, 7 Nov): hero, then SUGGESTIONS full width (3 per row at 1440), then a row with the chat (wider) and ON FONECTA NOW, then the Reset footer. At 390 the same order, stacked.
 
 | Widget | Shows | Data |
 |---|---|---|
-| Hero | the lead suggestion as one sentence, arc dot at its confidence, before/after hours | `GET /api/feed/furry-paw`, `GET /api/business/furry-paw`, step count from events |
-| CHAT WITH KAIKU (`#chat`) | Kaiku's opening (intro, one bubble per suggestion, the no_change note), one input, Enter sends. No buttons, no quick replies | `GET /api/chat/open` (first call `?quick=1`, no network signals), `POST /api/chat` |
-| MESSAGE TO THE OWNER (`#thread`) | thread of Kaiku messages and owner answers, labelled EMAIL / WHATSAPP / CALL / WEB, newest last. "Nothing sent yet." when empty | contact, decide and apply events for the business (`/api/events/recent` then SSE `/api/events`), plus the web chat messages (kept in sessionStorage `kaikuWeb`) |
-| SUGGESTIONS FOR ... (`#suggestions`) | one card per feed item, any kind: title, text, hours chip or "no change", confidence, reason sources, status chip proposed / approved / declined | `GET /api/feed/furry-paw`, polled every 10 s and refreshed on suggest/decide/apply/learn events and after each chat reply |
+| Hero (`#hero`) | headline "Furry Paw Vet Clinic: 3 things to fix before Christmas." (count = pending items, "nothing to fix" at zero), arc fill and sweeping dot = score/100, big number = the listing score, caption "NEEDS UPDATES · 4 OF 7 CHECKS" | `GET /api/score/furry-paw` (docs/score.md), polled every 10 s and after every decision |
+| SUGGESTIONS (`#suggestions`) | one card per feed item. Pending cards have **Accept** and **Suggest a change**. description and review cards show the proposed text in a quote block. "No change" notes have no actions | `GET /api/feed/furry-paw` |
+| CHAT WITH KAIKU (`#chat`) | Kaiku's opening, one input. Contact events appear as one faint mono system line after the intro ("EMAIL SENT 23:48 · WHATSAPP SENT 23:49"; degraded sends are not shown) | `GET /api/chat/open`, `POST /api/chat`, contact events |
+| ON FONECTA NOW (`#listing`) | name, address, category, phone, website, regular hours, holiday rows, description, reviews, read time. Missing = warn "no data" (links to its card when one exists); a value a pending suggestion would change gets "Kaiku suggests ..." | `GET /api/listing/furry-paw` (`kaiku/listing/router.py`, Yext sandbox through the apply client, cached 30 s, `?fresh=1`) |
 
-Thread text keys read from an event's `detail`: contact `message_en | message | text | body` (else the English title), decide `answer | reply | text | message` (else title), apply `receipt | message_en | text`. Channel from `detail.channel`, decide `via`, else the event title. Contact events marked `degraded` (nothing left the building) are not shown. A chat-made decision is not duplicated: the owner's WEB message already stands for it.
+Card actions (`kaiku/chat/router.py`):
+- `POST /api/suggestions/{id}/accept` `{business_id, session}` calls `kaiku.chat.actions.decide(..., "approve", via="web")`, the chat's own path. The reply (confirmation plus standing-permission question) goes into the chat session, so the next "yes" answers the question.
+- `POST /api/suggestions/{id}/change` sets that suggestion as the session focus and logs Kaiku's line "You want to change <title>. Tell me the new hours, or what is wrong, by text or by holding space to talk." The next message ("make it 10-14", "closed") is decided against it.
+
+Wiring: `kaiku/app.py` must include the `score` and `listing` routers (module list). Files: `owner.js` (hero, cards), `listing.js`, `chat.js`, `owner.css`. Components talk through window events (`kaiku:feed`, `kaiku:accept`, `kaiku:change`, `kaiku:sysline`, `kaiku:refresh`).
 
 Status: the engine builds every card `proposed`. `kaiku.chat.feed.with_decisions` lays the owner's recorded decisions over a copy (approved = approved, edited or applied; declined), used by the chat, by `/api/feed` (after its cache) and so by the cards.
 

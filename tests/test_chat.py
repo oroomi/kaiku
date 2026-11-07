@@ -201,3 +201,33 @@ def test_feed_overlay_shows_recorded_decisions(stub_feed, fake_yext):
                                      reasons=[], message_fi="", message_en=""))
     out = [i["status"] for i in with_decisions(feed)["suggestions"]]
     assert out == ["approved", "proposed", "proposed"] and feed["suggestions"][0]["status"] == "proposed"
+
+
+# ---------- card actions: Accept (the chat's decide path) and Suggest a change (chat context) ----------
+def test_accept_card_uses_decide_and_asks_standing_permission(stub_feed, fake_yext):
+    from kaiku.app import app
+    c = TestClient(app)
+    r = c.post("/api/suggestions/t-hours/accept", json={"business_id": "furry-paw", "session": "card1"}).json()
+    assert r["ok"] and r["status"] in ("approved", "applied") and r["actions"][0]["action"] == "approve"
+    assert fake_yext == [("SinceAI07", "2026-12-24", [{"start": "09:00", "end": "13:00"}])]
+    assert "Want me to do this every Christmas Eve?" in r["reply"]
+    assert store.get_decisions("t-hours")[0].via == "web"
+    # the chat session now holds the question: a plain "yes" is the standing permission, not a second approval
+    r2 = c.post("/api/chat", json={"message": "yes", "session": "card1"}).json()
+    assert r2["actions"] == [{"type": "standing", "suggestion_id": "t-hours", "enabled": True}] and len(fake_yext) == 1
+    assert c.post("/api/suggestions/t-hours/accept", json={"session": "card1"}).json()["ok"] is False   # already decided
+    assert c.post("/api/suggestions/t-nochange/accept", json={"session": "card1"}).json()["ok"] is False
+    assert any("Done," in m["text"] for m in c.get("/api/chat/open?session=card1").json()["messages"] if m.get("kind") == "chat")
+
+
+def test_suggest_a_change_sets_the_chat_context(stub_feed, fake_yext):
+    from kaiku.app import app
+    c = TestClient(app)
+    j = c.post("/api/suggestions/t-conflict/change", json={"business_id": "furry-paw", "session": "card2"}).json()
+    assert j["reply"] == ("You want to change Two sources disagree. Tell me the new hours, or what is wrong, "
+                          "by text or by holding space to talk.")
+    r = c.post("/api/chat", json={"message": "make it 10-14", "session": "card2"}).json()   # decided against the card, not t-hours
+    assert fake_yext == [("SinceAI07", "2026-12-24", [{"start": "10:00", "end": "14:00"}])]
+    assert r["actions"][0] == {"type": "decided", "suggestion_id": "t-conflict", "action": "edit", "status": r["actions"][0]["status"]}
+    assert c.post("/api/suggestions/t-nochange/change", json={"session": "card2"}).status_code == 409
+    assert c.post("/api/suggestions/nope/change", json={"session": "card2"}).status_code == 404
