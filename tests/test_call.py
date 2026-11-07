@@ -45,8 +45,7 @@ def test_agent_payload_shape_and_env_store(env):
     assert url.endswith("/v1/convai/agents/create") and h["xi-api-key"] == "k"
     cc = p["conversation_config"]
     assert cc["agent"]["language"] == "en" and cc["tts"]["voice_id"] == "voice1"
-    assert cc["agent"]["first_message"] == ("Hi, this is Kaiku, the Fonecta Connect assistant. "
-                                            "I'm calling about your opening hours, do you have a moment?")
+    assert cc["agent"]["first_message"] == C.FIRST_MESSAGE  # the warm first message lives in one place
     assert cc["tts"]["model_id"] == "eleven_flash_v2" and "Do you approve?" in cc["agent"]["prompt"]["prompt"]
     assert "{{holiday_date}}" in cc["agent"]["prompt"]["prompt"] and "Speak only English" in cc["agent"]["prompt"]["prompt"]
     dc = p["platform_settings"]["data_collection"]
