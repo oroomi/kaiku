@@ -11,10 +11,10 @@
   </div>
 
   <section class="hero glass" data-pilot="hero" id="hero" aria-live="polite">
-    <h1 class="headline" id="headline">Furry Paw Vet Clinic: checking Christmas Eve.</h1>
+    <h1 class="headline" id="headline">Furry Paw Vet Clinic: checking the listing.</h1>
     <p class="fi-line" id="fi-line" lang="en" hidden></p>
     <div class="arc-wrap">
-      <svg class="arc" viewBox="0 0 440 250" role="img" aria-label="Chain progress arc">
+      <svg class="arc" viewBox="0 0 440 250" role="img" aria-label="Listing score arc">
         <defs>
           <linearGradient id="arcg" x1="0" x2="1"><stop offset="0" stop-color="#8fd3e8" stop-opacity=".25"/><stop offset="1" stop-color="#8fd3e8"/></linearGradient>
           <filter id="blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
@@ -25,14 +25,19 @@
         <circle id="dot" r="6.5" fill="#fff" cx="30" cy="230"/>
       </svg>
       <div class="figure">
-        <div class="ba-old" id="ba-old" title="Regular hours as Connect publishes them today (not checked live on Google)"><span class="mono">Connect</span> <s id="ba-old-v">&ndash;</s></div>
-        <div class="ba-new" id="ba-new"><span class="mono">Kaiku</span> <b id="ba-new-v">&ndash;</b></div>
-        <div class="mono cap" id="big-cap">READY</div>
+        <div class="score-n" id="score-n" title="Listing score: how up to date and complete the information is everywhere Connect publishes">&ndash;</div>
+        <div class="mono cap" id="big-cap">READING THE LISTING</div>
       </div>
     </div>
     <div class="decide-row" id="decide-row" hidden>
       <a class="primary link" id="decide-go" href="#" target="_blank" rel="noopener" data-pilot="decide-link">Open the owner's decision</a>
     </div>
+  </section>
+
+  <section class="w-sug glass" id="suggestions" data-pilot="suggestions" aria-label="Suggestions to the business">
+    <header class="w-head"><span class="mono" id="sug-label">SUGGESTIONS FOR {{ (business.name if business else 'Furry Paw Vet Clinic')|upper }}</span><span class="mono soft" id="sug-count"></span></header>
+    <div class="sug-grid" id="sug-grid"></div>
+    <p class="empty" id="sug-empty" hidden>Nothing to suggest right now.</p>
   </section>
 
   <section class="w-chat glass" id="chat" data-pilot="chat" data-biz="{{ business.id if business else 'furry-paw' }}" aria-label="Chat with Kaiku">
@@ -46,17 +51,11 @@
     </form>
   </section>
 
-  <section class="w-thread glass" id="thread" data-pilot="thread" aria-label="Message to the owner">
-    <header class="w-head"><span class="mono">MESSAGE TO THE OWNER</span></header>
-    <div class="thread-log" id="thread-log" role="log" aria-live="polite">
-      <p class="empty" id="thread-empty">Nothing sent yet.</p>
-    </div>
-  </section>
-
-  <section class="w-sug glass" id="suggestions" data-pilot="suggestions" aria-label="Suggestions to the business">
-    <header class="w-head"><span class="mono" id="sug-label">SUGGESTIONS FOR {{ (business.name if business else 'Furry Paw Vet Clinic')|upper }}</span><span class="mono soft" id="sug-count"></span></header>
-    <div class="sug-grid" id="sug-grid"></div>
-    <p class="empty" id="sug-empty" hidden>Nothing to suggest right now.</p>
+  <section class="w-listing glass" id="listing" data-pilot="listing" aria-label="On Fonecta now">
+    <header class="w-head"><span class="mono">ON FONECTA NOW</span></header>
+    <p class="mono soft l-src" id="l-src">WHAT CONNECT PUBLISHES TODAY &middot; YEXT SANDBOX SINCEAI07</p>
+    <div class="l-body" id="l-body"><p class="empty">Reading the listing...</p></div>
+    <p class="mono soft l-read" id="l-read"></p>
   </section>
 
   <footer class="foot" data-pilot="reset" id="foot" hidden>
@@ -66,4 +65,4 @@
 </div>
 <div id="drawer-host"></div>
 {% endblock %}
-{% block scripts %}<script src="/static/owner.js?v={{ asset_v() }}" defer></script><script src="/static/chat.js?v={{ asset_v() }}" defer></script>{% endblock %}
+{% block scripts %}<script src="/static/owner.js?v={{ asset_v() }}" defer></script><script src="/static/listing.js?v={{ asset_v() }}" defer></script><script src="/static/chat.js?v={{ asset_v() }}" defer></script>{% endblock %}
