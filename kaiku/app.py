@@ -136,6 +136,11 @@ def _page(request: Request, name: str, **ctx):
 
 
 @app.get("/", response_class=HTMLResponse)
+def landing(request: Request):
+    """The product landing page: a static story, no business store needed."""
+    return render(request, "landing.html")
+
+
 @app.get("/owner", response_class=HTMLResponse)
 def home(request: Request):
     """The owner's page is one conversation with Kaiku. Demo controls live in a drawer only the key holder gets."""

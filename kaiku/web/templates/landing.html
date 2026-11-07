@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kaiku: holiday hours approved in one tap</title>
+<meta name="description" content="Kaiku notices the missing Christmas Eve hours, proposes last year's with the reason, and reaches you by email, WhatsApp or a phone call. No login, ever.">
+<meta name="theme-color" content="#e8f3fe">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230c1418'/%3E%3Cpath d='M6 22a10 10 0 0 1 20 0' fill='none' stroke='%238fd3e8' stroke-width='2.5' stroke-linecap='round'/%3E%3Ccircle cx='21' cy='13' r='2.6' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preload" href="/static/fonts/PlusJakartaSans-500.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="/static/landing/tiles.css?v={{ asset_v() }}">
+<link rel="stylesheet" href="/static/landing/landing.css?v={{ asset_v() }}">
+</head>
+<body class="lp">
+<header class="nav">
+  <nav class="nav__l" aria-label="Main"><a href="/owner">Product</a><a href="/judge">Judge</a><a href="/fiware">FIWARE</a></nav>
+  <a class="nav__logo" href="/" aria-label="Kaiku home">kaiku<span class="gt">.fi</span></a>
+  <a class="nav__cta" href="/owner"><span>Open the demo <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span></a>
+</header>
+
+<main>
+<section class="hero" id="top">
+  <div class="hero__in">
+    <div class="hero__head">
+      <p class="label">AI agent for holiday hours on Fonecta Connect</p>
+      <h1 class="h-hero">Holiday hours, approved<br>in <span class="gt">one tap</span>.</h1>
+      <p class="lead">Kaiku notices the missing Christmas Eve hours, proposes last year's with the reason, and reaches you by email, WhatsApp or a phone call. No login, ever.</p>
+      <div class="btns">
+        <a class="btn btn--dark" href="/owner">Open the live demo <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></a>
+        <a class="btn btn--light" href="https://youtu.be/Opg_gzlo_II" target="_blank" rel="noopener">Watch the film <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></a>
+      </div>
+    </div>
+    <div class="dome" aria-hidden="true"><canvas id="dome"></canvas></div>
+    <div class="hcards">
+      <div class="hc hc--pub"><span class="ico ico--g"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span><span>Published to Google, Apple, Bing</span></div>
+      <div class="hc hc--ok"><span class="chip chip--g">Approved</span><b>Furry Paw Vet Clinic</b><small>24.12. 9-13</small></div>
+      <div class="hc hc--mail"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 8 8 5.5L20 8"/></svg></span><span><b>Email sent</b><small>24.12. proposal, decision link inside</small></span></div>
+      <div class="hc hc--wa"><span class="chip">WhatsApp</span><span class="mini mini--a">Accept</span><span class="mini">Discard</span></div>
+      <div class="hc hc--call"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span><b>Kaiku is calling...</b><i class="pulse"></i></div>
+    </div>
+  </div>
+  <div class="marq" aria-label="Where the hours show up">
+    <div class="marq__track">
+      <ul>{% for t in ["Google","Apple Maps","Bing","Fonecta Connect","Yext","AI assistants","Directories"] %}<li>{{ t }}</li>{% endfor %}</ul>
+      <ul aria-hidden="true">{% for t in ["Google","Apple Maps","Bing","Fonecta Connect","Yext","AI assistants","Directories"] %}<li>{{ t }}</li>{% endfor %}</ul>
+    </div>
+  </div>
+</section>
+
+<section class="sec ft1" id="reach">
+  <div class="wrap grid2">
+    <div class="rv">
+      <p class="label">Three ways to reach you</p>
+      <h2 class="h-sec">We reach you where you are.</h2>
+      <p class="body">Email first, with the decision link. WhatsApp if there is no decision. A phone call by Kaiku if there is still none. One unanswered channel never ends the chain.</p>
+      <p class="sub">Gmail, Outlook, WhatsApp or a call: your choice, remembered.</p>
+    </div>
+    <div class="tilepanel rv">
+      <p class="smallcaps">We reach you where you are</p>
+      {% include "_tiles.html" ignore missing %}
+    </div>
+  </div>
+</section>
+
+<section class="ft2" id="chain">
+  <div class="ft2-pin">
+    <div class="wrap ft2-grid">
+      <div class="ft2-text">
+        <p class="label">The whole chain</p>
+        <h2 class="h-sec">From a missing holiday to published hours, six steps.</h2>
+        <p class="body">A complete chain beats a perfect single step. Every step is visible on the judge page.</p>
+      </div>
+      <ol class="ft2-stage">
+        {% for n,t,d in [("01","Detect","The broker subscription fires when a holiday has no hours yet."),("02","Suggest","Last year's hours, the website, Google and nearby peers, each its own instance with its own source."),("03","Contact","Email, then WhatsApp, then a call. Never a login."),("04","Decide","Accept, change the hours, or say no. The owner has the last word."),("05","Apply","Written to the Yext entity, read back, and the owner is told: we'll update your information everywhere."),("06","Learn","An edit or a decline makes the next suggestion better; recurring changes get a standing permission.")] %}
+        <li class="card"><div class="card__top"><span class="num">{{ n }}</span><h3>{{ t }}</h3></div><p>{{ d }}</p></li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section class="sec ft3" id="learning">
+  <div class="wrap grid2">
+    <div class="rv">
+      <p class="label">Learning</p>
+      <h2 class="h-sec">Ask once, remember forever.</h2>
+      <p class="body">After the decision Kaiku asks how you want to be reached next time, stores the answer with the business, and recurring changes can get a standing permission. Next December takes zero taps.</p>
+      <p class="sub">When the data is not sure, Kaiku asks instead of guessing: Father's Day, 8.11., is a flag day, not a holiday, so a clinic closed on Sundays gets "no change".</p>
+    </div>
+    <div class="phone rv"><img src="/static/landing/owner_phone.png" width="390" height="844" alt="The Kaiku owner page, one conversation with the proposal and the decision buttons" loading="lazy"></div>
+  </div>
+</section>
+
+<section class="ft4" id="spine">
+  <div class="ft4-head rv">
+    <p class="label">The spine</p>
+    <h2 class="h-sec">Built on FIWARE Orion-LD.</h2>
+    <p class="body">Detect is a subscription, Suggest a proposed attribute instance, Decide the default instance, Apply the notification that writes Yext. Each source is its own instance of the same attribute, with its source id and time. The same broker drives the Turku city twin: 813 OpenStreetMap stores on one map, each turning green when its Christmas Eve hours are approved.</p>
+    <p class="links"><a href="/fiware">See the broker view (/fiware)</a><a href="/city">Open the city twin (/city)</a></p>
+  </div>
+  <div class="frame rv"><img src="/static/landing/fiware_shot.png" width="1440" height="900" alt="The live FIWARE broker view of the Kaiku chain" loading="lazy"></div>
+</section>
+
+<section class="sec faq" id="faq">
+  <div class="wrap faq__grid">
+    <div class="rv"><p class="label">FAQs</p><h2 class="h-faq">What judges and owners usually ask.</h2></div>
+    <div class="faq__list" id="faqlist">
+      <details open><summary>What did you build this weekend?</summary><p>Everything in the repo from the opening bell: the chain, the contact lanes, the owner page, the judge page and the city twin. The pre-existing pieces are listed in DISCLOSURE.md.</p></details>
+      <details><summary>What if the owner never answers?</summary><p>Kaiku writes by email, then WhatsApp, then calls. After that the suggestion expires unapplied and nothing is changed.</p></details>
+      <details><summary>What if the suggestion is wrong?</summary><p>A confidence gate sits in front of every change; below it Kaiku asks instead of proposing. The owner can always edit or decline, and a decline teaches the next suggestion.</p></details>
+      <details><summary>Is the clinic real?</summary><p>No. Furry Paw Vet Clinic is a fictional entry in Fonecta's Yext sandbox. The email, WhatsApp message and call in the film went to our own phone.</p></details>
+      <details><summary>Why FIWARE?</summary><p>The broker is the spine of the chain, and the Turku city twin shows the same loop running over 813 real stores.</p></details>
+      <details><summary>What breaks first at scale?</summary><p>The WhatsApp test number only reaches numbers on its allow list, and the call lane needs a verified sender in each country.</p></details>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p class="foot__line">Team VY7, Since AI 2026, Turku.</p>
+    <nav class="foot__links" aria-label="Footer"><a href="/owner">Live demo</a><a href="/judge">Judge page</a><a href="https://github.com/oroomi/kaiku" target="_blank" rel="noopener">Code</a><a href="https://youtu.be/Opg_gzlo_II" target="_blank" rel="noopener">Film</a><a href="/fiware">FIWARE</a></nav>
+    <p class="foot__small">Furry Paw Vet Clinic is a fictional entry in Fonecta's Yext sandbox. Map data: OpenStreetMap contributors, ODbL.</p>
+  </div>
+</footer>
+
+<script>document.addEventListener('DOMContentLoaded',function(){document.documentElement.classList.add('anim')})</script>
+<script src="/static/vendor/gsap/gsap.min.js"></script>
+<script src="/static/vendor/gsap/ScrollTrigger.min.js"></script>
+<script src="/static/landing/landing.js?v={{ asset_v() }}"></script>
+</body>
+</html>

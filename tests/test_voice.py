@@ -194,7 +194,7 @@ def test_ask_route_error_hides_details(client, monkeypatch):
 def test_every_page_has_orb_and_nav(client, monkeypatch):
     from kaiku import store
     monkeypatch.setattr(store, "get_business", lambda bid: None)
-    html = client.get("/").text
+    html = client.get("/owner").text
     assert 'id="kv-orb"' in html and "/static/voice.js" in html  # the home has the orb and the nav
     assert 'href="/map"' in html
     j = client.get("/judge", headers={"x-kaiku-key": "testkey"}).text

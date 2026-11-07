@@ -310,7 +310,7 @@ def test_reply_trim_keeps_follow_up():
 def test_drawer_and_judge_keyed(stub_feed):
     from kaiku.app import app
     c = TestClient(app)
-    home = c.get("/").text
+    home = c.get("/owner").text
     for word in ("Run the chain", "time travel", "Today (time travel)"):
         assert word not in home
     assert c.get("/owner/drawer").status_code == 403 and c.get("/judge").status_code == 403

@@ -50,7 +50,7 @@ def test_store_seed():
 
 def test_healthz_and_home(client):
     assert client.get("/healthz").json() == {"ok": True, "broker": client.get("/api/status").json()["broker"]}
-    html = client.get("/").text
+    html = client.get("/owner").text
     for t in ["hero", "suggestions", "chat", "listing", "status"]:  # hero (listing score), suggestions, chat, ON FONECTA NOW
         assert f'data-pilot="{t}"' in html
     for t in ["event-strip", "run-chain", "drawer"]:  # no events strip, no chain controls on the home page
@@ -277,9 +277,9 @@ def test_decide_url_only_for_keyed_viewers(client):
         keyed = client.get("/api/events/recent?business=furry-paw", headers=h).json()
         assert any(e["detail"].get("decide_url") == url for e in keyed)
     assert "SECRETTOKEN" not in client.get("/api/events/recent", headers={"x-kaiku-key": "wrong"}).text
-    r = client.get("/?key=testkey")
+    r = client.get("/owner?key=testkey")
     assert "kaiku_key=testkey" in r.headers["set-cookie"] and "httponly" in r.headers["set-cookie"].lower()
-    assert "set-cookie" not in client.get("/?key=nope").headers
+    assert "set-cookie" not in client.get("/owner?key=nope").headers
 
 
 def test_room_reset_accepts_header_key(client):

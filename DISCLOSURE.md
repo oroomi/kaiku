@@ -13,6 +13,7 @@ First commit: e2f7382, the bell commit, Fri 6 Nov 2026 18:49:59Z, a fresh repo w
 ## Brought (declared)
 - voice-pilot, github.com/oroomi/voice-pilot (our own, MIT, published 18 Oct 2026), vendored under `vendor/voice-pilot` with its licence. The design is reused; the server code was rewritten during the event.
 - maplibre-gl 4.7.1, vendored (BSD-3-Clause). maplibre-gl 5.9.0, vendored for /city only (globe projection; BSD-3-Clause, licence kept in `kaiku/web/static/vendor/maplibre5/`). Fonts Inter, Newsreader, IBM Plex Mono (SIL OFL), vendored.
+- Landing page at `/` (8 Nov): layout, type scale and scroll motion follow serko.ai as a design reference, and the floating 3D channel tiles follow the CSS recipe of web-smith.de; all markup, CSS, copy, screenshots and icons are ours, written during the event. GSAP 3.13 with ScrollTrigger, vendored under `kaiku/web/static/vendor/gsap/` (free for all uses under the GSAP licence since 2024). Font Plus Jakarta Sans (SIL OFL), vendored under `kaiku/web/static/fonts/`.
 - OpenFreeMap "dark" style: fetched at runtime from tiles.openfreemap.org; an unmodified copy is bundled as the offline fallback (`kaiku/web/static/city/dark_style.json`, OpenFreeMap / OpenMapTiles / OpenStreetMap attribution shown on the page).
 - Map tiles: OpenFreeMap. Map data: OpenStreetMap via Overpass (ODbL).
 - Live feeds: Föli SIRI VM, Fintraffic Digitraffic AIS, Open-Meteo (all CC BY 4.0).
