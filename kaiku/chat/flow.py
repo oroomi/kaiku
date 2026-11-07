@@ -194,7 +194,7 @@ def change_prompt(item: dict) -> str:
                 "Tell me one set of hours for all of these dates, or say closed.")
     prop = item.get("proposed")
     sug = f"I suggested {hours_text(prop)}" if prop else "I had no ready hours"
-    return f"You want to change {title}. {sug} because {_plain_reason(item)}. What should it be?"
+    return f"You want to change {title}{'' if title.endswith('.') else '.'} {sug} because {_plain_reason(item)}. What should it be?"
 
 
 def confirm_text(item: dict, value) -> str:

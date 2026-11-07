@@ -295,3 +295,23 @@ def test_reset_clears_mcp_proposals(client, monkeypatch, tmp_path):
     r = client.post("/api/reset", headers={"X-Kaiku-Key": "testkey"}).json()
     assert r["reset"]["mcp_proposals_cleared"] is True
     assert json.loads(p.read_text()) == {}
+
+
+def test_standing_permission_applies_without_asking(client, wired, _module_fakes):
+    """Learning: after a standing permission the next run for that holiday applies without a question and tells the owner."""
+    from kaiku.learn import prefs
+    sid, evs = _run(client, "2026-12-24")
+    s = client.get(f"/api/suggestions/{sid}", headers={"x-kaiku-key": "testkey"}).json()
+    prefs.record_decision("furry-paw", s, {"suggestion_id": sid, "action": "approve", "standing_permission": True, "via": "web"})
+    wired.clear()
+    try:
+        sid2, evs2 = _run(client, "2026-12-24")
+        steps = [e["step"] for e in evs2 if e["step"] != "broker"]
+        assert "detect" in steps and "apply" in steps and "learn" in steps
+        contact = next(e for e in evs2 if e["step"] == "contact")
+        assert contact["detail"].get("phase") == "standing"           # nobody was asked
+        dec = next(e for e in evs2 if e["step"] == "decide")
+        assert dec["detail"].get("phase") == "standing" and "standing permission" in dec["title_en"]
+        assert wired and wired[-1][2] == HOURS_13                      # the write still happened
+    finally:
+        prefs._file().unlink(missing_ok=True)

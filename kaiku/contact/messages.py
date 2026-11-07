@@ -58,7 +58,7 @@ def fi_hours(hours) -> str:
 
 
 def en_hours(hours) -> str:
-    return "closed" if (not hours or hours == "closed") else fi_hours(hours).replace("-", " to ")
+    return "closed" if (not hours or hours == "closed") else fi_hours(hours)  # the demo writes times as 9-13 everywhere
 
 
 def holiday_name(s: dict) -> str:

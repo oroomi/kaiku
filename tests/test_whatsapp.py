@@ -133,7 +133,7 @@ def test_owner_lang_default_and_fi():
 def test_english_messages_default():
     t = M.suggestion_text(SUG)
     assert t.startswith("Hi, Furry Paw Vet Clinic!") and "Christmas Eve falls on Thursday 24.12." in t
-    assert "your hours are 9 to 13" in t or "9 to 13" in t
+    assert "your hours are 9-13" in t or "9-13" in t
     ask = dict(SUG, kind="ask", proposed=None)
     assert "Reply to this message" in M.ask_text(ask) and "9-13" in M.ask_text(ask)
     assert "regular hours apply" in M.no_change_text(dict(SUG, kind="no_change"))

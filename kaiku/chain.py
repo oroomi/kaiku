@@ -614,6 +614,28 @@ async def run_chain(business_id: str, holiday_date: str, now: Optional[datetime]
             await _broker(b, sid, f"Ehdotus kirjattu brokeriin ({day}, datasetId proposed)", f"Proposal written to the broker ({day}, datasetId proposed)",
                           what="proposed", day=holiday_date, proposed=s.proposed or "closed", status="proposed")
 
+        if getattr(s, "auto_apply", False) and s.kind in ("hours", "closed"):
+            # Standing permission (learn): no question this time. The owner is told what was done and can still change it.
+            why = getattr(s, "auto_apply_reason_en", None) or "you gave standing permission for this"
+            dec = Decision(suggestion_id=sid, action="approve", edited=None, reason_chip="standing", standing_permission=True, via="web")
+            _ev("contact", b, sid, "Pysyvä lupa: ei kysymystä tällä kertaa", "Standing permission: no question this time, the owner is told afterwards",
+                phase="standing", channel="none")
+            _ev("decide", b, sid, f"Hyväksytty pysyvällä luvalla ({why})", f"Applied under standing permission ({why})", phase="standing", applied=True)
+            s = await post_decision(b, s, dec, pause)
+            try:  # one line to the owner, no buttons: they can still reply with other hours
+                if whatsapp_configured():
+                    from .contact import ladder, whatsapp as W
+                    phone = ladder.owner_phone(_s_dict(s))
+                    if phone and W.outbound_allowed():
+                        hol = (s.holiday_name_en or "that day")
+                        hours = "closed" if s.proposed in (None, "closed") else ", ".join(f"{_short(x.start)}-{_short(x.end)}" for x in s.proposed)
+                        txt = (f"Under your standing permission I set {hol} {int(day[8:10])}.{int(day[5:7])}. to {hours} everywhere Connect publishes. "
+                               f"Reply with other hours if you want it changed.")
+                        await asyncio.to_thread(W.get_client().send_text, phone, txt)
+            except Exception as exc:
+                log.warning("standing-permission notice failed: %s", exc)
+            return s
+
         await pause("contact")
         await _call(STEPS["contact"], s)
         s = store.get_suggestion(sid) or s
