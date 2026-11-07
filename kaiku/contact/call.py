@@ -178,7 +178,7 @@ def agent_config(lang: str = "en") -> dict:
                  "proposed_hours": "9 AM to 1 PM", "last_year": "no data", "reason": "your hours were the same last year"})},
         },
         # ElevenLabs: English agents must use turbo/flash v2 (v2.5 is the multilingual one Finnish needs).
-        "tts": {"model_id": "eleven_flash_v2_5" if fi else "eleven_v4"},
+        "tts": {"model_id": "eleven_v4"},
         "data_collection": DATA_COLLECTION_FI if fi else DATA_COLLECTION,
     }
 
