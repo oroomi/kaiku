@@ -33,10 +33,11 @@ Facts you may use (never invent anything else):
 Flow:
 1. Once the owner has answered the first question, say in two sentences: {{holiday_name}} is on {{holiday_date}} and you propose the hours {{proposed_hours}}, because {{reason}}.
 2. Ask: "Do you approve?"
-3. If the owner says yes, I approve, yeah, sure or similar: say "Thanks, I'm updating it now. It will show on Google and the other channels shortly." and end the call.
-4. If the owner gives other hours (for example "nine to one", "9-13", "closed"): repeat the hours back and ask "Is that right?". When they confirm, thank them and end the call.
-5. If the owner says no: say "Understood, I won't change anything. Thanks for your time." and end the call.
+3. If the owner says yes, I approve, yeah, sure or similar: say "Thanks, I'm updating it now. It will show on Google and the other channels shortly." and then go to step 7.
+4. If the owner gives other hours (for example "nine to one", "9-13", "closed"): repeat the hours back and ask "Is that right?". When they confirm, thank them and go to step 7.
+5. If the owner says no: say "Understood, I won't change anything." and go to step 7.
 6. If the owner does not understand or asks something else, answer only from the facts above. If you do not know, say you do not know, and ask again: "Do you approve?"
+7. Closing question, always, once the decision is settled: "Before I go, next time something like this comes up, would you prefer we contact you a different way, WhatsApp or email, or is a call fine?" Accept "WhatsApp", "email", "call" or "this is fine" (that means call). Repeat the choice back in one short sentence ("Got it, WhatsApp next time.", "Got it, email next time.", "Got it, a call is fine.") and then say goodbye and end the call. If the owner does not answer or does not want to say, say goodbye and end the call.
 Never promise anything you cannot get from the facts. Never ask for personal data. End the call politely."""
 
 SYSTEM_PROMPT_FI = """Olet Kaiku, Fonecta Connectin avustaja. Soitat yrityksen {{business_name}} omistajalle. Puhu vain suomea, rauhallisesti, enintään kaksi lausetta kerrallaan.
@@ -48,10 +49,11 @@ Tiedot, joita saat käyttää (älä keksi mitään muuta):
 Kulku:
 1. Kun omistaja on vastannut ensimmäiseen kysymykseen, kerro kahdella lauseella: {{holiday_name_fi}} on {{holiday_date_fi}} ja ehdotat aukioloajaksi {{proposed_hours}}, koska {{reason}}.
 2. Kysy: "Hyväksytkö?"
-3. Jos omistaja sanoo kyllä, hyväksyn, joo tai vastaavaa: sano "Kiitos, päivitän tiedot nyt. Näkyy pian Googlessa ja muissa kanavissa." ja lopeta puhelu.
-4. Jos omistaja antaa muut ajat (esimerkiksi "yhdeksästä yhteen", "9-13", "suljettu"): toista ajat takaisin ja kysy "Oliko oikein?". Kun hän vahvistaa, kiitä ja lopeta puhelu.
-5. Jos omistaja sanoo ei: sano "Selvä, en muuta mitään. Kiitos ajastasi." ja lopeta puhelu.
+3. Jos omistaja sanoo kyllä, hyväksyn, joo tai vastaavaa: sano "Kiitos, päivitän tiedot nyt. Näkyy pian Googlessa ja muissa kanavissa." ja siirry kohtaan 7.
+4. Jos omistaja antaa muut ajat (esimerkiksi "yhdeksästä yhteen", "9-13", "suljettu"): toista ajat takaisin ja kysy "Oliko oikein?". Kun hän vahvistaa, kiitä ja siirry kohtaan 7.
+5. Jos omistaja sanoo ei: sano "Selvä, en muuta mitään." ja siirry kohtaan 7.
 6. Jos omistaja ei ymmärrä tai kysyy jotain muuta, vastaa vain yllä olevien tietojen perusteella. Jos et tiedä, sano ettet tiedä, ja kysy uudelleen: "Hyväksytkö?"
+7. Lopetuskysymys, aina kun päätös on selvä: "Ennen kuin lopetan: jos jotain tällaista tulee jatkossa, haluaisitko että otamme yhteyttä jollain muulla tavalla, WhatsAppilla tai sähköpostilla, vai sopiiko puhelu?" Hyväksy "WhatsApp", "sähköposti", "puhelu" tai "näin on hyvä" (tarkoittaa puhelua). Toista valinta yhdellä lyhyellä lauseella ("Selvä, ensi kerralla WhatsAppilla.", "Selvä, ensi kerralla sähköpostilla.", "Selvä, puhelu sopii.") ja sano sitten näkemiin ja lopeta puhelu. Jos omistaja ei vastaa tai ei halua sanoa, sano näkemiin ja lopeta puhelu.
 Älä koskaan lupaa mitään, mitä et saa tiedoista. Älä pyydä henkilötietoja. Lopeta puhelu kohteliaasti."""
 
 DATA_COLLECTION = {
@@ -59,6 +61,8 @@ DATA_COLLECTION = {
                "description": "The owner's decision: approve (approved the proposed hours), edit (gave other hours or said closed), decline (no change), none (no decision)."},
     "hours": {"type": "string",
               "description": "If action is edit: the hours the owner gave as HH:MM-HH:MM, or 'closed' if closed. Otherwise empty."},
+    "preferred_channel": {"type": "string",
+                          "description": "How the owner wants to be contacted next time, from the closing question: whatsapp | email | call (a call is fine) | none (no answer)."},
 }
 
 DATA_COLLECTION_FI = {
@@ -66,6 +70,8 @@ DATA_COLLECTION_FI = {
                "description": "Omistajan päätös: approve (hyväksyi ehdotetut ajat), edit (antoi muut ajat tai sanoi suljettu), decline (ei muutosta), none (ei päätöstä)."},
     "hours": {"type": "string",
               "description": "Jos action on edit: omistajan antamat ajat muodossa HH:MM-HH:MM, tai 'closed' jos suljettu. Muuten tyhjä."},
+    "preferred_channel": {"type": "string",
+                          "description": "Mitä kautta omistaja haluaa jatkossa yhteydenoton lopetuskysymyksessä: whatsapp, email, call (puhelu sopii) tai none (ei vastausta)."},
 }
 
 
@@ -218,7 +224,10 @@ def update_agent(api: Api | None = None, lang: str = "en") -> dict:
     if not aid:
         return {"ok": False, "error": "ELEVENLABS_AGENT_ID missing"}
     cfg = agent_config(lang)
-    body = {"conversation_config": {"agent": cfg["agent"], "tts": cfg["tts"]}, "platform_settings": {"data_collection": cfg["data_collection"]}}
+    tts = dict(cfg["tts"])
+    if os.environ.get("ELEVENLABS_VOICE_ID"):
+        tts["voice_id"] = os.environ["ELEVENLABS_VOICE_ID"]
+    body = {"conversation_config": {"agent": cfg["agent"], "tts": tts}, "platform_settings": {"data_collection": cfg["data_collection"]}}
     st, b = api.call("PATCH", f"/v1/convai/agents/{aid}", body)
     if st >= 300:
         return {"ok": False, "error": _err(st, b)}

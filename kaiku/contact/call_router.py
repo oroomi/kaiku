@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from . import call as C
 from . import whatsapp as W
+from kaiku.learn import prefs
 
 router = APIRouter()  # defined before importing .router, which includes this router (circular import)
 
@@ -142,6 +143,10 @@ def parse_utterance(text: str) -> dict | None:
 def parse_transcript(transcript: list[dict]) -> dict | None:
     """Last owner turn that says something decisive, only after the agent has asked 'Do you approve' / 'Hyväksytkö'."""
     turns = [(x.get("role"), x.get("message") or "") for x in transcript or []]
+    for i, (role, msg) in enumerate(turns):  # the closing channel question is not part of the decision
+        if role == "agent" and ("before i go" in msg.lower() or "ennen kuin lopetan" in msg.lower()):
+            turns = turns[:i]
+            break
     start = 0
     for i, (role, msg) in enumerate(turns):
         if role == "agent" and ("hyväksyt" in msg.lower() or "approve" in msg.lower()):
@@ -170,6 +175,13 @@ def from_analysis(analysis: dict) -> dict | None:
         h = parse_hours(str(val("hours") or ""))
         return {"action": "edit", "edited": h} if h is not None else None
     return None
+
+
+def preferred_channel(data: dict) -> str | None:
+    """The closing-question answer from the post-call data collection: 'whatsapp' | 'email' | 'call' | None."""
+    dc = ((data.get("analysis") or {}).get("data_collection_results") or {}).get("preferred_channel")
+    v = dc.get("value") if isinstance(dc, dict) else dc
+    return prefs.parse_channel(str(v)) if v else None
 
 
 def derive(data: dict) -> dict | None:
@@ -226,6 +238,12 @@ async def handle_payload(payload: dict) -> dict:
         return {"ok": True, "ignored": typ}
     if not sid:
         return {"ok": True, "ignored": "unknown suggestion"}
+    ch = preferred_channel(data)
+    if ch and biz:
+        try:
+            prefs.set_contact_channel(biz, ch, said="said on the call")
+        except Exception:
+            pass
     d = derive(data)
     if not d:
         _emit(sid, biz, "Puhelu: päätöstä ei saatu", "Call: no decision reached", {"conversation_id": data.get("conversation_id")})

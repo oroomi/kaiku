@@ -33,7 +33,11 @@ Per call via dynamic variables `business_name, holiday_name (Christmas Eve), hol
 4. Other hours: repeats them back, "Is that right?", thanks, ends.
 5. No: "Understood, I won't change anything. Thanks for your time." ends.
 6. Anything else: answers only from the given facts, else says it does not know and asks "Do you approve?" again. Never invents facts, never asks for personal data. Max call 240 s, ringing timeout 45 s.
-Data collection (English descriptions): `action` approve/edit/decline/none, `hours` HH:MM-HH:MM or closed.
+7. Closing question (every call, once the decision is settled; owner's note 7 Nov): "Before I go, next time something like this comes up, would you prefer we contact you a different way, WhatsApp or email, or is a call fine?" The agent accepts WhatsApp, email, call or "this is fine", repeats the choice in one short sentence ("Got it, WhatsApp next time.") and says goodbye. Finnish has the same step.
+Data collection (English descriptions): `action` approve/edit/decline/none, `hours` HH:MM-HH:MM or closed, `preferred_channel` whatsapp | email | call | none.
+
+### Remembered channel
+The post-call webhook maps `preferred_channel` through `learn.prefs.parse_channel` and stores it with `set_contact_channel(business_id, channel)`, the same store and learn event the WhatsApp and email paths use. `none`, empty or an unknown value stores nothing. The decision handling is unchanged; the transcript fallback ignores everything after the closing question so "a call is fine" is never read as a decline. `update-agent` also pushes `ELEVENLABS_VOICE_ID` from `.env` as the agent voice.
 The agent uses LLM gemini-2.0-flash and voice `ELEVENLABS_VOICE_ID`. TTS model: `eleven_flash_v2` for English (ElevenLabs rejects v2.5 for English agents), `eleven_flash_v2_5` for Finnish.
 
 The live agent was switched to English on 6 Nov 2026 with `python -m kaiku.contact.call update-agent` (PATCH `/v1/convai/agents/{id}`, then a GET that checks `language` and `first_message`); verified `language: en`, English first message, English prompt and data collection.
