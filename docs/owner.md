@@ -1,6 +1,6 @@
 # Owner home (`/`, `/owner`)
 
-The owner home (`owner.html`)...
+The owner home. Template `owner.html`; scripts `app.js`, `owner.js`, `listing.js`, `chat.js`; styles `horizon.css`, `owner.css`, `chat.css`.
 
 Kept as it was: status chips and the small "i" toggle, keyed Reset footer (key holder only), the voice orb (its transcript goes into the chat).
 
