@@ -9,7 +9,7 @@ Finnish strings (English gloss):
 - Olemme auki normaalisti (We are open as usual), Ajat ovat väärin (The times are wrong), Emme tiedä vielä (We do not know yet), Ei koske meitä (Does not concern us)
 - Saa päivittää tämän jatkossa automaattisesti (Allow Kaiku to apply this automatically next time), (voit perua milloin vain) (you can cancel any time)
 - Kiitos. Päivitän tiedot nyt. (Thank you. I am updating the details now.), Kiitos, tehty. (Thank you, done.)
-- Näkyy: Fonecta Caller, Finder, 020202, Google-yritysprofiili (Shown in: ... Google Business Profile)
+- Päivitämme tietosi kaikkialle. (We'll update your information everywhere.)
 - Tämä linkki ei toimi. (This link does not work.), Linkki on vanhentunut. (This link has expired.)
 Not done: no-JS form fallback.
 Timeout rule: when the decide step times out it sets the suggestion status to `expired`. A later POST (nothing waiting) never claims success. If `chain.on_decision` exists and returns truthy, the decision is accepted out of band (response 200, `late: true`, page says Kiitos. Päivitän tiedot nyt.). Otherwise 410 `{state: "expired", message_fi: "Ehdotus vanheni ennen päätöstä. Kaiku lähettää uuden ehdotuksen.", message_en: "The suggestion expired before a decision. Kaiku will send a new suggestion."}`, the token stays unused, and the page shows the calm expired state (GET /d/<token> shows it too). A POST for a suggestion that no longer exists returns 404 `{message_fi: "Ehdotusta ei löydy.", message_en: "The suggestion cannot be found."}` and emits nothing. The page header date is fetched from /api/today and shown as 17.12.2026.

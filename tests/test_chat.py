@@ -131,7 +131,7 @@ def test_accept_applies_at_once_then_recurring_then_next(stub_feed, fake_yext):
     r = c.post("/api/suggestions/t-hours/accept", json={"session": "s1"}).json()
     assert r["ok"] is True
     assert fake_yext == [("SinceAI07", "2026-12-24", [{"start": "09:00", "end": "13:00"}])]   # one click wrote it, no "yes" needed
-    assert r["reply"] == "Done. 24.12. 9-13 is saved and shows on Google, Fonecta Finder and 020202 within the hour. " + RECUR
+    assert r["reply"] == "Done. 24.12. 9-13 is saved. We'll update your information everywhere within the hour. " + RECUR
     assert r["actions"][0]["type"] == "decided" and r["actions"][0]["suggestion_id"] == "t-hours"
     assert store.get_suggestion("t-hours").status == "applied"
     ev = [e for e in store.recent_events(50) if e.suggestion_id == "t-hours"]
@@ -157,7 +157,7 @@ def test_recurring_question_only_with_last_year_data(stub_feed, fake_yext):
     from kaiku.chat import flow
     assert flow.proposal("furry-paw", item).startswith("Midsummer Eve is coming. Everywhere Connect publishes still says 9-17. Do you want to change your hours on Midsummer Eve 18.6. to 10-14?")
     out = c.post("/api/suggestions/t-mid/accept", json={"session": "m1"}).json()["reply"]   # one click applies
-    assert out.startswith("Done. 18.6. 10-14 is saved and shows on") and "recurring" not in out
+    assert out.startswith("Done. 18.6. 10-14 is saved. We'll update") and "recurring" not in out
     assert "Next: Two sources disagree." in out                          # no recurring question: straight to the next card
     assert len(fake_yext) == 1 and fake_yext[0][1] == "2027-06-18"
 
@@ -221,12 +221,12 @@ def test_text_kinds_proposal_texts_and_honest_receipts_on_accept(stub_feed, fake
                         ({"yext_status": "ok", "verified": True} if item["kind"] == "description" else {"yext_status": "ok", "stored": True, "posted": False}))
     from kaiku.chat import flow
     items = {i["id"]: i for i in json.loads(stub_feed.read_text())["suggestions"]}
-    assert flow.proposal("furry-paw", items["t-desc"]) == 'Your description on Connect reads "vacination". Shall I correct it to "vaccination"? That text shows on Google and Fonecta.'
+    assert flow.proposal("furry-paw", items["t-desc"]) == 'Your description on Connect reads "vacination". Shall I correct it to "vaccination"? We\'ll update your information everywhere.'
     assert flow.proposal("furry-paw", items["t-nodesc"]) == "Your listing has no description, so searches show only your name and address. Shall I publish this one? A small clinic."
     assert flow.proposal("furry-paw", items["t-rev"]) == 'The 3-star review has no reply yet, and it shows next to your listing. Shall I post this reply? "Thank you, sorry about the wait."'
     c = TestClient(app)
     r = c.post("/api/suggestions/t-desc/accept", json={"session": "x1"}).json()["reply"]     # one click applies
-    assert r.startswith("Done. Your description is saved and shows on Google") and calls == [("t-desc", "We offer vaccination.")]
+    assert r.startswith("Done. Your description is saved. We'll update your information everywhere") and calls == [("t-desc", "We offer vaccination.")]
     r = c.post("/api/suggestions/t-rev/accept", json={"session": "x3"}).json()["reply"]
     assert r.startswith("Your reply is stored. The sandbox key cannot post review comments")   # stored, not posted: never claim a post
     assert "posted" not in r.replace("cannot post", "").replace("not on the review", "")
@@ -248,7 +248,7 @@ def test_period_one_click_accept_sets_every_member_date(stub_feed, fake_yext):
     assert flow.proposal("furry-paw", json.loads(stub_feed.read_text())["suggestions"][0]) == "The Christmas period is coming. Shall I set 24.12. 9-13; 25.12. closed; 26.12. closed?"
     out = c.post("/api/suggestions/t-period/accept", json={"session": "p1"}).json()          # one click sets every member date
     assert [w[1] for w in fake_yext] == ["2026-12-24", "2026-12-25", "2026-12-26"]
-    assert out["reply"].startswith("Done. All 3 dates are saved and show on Google, Fonecta Finder and 020202 within the hour.")
+    assert out["reply"].startswith("Done. All 3 dates are saved. We'll update your information everywhere within the hour.")
 
 
 def test_failed_write_on_accept_is_not_reported_as_saved(stub_feed, monkeypatch):

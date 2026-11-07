@@ -113,11 +113,11 @@ def _warm_opener(s: dict, name: str, en: str, d: str, prop: str, text: str, tail
     else:
         lines.append(text)
     if prop and prop != "closed":
-        ask = f"Shall I set {prop} for {hol} on Google, Fonecta and everywhere else Connect publishes?"
+        ask = f"Shall I set {prop} for {hol}? We'll update your information everywhere."
     elif prop == "closed":
-        ask = f"Shall I mark {hol} as closed everywhere Connect publishes?"
+        ask = f"Shall I mark {hol} as closed? We'll update your information everywhere."
     else:
-        ask = "Shall I update it everywhere Connect publishes?"
+        ask = "Shall I update it? We'll update your information everywhere."
     lines.append(f"{ask} {tail}")
     return "\n\n".join(lines)
 

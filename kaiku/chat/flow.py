@@ -17,7 +17,6 @@ from . import feed as F
 from . import parser as P
 from .util import d_short, hours_text, is_pending
 
-WHERE = "Google, Fonecta Finder and 020202"
 RECURRING_Q = "You changed this last year as well. Do you want to make it recurring, this time of the year?"
 LEAVE = "Okay, I leave it as it is."
 TEXT_KINDS = ("description", "review")
@@ -154,9 +153,9 @@ def proposal(bid: str, item: dict) -> str:
         ty = item.get("typos") or []
         if len(ty) == 1:
             return (f"Your description on Connect reads \"{ty[0]['wrong']}\". Shall I correct it to \"{ty[0]['right']}\"? "
-                    f"That text shows on Google and Fonecta.")
+                    f"We'll update your information everywhere.")
         fix = " and ".join(f"\"{t['wrong']}\" to \"{t['right']}\"" for t in ty[:2]) + (f" and {len(ty) - 2} more" if len(ty) > 2 else "")
-        return f"Your description has typos: {fix}. Shall I correct them? That text shows on Google and Fonecta."
+        return f"Your description has typos: {fix}. Shall I correct them? We'll update your information everywhere."
     if k == "conflict":  # two sources disagree: no ready hours, the owner is the tie-breaker
         return f"{(item.get('text_en') or item.get('title_en') or '').strip()} Which is right? Reply with the hours, or closed."
     if k == "review":
@@ -238,12 +237,12 @@ def receipt(bid: str, item: dict, r: dict) -> str:
             return "Your reply is stored. The sandbox key cannot post review comments, so it is not on the review yet."
     elif r.get("yext") == "ok":
         if k == "description":
-            return f"Done. Your description is saved and shows on {WHERE} within the hour."
+            return f"Done. Your description is saved. We'll update your information everywhere within the hour."
         if k == "period":
             n = r.get("count")
-            return f"Done. {'All ' + str(n) + ' dates are' if n and n > 1 else 'The dates are'} saved and show on {WHERE} within the hour."
+            return f"Done. {'All ' + str(n) + ' dates are' if n and n > 1 else 'The dates are'} saved. We'll update your information everywhere within the hour."
         final = r.get("final_hours") or ""
-        return f"Done. {d_short(item['holiday_date']) if item.get('holiday_date') else holiday_name(item)} {final} is saved and shows on {WHERE} within the hour."
+        return f"Done. {d_short(item['holiday_date']) if item.get('holiday_date') else holiday_name(item)} {final} is saved. We'll update your information everywhere within the hour."
     if r.get("yext") is None:
         return "I have your answer, but the write to Yext has not finished, so I will not say it is saved yet."
     return "I could not save it: the write to Yext did not go through, so nothing has changed on your listing."

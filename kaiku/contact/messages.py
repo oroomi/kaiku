@@ -271,17 +271,12 @@ def receipt_text_fi(r: dict) -> str:
     """r: ApplyResult dict, optionally enriched with holiday_name_fi, hours (list|'closed') or hours_text."""
     h = _hours_from_result(r)
     h_txt = h if isinstance(h, str) and h != "closed" else fi_hours(h)
-    pubs = r.get("publishers") or PUBLISHERS_DEFAULT
-    pub_txt = _join_fi(pubs)
     gen = holiday_name_genitive(r) if _has_name(r) else "Poikkeuspäivän"
     if h_txt == "suljettu":
         what = f"{gen} sulkeutuminen on nyt tallennettu."
-        return f"Kiitos! {what} Se näkyy {pub_txt}."
+        return f"Kiitos! {what} Päivitämme tietosi kaikkialle."
     what = f"{gen} aukioloajat {h_txt} on nyt tallennettu."
-    return f"Kiitos! {what} Ne näkyvät {pub_txt}."
-
-
-CHANNELS_EN = "Google, Fonecta Finder, 020202 and the other channels Connect publishes to"
+    return f"Kiitos! {what} Päivitämme tietosi kaikkialle."
 
 
 def receipt_text_en(r: dict) -> str:
@@ -291,8 +286,8 @@ def receipt_text_en(r: dict) -> str:
     hol = r.get("holiday_name_en") or "Exception day"
     day = f"{hol} {fi_date(r['holiday_date'])}" if r.get("holiday_date") else hol
     if h_txt == "closed":
-        return f"Done. {day} closure is saved and will show on {CHANNELS_EN}."
-    return f"Done. {day} hours {h_txt} are saved and will show on {CHANNELS_EN}."
+        return f"Done. {day} closure is saved. We'll update your information everywhere within the hour."
+    return f"Done. {day} hours {h_txt} are saved. We'll update your information everywhere within the hour."
 
 
 def standing_question_text_en(s: dict) -> str:

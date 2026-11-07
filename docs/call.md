@@ -29,7 +29,7 @@ First message: "Hi, this is Kaiku, the Fonecta Connect assistant. I'm calling ab
 Per call via dynamic variables `business_name, holiday_name (Christmas Eve), holiday_date (spoken: December 24), proposed_hours (spoken: 9 AM to 1 PM), last_year, reason` (+ `suggestion_id, business_id`). The reason comes from `reasons[0].text_en`. For Finnish owners the variables are `holiday_name_fi, holiday_date_fi (24.12.), proposed_hours (9-13), ...` with `reasons[0].text_fi`.
 1. Two sentences: the holiday, the date, the proposed hours and the reason.
 2. "Do you approve?"
-3. Yes: "Thanks, I'm updating it now. It will show on Google and the other channels shortly." then ends the call.
+3. Yes: "Lovely, I'm setting it now! We'll update your information everywhere within the hour." then ends the call.
 4. Other hours: repeats them back, "Is that right?", thanks, ends.
 5. No: "Understood, I won't change anything. Thanks for your time." ends.
 6. Anything else: answers only from the given facts, else says it does not know and asks "Do you approve?" again. Never invents facts, never asks for personal data. Max call 240 s, ringing timeout 45 s.

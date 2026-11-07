@@ -34,15 +34,27 @@ def test_dry_run_writes_eml_with_link(env):
     assert len(eml) == 1
     body = eml[0].read_text()
     assert "https://kaiku.example/d/TOKEN123" in body
-    assert "Christmas Eve hours, one question" in body and "Furry Paw Vet Clinic" in body
+    assert "your Christmas Eve hours, one quick question" in body and "Furry Paw Vet Clinic" in body
     assert "text/html" in body and "text/plain" in body and "—" not in body
     log = json.loads((env / "email_log.jsonl").read_text().splitlines()[-1])
     assert log["to"] == "***@example.com" and "owner@" not in json.dumps(log)
 
 
+def test_plain_body_names_holiday_hours_and_no_login(env):
+    _, parts = E.build_message(SUG, "owner@example.com")
+    for part in (parts["text"], parts["html"]):
+        assert "Christmas Eve (24.12.)" in part and "9-13" in part and "No login needed" in part
+        assert "Last year you were open 9-13 that day" in part and "Open the decision" in part
+    assert "Approve, edit or decline" not in parts["text"] and "https://kaiku.example/d/TOKEN123" in parts["text"]
+    _, fi = E.build_message(dict(SUG, owner_language="fi"), "owner@example.com")
+    assert "Laitanko jouluaatolle 9-13?" in fi["text"] and "Ei kirjautumista" in fi["text"] and "Avaa päätös" in fi["html"]
+    _, closed = E.build_message(dict(SUG, kind="closed", proposed="closed", last_year_hours=None), "owner@example.com")
+    assert "Shall I mark you closed on Christmas Eve?" in closed["text"] and "I don't have last year's hours" in closed["text"]
+
+
 def test_finnish_email(env):
     r = E.send_decision_email(dict(SUG, owner_language="fi"), "owner@example.com")
-    assert "Jouluaaton aukioloajat, yksi kysymys" in r["subject"]
+    assert "jouluaaton aukioloajat, yksi pikainen kysymys" in r["subject"]
 
 
 def test_real_smtp_path(env, monkeypatch):
@@ -62,7 +74,7 @@ def test_real_smtp_path(env, monkeypatch):
 
     monkeypatch.setattr(E.smtplib, "SMTP", FakeSMTP)
     r = E.send_decision_email(SUG, "owner@example.com")
-    assert r == {"ok": True, "dry_run": False, "subject": "Furry Paw Vet Clinic: Christmas Eve hours, one question"}
+    assert r == {"ok": True, "dry_run": False, "subject": "Furry Paw Vet Clinic: your Christmas Eve hours, one quick question"}
     assert "tls" in sent and sent[0] == ("conn", "smtp.test", 587)
 
 

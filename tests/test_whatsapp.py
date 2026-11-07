@@ -98,9 +98,9 @@ def test_receipt_snapshot():
     r = {"holiday_name_fi": "Jouluaatto", "hours": [{"start": "09:00", "end": "13:00"}],
          "publishers": ["Google", "Apple Maps"]}
     assert M.receipt_text(dict(r, owner_language="fi")) == ("Kiitos! Jouluaaton aukioloajat 9-13 on nyt tallennettu. "
-                                 "Ne näkyvät Googlessa, Apple Mapsissa ja Fonectan palveluissa.")
+                                 "Päivitämme tietosi kaikkialle.")
     c = M.receipt_text({"holiday_name_fi": "Joulupäivä", "hours": "closed", "publishers": ["Google"], "owner_language": "fi"})
-    assert "Se näkyy" in c and "Ne näkyvät" not in c
+    assert "Päivitämme tietosi kaikkialle." in c and "Googlessa" not in c
 
 
 def test_other_messages_and_no_em_dash():
@@ -139,7 +139,7 @@ def test_english_messages_default():
     assert "regular hours apply" in M.no_change_text(dict(SUG, kind="no_change"))
     assert M.edit_prompt_text() == "Reply with the new hours, like 9-13, or 'closed'."
     assert M.receipt_text({"holiday_name_en": "Christmas Eve", "holiday_date": "2026-12-24", "hours": [{"start": "09:00", "end": "13:00"}]}) == (
-        "Done. Christmas Eve 24.12. hours 9-13 are saved and will show on Google, Fonecta Finder, 020202 and the other channels Connect publishes to.")
+        "Done. Christmas Eve 24.12. hours 9-13 are saved. We'll update your information everywhere within the hour.")
     assert M.receipt_text({"holiday_name_en": "Christmas Day", "hours": "closed"}).startswith("Done. Christmas Day closure is saved")
     for fn in (M.decline_thanks_text, M.unknown_reply_text, M.unknown_suggestion_text):
         out = fn()

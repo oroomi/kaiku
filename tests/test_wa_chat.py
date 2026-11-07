@@ -217,7 +217,7 @@ def test_whatsapp_approval_runs_the_web_chat_path(fake_yext, monkeypatch):
     ev = [e for e in store.recent_events(50) if e.suggestion_id == "t-hours"]
     assert any(e.step == "decide" and (e.detail or {}).get("via") == "whatsapp" for e in ev) and any(e.step == "apply" for e in ev)
     body = f.texts()[0]
-    assert body.startswith("Done. 24.12. 9-13 is saved and shows on Google, Fonecta Finder and 020202 within the hour.")
+    assert body.startswith("Done. 24.12. 9-13 is saved. We'll update your information everywhere within the hour.")
     assert body.endswith("You changed this last year as well. Do you want to make it recurring, this time of the year?")
     assert res["decisions"][0]["action"] == "approve"
     # standing permission: yes to the follow-up, same tool as the web chat
@@ -291,7 +291,7 @@ def test_approve_tap_applies_at_once_and_replies_with_the_receipt(fake_yext):
     assert res["decisions"][0]["suggestion_id"] == "t-hours"
     assert fake_yext == [("SinceAI07", "2026-12-24", [{"start": "09:00", "end": "13:00"}])]   # one tap applied it
     assert store.get_decisions("t-hours")[0].via == "whatsapp" and store.get_suggestion("t-hours").status == "applied"
-    assert f.texts()[0].startswith("Done. 24.12. 9-13 is saved and shows on Google, Fonecta Finder and 020202 within the hour.")
+    assert f.texts()[0].startswith("Done. 24.12. 9-13 is saved. We'll update your information everywhere within the hour.")
 
 
 def test_edit_button_then_text_sets_the_new_hours(fake_yext):

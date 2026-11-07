@@ -79,31 +79,88 @@ def decision_link(s: dict) -> str:
         return base.rstrip("/") + "/d/" + s["id"]
 
 
+_ALLATIVE = {"jouluaatto": "jouluaatolle", "joulupäivä": "joulupäivälle", "tapaninpäivä": "tapaninpäivälle",
+             "uudenvuodenaatto": "uudenvuodenaatolle", "uudenvuodenpäivä": "uudenvuodenpäivälle",
+             "loppiainen": "loppiaiselle", "vappu": "vapulle", "juhannusaatto": "juhannusaatolle"}
+
+
+def _for_fi(s: dict) -> str:
+    """'jouluaatolle' for a known holiday, else 'päivälle 24.12.'."""
+    if not M._has_name(s):
+        return f"päivälle {M.fi_date(s['holiday_date'])}"
+    n = M.holiday_name(s).lower()
+    if n in _ALLATIVE:
+        return _ALLATIVE[n]
+    if n.endswith("päivä"):
+        return n + "lle"
+    if n.endswith("nen"):
+        return n[:-3] + "selle"
+    return f"päivälle {M.fi_date(s['holiday_date'])}"
+
+
 def subject_for(s: dict) -> str:
     name = M.business_name(s)
     if M.owner_lang(s) == "fi":
-        hol = M.holiday_name_genitive(s) if M._has_name(s) else "Poikkeuspäivän"
-        return f"{name}: {hol} aukioloajat, yksi kysymys"
-    hol = s.get("holiday_name_en") or "Exception day"
-    return f"{name}: {hol} hours, one question"
+        hol = M.holiday_name_genitive(s).lower() if M._has_name(s) else "poikkeuspäivän"
+        return f"{name}: {hol} aukioloajat, yksi pikainen kysymys"
+    hol = s.get("holiday_name_en")
+    return f"{name}: your {hol} hours, one quick question" if hol else f"{name}: your hours for a special day, one quick question"
 
 
-def _proposal_en(s: dict) -> str:
-    hol = s.get("holiday_name_en") or "that day"
+def _is_closed(s: dict) -> bool:
+    return s.get("kind") == "closed" or s.get("proposed") == "closed"
+
+
+def _intro_and_ask(s: dict, fi: bool) -> tuple[str, str]:
+    """(paragraph 1, paragraph 2) in plain words; every fact kept: holiday, date, last year's hours, proposal."""
+    date = M.fi_date(s["holiday_date"])
+    named = M._has_name(s) if fi else bool(s.get("holiday_name_en"))
+    ly = M._hours_of(M._last_year(s))
+    web = M._hours_of(M._signal(s, "website"))
+    gn = M._hours_of(M._google_now(s))
+    prop = None if _is_closed(s) else s.get("proposed")
+    ph = M.fi_hours(prop) if prop and prop != "closed" else None
+    stale = gn is None or gn != prop
+    if fi:
+        hol = M.holiday_name(s)
+        p1 = [f"{hol} ({date}) lähestyy." if named else f"Päivä {date} lähestyy."]
+        if s.get("kind") == "ask":
+            p1.append("Minulla ei ole tietoa aukioloajoistanne sinä päivänä.")
+        elif ly is not None:
+            p1.append("Viime vuonna olitte sinä päivänä suljettuina" if ly == "closed" else f"Viime vuonna olitte auki {M.fi_hours(ly)}")
+            p1[-1] += ", ja tällä hetkellä tietosi näyttävät vielä normaalit aukioloajat." if stale else "."
+        elif web is not None:
+            p1.append(f"Verkkosivunne mukaan olette auki {M.fi_hours(web)}.")
+        else:
+            p1.append("Viime vuoden aukioloaikoja minulla ei tästä päivästä ole.")
+        tail = "Napauta alta ja sano kyllä, muuta ajat tai jätä ennalleen. Ei kirjautumista, vie muutaman sekunnin."
+        if s.get("kind") == "ask":
+            p2 = "Kertoisitko, mitkä ajat sinä päivänä on? Napauta alta ja kirjoita ne. Ei kirjautumista, vie muutaman sekunnin."
+        elif _is_closed(s):
+            p2 = (f"Merkitsenkö teidät suljetuiksi {M.essive(M.holiday_name(s))}? " if named else "Merkitsenkö teidät sinä päivänä suljetuiksi? ") + tail
+        else:
+            p2 = (f"Laitanko {_for_fi(s)} {ph}? " if named else f"Laitanko {date} ajaksi {ph}? ") + tail
+        return " ".join(p1), p2
+    hol = s.get("holiday_name_en") or "That day"
+    p1 = [f"{hol} ({date}) is coming up." if named else f"{date} is coming up."]
     if s.get("kind") == "ask":
-        return f"I do not have your hours for {hol} ({M.fi_date(s['holiday_date'])}). Could you tell me what they are?"
-    if s.get("kind") == "closed" or s.get("proposed") == "closed":
-        return f"I suggest you are closed on {hol} ({M.fi_date(s['holiday_date'])})."
-    return f"I suggest your hours on {hol} ({M.fi_date(s['holiday_date'])}) are {M.en_hours(s.get('proposed'))}."
-
-
-def _proposal_fi(s: dict) -> str:
-    when = M.fi_date(s["holiday_date"])
+        p1.append("I don't have your hours for that day.")
+    elif ly is not None:
+        p1.append("Last year you were closed that day" if ly == "closed" else f"Last year you were open {M.en_hours(ly)} that day")
+        p1[-1] += ", and right now your listing still shows your normal hours." if stale else "."
+    elif web is not None:
+        p1.append(f"Your website says {M.en_hours(web)}.")
+    else:
+        p1.append("I don't have last year's hours for that day.")
+    on = hol if named else "that day"
+    tail = "Tap below and say yes, change the hours, or leave it as it is. No login needed, it takes a few seconds."
     if s.get("kind") == "ask":
-        return f"Minulla ei ole tietoa aukioloajoistanne {when}. Kertoisitko ne?"
-    if s.get("kind") == "closed" or s.get("proposed") == "closed":
-        return f"Ehdotan, että olette suljettu {when}."
-    return f"Ehdotan, että aukioloaikanne {when} on {M.fi_hours(s.get('proposed'))}."
+        p2 = "Could you tell me what they are? Tap below and type them in. No login needed, it takes a few seconds."
+    elif _is_closed(s):
+        p2 = f"Shall I mark you closed on {on}? " + tail
+    else:
+        p2 = f"Shall I set {M.en_hours(prop)} for {on}? " + tail
+    return " ".join(p1), p2
 
 
 def build_message(s: dict, to_email: str) -> tuple[EmailMessage, dict]:
@@ -112,25 +169,18 @@ def build_message(s: dict, to_email: str) -> tuple[EmailMessage, dict]:
     link = decision_link(s)
     subject = subject_for(s)
     name = M.business_name(s)
-    lines = [f"Hei, {name}!" if fi else f"Hi, {name}!", ""]
-    ly = M._hours_of(M._last_year(s))
-    if ly is not None:
-        lines.append(f"Viime vuonna aukioloaikanne sinä päivänä oli {M.fi_hours(ly)}." if fi
-                     else f"Last year your hours that day were {M.en_hours(ly)}.")
-    gn = M._hours_of(M._google_now(s))
-    if gn is not None:
-        lines.append(f"Google näyttää nyt {M.fi_hours(gn)}." if fi else f"Google currently shows {M.en_hours(gn)}.")
-    lines.append(_proposal_fi(s) if fi else _proposal_en(s))
-    lines += ["", ("Hyväksy, muokkaa tai kieltäydy yhdellä napautuksella, kirjautumista ei tarvita:" if fi
-                   else "Approve, edit or decline with one tap, no login needed:"), link, "",
-              "Kaiku, Fonecta Connect"]
-    text = "\n".join(lines)
-    paras = "".join(f"<p>{escape(l)}</p>" for l in lines[:-4] if l)
-    cta = escape("Avaa päätös" if fi else "Open the decision")
-    html = (f'<html><body style="font-family:system-ui,sans-serif;font-size:16px;color:#1c2b2d">{paras}'
-            f'<p>{escape(lines[-4])}</p><p><a href="{escape(link)}" style="background:#0f766e;color:#fff;padding:10px 18px;'
+    p1, p2 = _intro_and_ask(s, fi)
+    hi = f"Hei {name}!" if fi else f"Hi {name}!"
+    after = "Kun päätät, päivitämme tietosi kaikkialle." if fi else "Once you decide, we'll update your information everywhere."
+    sign = "Kaiku, avustajasi Fonecta Connectissa" if fi else "Kaiku, your assistant at Fonecta Connect"
+    cta_txt = "Avaa päätös" if fi else "Open the decision"
+    text = "\n".join([hi, "", p1, "", p2, "", f"{cta_txt}: {link}", "", after, "", sign])
+    cta = escape(cta_txt)
+    html = (f'<html><body style="font-family:system-ui,sans-serif;font-size:16px;color:#1c2b2d"><p>{escape(hi)}</p>'
+            f'<p>{escape(p1)}</p><p>{escape(p2)}</p>'
+            f'<p><a href="{escape(link)}" style="background:#0f766e;color:#fff;padding:10px 18px;'
             f'border-radius:8px;text-decoration:none;display:inline-block">{cta}</a></p>'
-            f'<p style="color:#667">{escape(link)}</p><p>Kaiku, Fonecta Connect</p></body></html>')
+            f'<p style="color:#667">{escape(link)}</p><p>{escape(after)}</p><p>{escape(sign)}</p></body></html>')
     cfg = smtp_config()
     sender = (cfg or {}).get("from") or "kaiku@example.invalid"
     msg = EmailMessage()

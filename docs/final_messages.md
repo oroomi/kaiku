@@ -36,7 +36,7 @@ Holiday hours (24.12.):
 >
 > Last year you were open 9-13 on Christmas Eve (Thursday 24.12. this year), but Connect still shows your regular hours, 9-17, for that day.
 >
-> Shall I set 9-13 for Christmas Eve on Google, Fonecta and everywhere else Connect publishes? Tap Accept to save it or Discard to leave it. To change the hours, just reply with them.
+> Shall I set 9-13 for Christmas Eve? We'll update your information everywhere. Tap Accept to save it or Discard to leave it. To change the hours, just reply with them.
 
 Buttons: `[ Accept ]` `[ Discard ]`
 
@@ -48,7 +48,7 @@ Closed day (25.12.):
 >
 > Last year you were closed on Christmas Day (Friday 25.12. this year), but Connect still shows your regular hours, 9-17, for that day.
 >
-> Shall I mark Christmas Day as closed everywhere Connect publishes? Tap Accept to save it or Discard to leave it. To change the hours, just reply with them.
+> Shall I mark Christmas Day as closed? We'll update your information everywhere. Tap Accept to save it or Discard to leave it. To change the hours, just reply with them.
 
 Buttons: `[ Accept ]` `[ Discard ]`
 
@@ -59,7 +59,7 @@ A tap on Accept (WhatsApp button or page card) saves at once, with no second que
 
 **Accept on Christmas Eve** (tests/test_chat.py::test_accept_applies_at_once_then_recurring_then_next): the receipt and, because last year's data exists, the recurring question in the same message:
 
-> Done. 24.12. 9-13 is saved and shows on Google, Fonecta Finder and 020202 within the hour. You changed this last year as well. Do you want to make it recurring, this time of the year?
+> Done. 24.12. 9-13 is saved. We'll update your information everywhere within the hour. You changed this last year as well. Do you want to make it recurring, this time of the year?
 
 **The proposal question** (what Kaiku asks when it moves to the next item, and what a typed "yes" answers; every proposal carries its reason):
 
@@ -67,7 +67,7 @@ A tap on Accept (WhatsApp button or page card) saves at once, with no second que
 
 **Receipt, one per decision** (`flow.receipt`, built from the Yext write result; the model never writes it):
 
-> Done. 24.12. 9-13 is saved and shows on Google, Fonecta Finder and 020202 within the hour.
+> Done. 24.12. 9-13 is saved. We'll update your information everywhere within the hour.
 
 **Recurring question**, asked only when last year's data exists (`flow.has_last_year`):
 
@@ -91,7 +91,7 @@ The owner types "10-14"; Kaiku asks for confirmation:
 
 Other cards, same shape:
 
-> Your description on Connect reads "vacination". Shall I correct it to "vaccination"? That text shows on Google and Fonecta.
+> Your description on Connect reads "vacination". Shall I correct it to "vaccination"? We'll update your information everywhere.
 >
 > (review card) The 3-star review has no reply yet, and it shows next to your listing. Shall I post this reply? "Thank you for sharing your feedback, and for your kind words about our staff. We understand that waiting 40 minutes for a booked appointment is frustrating, especially when you are caring for a pet. We appreciate you letting us know, and we are glad the team made your visit a more comfortable one."
 
@@ -104,7 +104,7 @@ Other cards, same shape:
 > I have your answer, but the write to Yext has not finished, so I will not say it is saved yet.
 
 ## 4. The WhatsApp receipt after a button tap
-> Done. 24.12. 9-13 is saved and shows on Google, Fonecta Finder and 020202 within the hour.
+> Done. 24.12. 9-13 is saved. We'll update your information everywhere within the hour.
 
 (`tests/test_wa_chat.py::test_approve_tap_applies_at_once_and_replies_with_the_receipt`.)
 
@@ -193,21 +193,21 @@ English gloss:
 
 Finnish:
 
-> Kiitos! Jouluaaton aukioloajat 9-13 on nyt tallennettu. Ne näkyvät Googlessa, Apple Mapsissa, Bingissä ja Fonectan palveluissa.
+> Kiitos! Jouluaaton aukioloajat 9-13 on nyt tallennettu. Päivitämme tietosi kaikkialle.
 
 English gloss:
 
-> Done. Christmas Eve hours 9-13 are saved and will show on Google, Fonecta Finder, 020202 and the other channels Connect publishes to.
+> Done. Christmas Eve hours 9-13 are saved. We'll update your information everywhere within the hour.
 
 ### 5b. Receipt after apply (closed day, singular)
 
 Finnish:
 
-> Kiitos! Joulupäivän sulkeutuminen on nyt tallennettu. Se näkyy Googlessa, Apple Mapsissa, Bingissä ja Fonectan palveluissa.
+> Kiitos! Joulupäivän sulkeutuminen on nyt tallennettu. Päivitämme tietosi kaikkialle.
 
 English gloss:
 
-> Done. Christmas Day closure is saved and will show on Google, Fonecta Finder, 020202 and the other channels Connect publishes to.
+> Done. Christmas Day closure is saved. We'll update your information everywhere within the hour.
 
 ### 0. Step 1 email (subject, then body)
 
