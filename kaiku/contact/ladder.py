@@ -80,9 +80,10 @@ REPLY_LINE = {"en": "Just reply yes, or tell me what the hours should be, and I'
 
 
 def buttons_enabled() -> bool:
-    """Interactive Approve / Edit / No thanks buttons only when WA_BUTTONS=1; the default is one plain text message."""
+    """Accept / Discard buttons under the warm opener by default (one tap to accept or discard, an edit is typed);
+    WA_BUTTONS=0 sends the opener as one plain text instead."""
     W.load_env()
-    return (os.environ.get("WA_BUTTONS") or "").strip() == "1"
+    return (os.environ.get("WA_BUTTONS") or "1").strip() != "0"
 
 
 def _warm_opener(s: dict, name: str, en: str, d: str, prop: str, text: str, tail: str) -> str:
@@ -118,12 +119,16 @@ def _warm_opener(s: dict, name: str, en: str, d: str, prop: str, text: str, tail
     return "\n\n".join(lines)
 
 
-def chat_text_for(s: dict) -> str:
+BUTTON_TAIL = {"en": "Tap Accept to save it or Discard to leave it. To change the hours, just reply with them.",
+               "fi": "Paina Hyväksy tai Hylkää. Jos haluat muuttaa aukioloaikoja, vastaa niillä."}
+
+
+def chat_text_for(s: dict, buttons: bool = False) -> str:
     """The WhatsApp opening as ONE plain text: the same intro and suggestion lines the website chat shows on load
     (kaiku.chat.router.opening), then "Reply in your own words." Finnish owners and businesses the chat does not know
     get the suggestion text instead."""
     lang = M.owner_lang(s)
-    tail = REPLY_LINE["fi" if lang == "fi" else "en"]
+    tail = (BUTTON_TAIL if buttons else REPLY_LINE)["fi" if lang == "fi" else "en"]
     if lang != "fi":
         try:
             from kaiku import store  # type: ignore
@@ -236,8 +241,11 @@ def _whatsapp(s: dict, client: W.WhatsAppClient | None = None, escalate_s: float
     body = body_for(s)
     btns = buttons_for(s)
     chat_text = None
-    if not use_buttons and s.get("kind") != "no_change":
-        chat_text = chat_text_for(s)  # one text message, the same conversation as the website chat
+    if s.get("kind") not in ("no_change", "ask"):
+        if use_buttons:
+            body = chat_text_for(s, buttons=True)  # the warm opener as the interactive body, Accept / Discard under it
+        else:
+            chat_text = chat_text_for(s)  # one text message, the same conversation as the website chat
     R.register_sent(phone, s["id"], None, s.get("business_id"), M.owner_lang(s))
 
     if btns is None:

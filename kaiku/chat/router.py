@@ -169,8 +169,8 @@ def _item_or_404(body: AcceptIn, suggestion_id: str) -> dict:
 
 @router.post("/api/suggestions/{suggestion_id}/accept")
 async def accept(suggestion_id: str, body: AcceptIn | None = None):
-    """Accept hands over to Kaiku: nothing is written. Kaiku's pre-written proposal goes into the chat and the card becomes the
-    session focus; the owner's 'yes' (text, voice or WhatsApp) applies it through actions.decide."""
+    """Accept = one tap: the suggestion is applied through actions.decide at once; Kaiku's receipt, the recurring question
+    (when there is last-year data) and the hand-off to the next item go into the chat."""
     body = body or AcceptIn()
     item = _item_or_404(body, suggestion_id)
     s = session(body.session)
@@ -178,12 +178,14 @@ async def accept(suggestion_id: str, body: AcceptIn | None = None):
     if item["kind"] == "no_change" or not is_pending(item):
         return {"ok": False, "error": f"already {item.get('status')}" if item["kind"] != "no_change" else "nothing to decide",
                 "reply": "That one is already decided." if item["kind"] != "no_change" else "That one needs no change.", "status": item.get("status"), "actions": []}
-    if s.get("focus") == item["id"] and s.get("stage") in ("proposed", "ask_new") and not s.get("followup"):
-        return {"ok": True, "repeat": True, "reply": None, "focus": item["id"], "actions": []}
-    line = flow.start_proposal(body.business_id, s, item)
-    s["log"].append({"role": "kaiku", "kind": "chat", "text": line})
-    s["hist"] += [("user", f"(accepted on the card: {item.get('title_en', suggestion_id)})"), ("assistant", line)]
-    return {"ok": True, "reply": line, "focus": item["id"], "stage": s["stage"], "actions": []}
+    from .brain import Turn  # one tap = approve now (owner's rule 7 Nov); Kaiku's receipt, the recurring question and the next item follow in the chat
+    turn = Turn(body.business_id, s)
+    s["focus"], s["stage"], s["pending"], s["followup"] = item["id"], None, None, None
+    reply = await flow.apply_and_say(turn, body.business_id, s, item, "approve")
+    s["log"].append({"role": "kaiku", "kind": "chat", "text": reply})
+    s["hist"] += [("user", f"(accepted on the card: {item.get('title_en', suggestion_id)})"), ("assistant", reply)]
+    _listing_changed(body.business_id)
+    return {"ok": True, "reply": reply, "focus": s.get("focus"), "stage": s.get("stage"), "actions": turn.actions}
 
 
 @router.post("/api/suggestions/{suggestion_id}/discard")

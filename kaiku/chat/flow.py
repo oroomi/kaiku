@@ -157,6 +157,8 @@ def proposal(bid: str, item: dict) -> str:
                     f"That text shows on Google and Fonecta.")
         fix = " and ".join(f"\"{t['wrong']}\" to \"{t['right']}\"" for t in ty[:2]) + (f" and {len(ty) - 2} more" if len(ty) > 2 else "")
         return f"Your description has typos: {fix}. Shall I correct them? That text shows on Google and Fonecta."
+    if k == "conflict":  # two sources disagree: no ready hours, the owner is the tie-breaker
+        return f"{(item.get('text_en') or item.get('title_en') or '').strip()} Which is right? Reply with the hours, or closed."
     if k == "review":
         n = item.get("rating")
         star = f"{int(n) if float(n) == int(n) else n}-star review" if n else "review"

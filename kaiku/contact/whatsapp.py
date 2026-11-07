@@ -15,8 +15,8 @@ GRAPH_BASE = "https://graph.facebook.com"
 ROOT = Path(__file__).resolve().parents[2]
 CANONICAL_ENV = Path("/root/hack/kaiku/.env")
 
-DEFAULT_BUTTONS = [("approve", "Approve"), ("edit", "Edit"), ("decline", "No thanks")]  # English is the default
-FI_BUTTONS = [("approve", "Hyväksy"), ("edit", "Muokkaa"), ("decline", "Ei kiitos")]
+DEFAULT_BUTTONS = [("approve", "Accept"), ("decline", "Discard")]  # one tap to accept or discard; an edit is typed (owner's rule 7 Nov)
+FI_BUTTONS = [("approve", "Hyväksy"), ("decline", "Hylkää")]
 
 
 def buttons_for_lang(lang: str | None) -> list[tuple[str, str]]:

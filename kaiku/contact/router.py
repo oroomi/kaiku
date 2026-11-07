@@ -421,6 +421,10 @@ async def handle_payload(payload: dict, client: W.WhatsAppClient | None = None) 
                 client.send_text(phone, M.unknown_suggestion_text(_lang(sid))); out["replies"] += 1
                 out["unknown"].append(sid)
                 continue
+            if act in ("approve", "decline"):  # a tap is a "yes" or a "no" in the same conversation as the chat
+                bid_ = _business_for(sid) or DEFAULT_BUSINESS
+                if await _chat_text(phone, "yes" if act == "approve" else "no", sid, client, out, focus=feed_id_for(bid_, sid)):
+                    continue
             if act == "approve":
                 decision = make_decision(sid, "approve")
             elif act == "decline":
@@ -474,7 +478,7 @@ async def handle_payload(payload: dict, client: W.WhatsAppClient | None = None) 
     return out
 
 
-async def _chat_text(phone: str, text: str, sid: str | None, client: W.WhatsAppClient, out: dict) -> bool:
+async def _chat_text(phone: str, text: str, sid: str | None, client: W.WhatsAppClient, out: dict, focus: str | None = None) -> bool:
     """Any inbound text goes to the chat brain; its reply goes back as a WhatsApp text. False = brain unavailable, the
     keyword parser takes over (yes / no / new times), so the lane never goes silent."""
     bid = _business_for(sid)
@@ -485,7 +489,7 @@ async def _chat_text(phone: str, text: str, sid: str | None, client: W.WhatsAppC
             d = _load()
             awaiting = d["awaiting_edit"].pop(phone, None)
             _save(d)
-        reply, acts = await chat_turn(phone, text, bid, awaiting)
+        reply, acts = await chat_turn(phone, text, bid, awaiting or focus)
     except Exception as e:
         log.warning("chat brain failed on WhatsApp (%s), keyword parser", type(e).__name__)
         return False
