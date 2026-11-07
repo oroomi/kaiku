@@ -12,7 +12,7 @@ from test_call import env, payload, run, tr  # noqa: F401
 def test_prompts_have_closing_question():
     en, fi = C.agent_config("en"), C.agent_config("fi")
     assert "would you rather I message you on WhatsApp or email, or is a call fine?" in en["agent"]["prompt"]["prompt"]
-    assert "Got it, WhatsApp next time." in en["agent"]["prompt"]["prompt"]
+    assert "WhatsApp it is, thanks!" in en["agent"]["prompt"]["prompt"]
     assert "WhatsAppilla tai sähköpostilla, vai sopiiko puhelu?" in fi["agent"]["prompt"]["prompt"]
     assert en["agent"]["first_message"] == C.FIRST_MESSAGE and fi["agent"]["first_message"] == C.FIRST_MESSAGE_FI
     assert "preferred_channel" in en["data_collection"] and "preferred_channel" in fi["data_collection"]
