@@ -75,13 +75,47 @@ def body_for(s: dict) -> str:
     return M.suggestion_text(s)
 
 
-REPLY_LINE = {"en": "Reply yes, or tell me the hours.", "fi": "Vastaa kyllä tai kerro aukioloajat."}
+REPLY_LINE = {"en": "Just reply yes, or tell me what the hours should be, and I'll take care of the rest.",
+              "fi": "Vastaa kyllä tai kerro oikeat aukioloajat, niin hoidan loput."}
 
 
 def buttons_enabled() -> bool:
     """Interactive Approve / Edit / No thanks buttons only when WA_BUTTONS=1; the default is one plain text message."""
     W.load_env()
     return (os.environ.get("WA_BUTTONS") or "").strip() == "1"
+
+
+def _warm_opener(s: dict, name: str, en: str, d: str, prop: str, text: str, tail: str) -> str:
+    """The first WhatsApp message, in the voice of a helpful assistant: who I am, why I write, what I noticed
+    (every fact from the suggestion's own message), one ask. The owner reads this one line on a phone."""
+    from kaiku.suggest import feed as F  # type: ignore
+    msg = s.get("message_en") or ""
+    m_ly = re.search(r"Last year you were (open [0-9:.\-]+|closed)", msg)
+    m_reg = re.search(r"regular (\w+) hours \(([0-9:.\-]+)\)", msg)
+    m_wd = re.search(r"is on (\w+day)", msg)
+    ly = F._short_times(m_ly.group(1)) if m_ly else None
+    reg = F._short_times(m_reg.group(2)) if m_reg else None
+    wd = m_wd.group(1) if m_wd else (m_reg.group(1) if m_reg else "")
+    month = (s.get("holiday_date") or "")[5:7]
+    hol = en or "the holiday"
+    lines = [f"Hi {name}! \U0001F44B It's Kaiku, your assistant at Fonecta Connect."]
+    if month in ("12", "01"):
+        lines.append("Christmas is around the corner, and I want to make sure none of your customers turn up at a closed door.")
+    else:
+        lines.append(f"{hol} is coming up, and I want to make sure none of your customers turn up at a closed door.")
+    if ly and reg:
+        when = f"{hol} ({wd} {d} this year)" if wd else f"{hol} ({d})"
+        lines.append(f"Last year you were {ly} on {when}, but Connect still shows your regular hours, {reg}, for that day.")
+    else:
+        lines.append(text)
+    if prop and prop != "closed":
+        ask = f"Shall I set {prop} for {hol} on Google, Fonecta and everywhere else Connect publishes?"
+    elif prop == "closed":
+        ask = f"Shall I mark {hol} as closed everywhere Connect publishes?"
+    else:
+        ask = "Shall I update it everywhere Connect publishes?"
+    lines.append(f"{ask} {tail}")
+    return "\n\n".join(lines)
 
 
 def chat_text_for(s: dict) -> str:
@@ -113,7 +147,7 @@ def chat_text_for(s: dict) -> str:
                     CR.session("wa:" + owner_phone(s))["focus"] = s.get("id")
                 except Exception:
                     pass
-                return f"Hi {name}, Kaiku here from Fonecta Connect. {text}\n\n{tail}"
+                return _warm_opener(s, name, en, d, prop, text, tail)
         except Exception:
             pass
     return body_for(s) + "\n\n" + tail
