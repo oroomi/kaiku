@@ -23,7 +23,7 @@ First commit: e2f7382, the bell commit, Fri 6 Nov 2026 18:49:59Z, a fresh repo w
 - Libraries and APIs: mcp Python SDK, Anthropic SDK (model claude-sonnet-5-5), Yext sandbox API (entity provided by Fonecta), Serper (Google places lookup), Meta WhatsApp Cloud API (test number).
 - Infrastructure: our VPS, domain, and a Cloudflare tunnel.
 - `/root/hack/bin` scripts (pre-existing process tooling, not product code): deploy, shot, smoke, expose.
-- Film (Kaiku and Aura videos): made with Remotion and our own capture scripts; the music bed and the trailer template are declared in the video notes before submission (see "Open items" below).
+- Film (Kaiku and Aura videos): made with Remotion, our own capture scripts and our own trailer motion template (team tooling from before the event, not product code). Music: the licensed cut uses "Hype Beat" (Pixabay licence); the alternative cut uses "Victory Lap" by Fred again.. and Skepta, for which we hold no licence (YouTube Content ID may claim or mute it). The `video/` folder is not in the public repo.
 
 ## What is sample data and what is real
 | Item | Real or sample | Where to see it |
@@ -66,5 +66,5 @@ First commit: e2f7382, the bell commit, Fri 6 Nov 2026 18:49:59Z, a fresh repo w
 See docs/DATA_SOURCES.md.
 
 ## Open items to settle before submission
-- The film: the music bed and the trailer template are declared in `video/NOTES.md`; the `video/` folder is removed from the public repo (see docs/SUBMISSION.md, "At submission time").
+- The film: the music bed and the trailer template are declared above under "Brought"; the `video/` folder is removed from the public repo (see docs/SUBMISSION.md, "At submission time").
 - A team member's personal phone number appears in the git history (and in a test file and one doc line until the removal list is run). Decision recorded in docs/SUBMISSION.md.
