@@ -211,6 +211,7 @@
     try {
       const d = await (await fetch("/api/city/stores?only=approved")).json();
       state.source = d.source;
+      if (d.holiday && d.holiday.now) { const sv = Date.parse(d.holiday.now); if (!isNaN(sv)) { skew = sv - Date.now(); clock(); } }
       const now = Date.now();
       for (const r of d.rows) {
         const cur = state.rows.get(r.id);
@@ -234,7 +235,7 @@
     if (!state.pulses.length && !state._pulseDirty) return;
     state._pulseDirty = state.pulses.length > 0;
     src.setData({ type: "FeatureCollection", features: state.pulses.map((p) => {
-      const k = (now - p.t0) / 1400;
+      const k = Math.max(0, (now - p.t0) / 1400);
       return { type: "Feature", properties: { r: 4 + 44 * (1 - Math.pow(1 - k, 2)), o: 0.7 * (1 - k) },
                geometry: { type: "Point", coordinates: [p.lon, p.lat] } };
     }) });
@@ -263,7 +264,7 @@
     void c;
   }
   function pos(v, now) {
-    const k = Math.min(1, (now - v.t0) / DUR);
+    const k = Math.max(0, Math.min(1, (now - v.t0) / DUR)); // clamped: a clock that steps back must not extrapolate
     return [v.from[0] + (v.to[0] - v.from[0]) * k, v.from[1] + (v.to[1] - v.from[1]) * k];
   }
   let lastVeh = 0, lastTrail = 0;
@@ -292,7 +293,7 @@
       if (state.vehOn) vehFrame(now);
       pulseFrame(now);
       if (state.drift && !state.flying && now - state.lastTouch > 8000 && !map.isMoving()) {
-        const dt = state._lt ? Math.min(100, now - state._lt) : 16;
+        const dt = state._lt ? Math.max(0, Math.min(100, now - state._lt)) : 16;
         map.setBearing(map.getBearing() + dt / 1000);
       }
     }
