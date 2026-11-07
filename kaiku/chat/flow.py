@@ -353,6 +353,29 @@ async def handle(turn, sess: dict, message: str) -> str | None:
             return await recurring_answer(turn, bid, sess, yn == "approve")
         sess["followup"] = None            # the question lapses: a later 'yes' must not answer it
     stage = sess.get("stage")
+    if not stage and yn and sess.get("focus"):
+        # No stage but a focus: the WhatsApp opening (or an older message the owner tapped) IS the proposal.
+        item = _focus_item(bid, sess)
+        if item is not None:  # still pending: a yes applies it, a no leaves it
+            return await apply_and_say(turn, bid, sess, item, "approve" if yn == "approve" else "decline")
+        done = F.find(bid, sess["focus"])
+        if done is not None and done.get("kind") != "no_change":  # decided earlier (on the page, in the chat, on WhatsApp)
+            st = done.get("status")
+            h = hours_text(done.get("proposed")) if done["kind"] not in TEXT_KINDS and done.get("proposed") else ""
+            if done["kind"] in ("holiday_hours", "conflict"):
+                what = f"{holiday_name(done)} {d_short(done['holiday_date']) if done.get('holiday_date') else ''}".strip()
+            elif done["kind"] == "period":
+                what = f"The {period_name(done)}"
+            elif done["kind"] == "description":
+                what = "Your description"
+            elif done["kind"] == "review":
+                what = "The review reply"
+            else:
+                what = done.get("title_en") or "That one"
+            line = (f"{what} is already saved" + (f" ({h})" if h else "") + "." if st in ("approved", "applied", "edited")
+                    else f"{what} is already left as it is.")
+            nxt = handoff_text(bid, sess, {done["id"]})  # the next open item, with its reason
+            return f"{line} {nxt}".strip()
     if not stage:
         return None
     item = _focus_item(bid, sess)

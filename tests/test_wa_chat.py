@@ -359,3 +359,34 @@ def test_whatsapp_yes_cancels_the_ladder_call(fake_yext, monkeypatch):
     time.sleep(1.2)
     assert called == [], "the call must never be placed after a WhatsApp approval"
     assert fake_yext
+
+
+# ---------------------------------------------------------------- 8. a tap on an already-saved item: scripted answer, next item with its reason
+
+def test_tap_on_a_saved_item_confirms_and_proposes_the_next_with_a_reason(fake_yext, monkeypatch):
+    period = {"id": "t-period", "kind": "period", "title_en": "Christmas period: 2 dates", "text_en": "", "status": "proposed",
+              "holiday_date": "2026-12-25", "holiday_name_en": "Christmas period", "confidence": 0.8,
+              "proposed": [{"date": "2026-12-25", "kind": "closed", "proposed": "closed"}, {"date": "2026-12-26", "kind": "closed", "proposed": "closed"}],
+              "reasons": [{"source": "last_year", "text_en": "Last year on 25.12. you were closed"}]}
+
+    def feed(bid, *a, **k):
+        items = []
+        for it in FEED["suggestions"] + [period]:
+            it = dict(it)
+            s = store.get_suggestion(it["id"])
+            if s:
+                it["status"] = {"approved": "approved", "edited": "approved", "applied": "approved", "declined": "declined"}.get(s.status, "proposed")
+            items.append(it)
+        return {"suggestions": items}
+    monkeypatch.setattr(chat_feed, "get_feed", feed)
+    R.register_sent(PHONE, "t-hours", None, "furry-paw")
+    f = Fake()
+    run(R.handle_payload(inbound("yes", "wamid.S1"), client(f)))          # saves Christmas Eve
+    assert fake_yext and store.get_suggestion("t-hours").status in ("approved", "applied")
+    sess = chat_router.session("wa:" + PHONE)
+    sess["focus"], sess["stage"], sess["followup"] = "t-hours", None, None   # the owner taps Accept on the old message
+    run(R.handle_payload(inbound("yes", "wamid.S2"), client(f)))
+    last = f.texts()[-1]
+    assert last.startswith("Christmas Eve 24.12. is already saved (9-13). Next: Christmas period: 2 dates.")
+    assert "Last year on 25.12. you were closed" in last and last.rstrip().endswith("?")
+    assert "Sorry" not in last and "confusing" not in last
