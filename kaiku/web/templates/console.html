@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Kaiku, console{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/chat.css?v={{ asset_v() }}"><link rel="stylesheet" href="/static/owner.css?v={{ asset_v() }}"><link rel="stylesheet" href="/static/console.css?v={{ asset_v() }}">{% endblock %}
+{% block content %}
+{% if keyed %}
+<div class="console" id="console" data-biz="furry-paw">
+  <section class="glass c-sec" data-pilot="console-contact" aria-label="Who Kaiku reaches">
+    <h2 class="mono">WHO KAIKU REACHES</h2>
+    <div class="dcontact">
+      <label class="dfield"><span class="mono">Email</span>
+        <input type="email" id="dc-email" autocomplete="off" inputmode="email" placeholder="name@company.fi" aria-label="Demo contact email"></label>
+      <label class="dfield"><span class="mono">Phone (international)</span>
+        <input type="tel" id="dc-phone" autocomplete="off" inputmode="tel" placeholder="+358 40 123 4567" aria-label="Demo contact phone"></label>
+      <div class="drow">
+        <button class="primary" id="dc-save" type="button">Save</button>
+        <button class="ghost" id="dc-clear" type="button">Back to my own</button>
+      </div>
+      <p class="mono soft" id="dc-msg" aria-live="polite">Using the owner's own.</p>
+    </div>
+    <p class="mono soft c-note">WhatsApp reaches only numbers in the Meta test app; email and the call reach anyone.</p>
+    <p class="mono soft c-note" id="c-call">{{ last_call }}</p>
+  </section>
+
+  <section class="glass c-sec" aria-label="The customer we were given">
+    <h2 class="mono">THE CUSTOMER WE WERE GIVEN</h2>
+    <p class="c-who">Furry Paw Vet Clinic, Vantaa. Fonecta sandbox entity SinceAI07, fictional.</p>
+    <p class="mono soft" id="c-score">Reading the score...</p>
+    <section class="w-listing" id="listing" aria-label="On Fonecta now">
+      <header class="w-head"><span class="mono">ON FONECTA NOW</span></header>
+      <p class="mono soft l-src" id="l-src">WHAT CONNECT PUBLISHES TODAY &middot; YEXT SANDBOX SINCEAI07</p>
+      <div class="l-body" id="l-body"><p class="empty">Reading the listing...</p></div>
+      <p class="mono soft l-read" id="l-read"></p>
+    </section>
+  </section>
+
+  <section class="glass c-sec" aria-label="Run it">
+    <h2 class="mono">RUN IT</h2>
+    <p class="c-note2">Before WhatsApp: the rep sends 'moi' to +1 555 188 5173 (24 h window)</p>
+    <div class="drow">
+      <button class="primary" id="run" type="button">Run the chain (24.12.)</button>
+      <button class="ghost" id="reset" type="button" title="Removes the holiday hours from the Yext sandbox, clears runs and events, sets the date to 17.12.2026">Reset demo</button>
+    </div>
+    <p class="mono soft" id="d-msg" aria-live="polite"></p>
+    <a class="dlink" id="c-judge" href="/judge">Watch the events on the judge view</a>
+  </section>
+</div>
+{% else %}
+<div class="console"><section class="glass c-sec">
+  <span class="mono">CONSOLE</span>
+  <p class="empty">This page is for the team. Open it with the demo key.</p>
+</section></div>
+{% endif %}
+{% endblock %}
+{% block scripts %}{% if keyed %}<script src="/static/listing.js?v={{ asset_v() }}" defer></script><script src="/static/console.js?v={{ asset_v() }}" defer></script>{% endif %}{% endblock %}

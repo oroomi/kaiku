@@ -29,3 +29,11 @@ Demo drawer (holiday picker, Run the chain, time travel, Reset): `/owner/drawer`
 ## Demo contact
 
 At the Joki Q&A a visitor may want the email, the WhatsApp message and the call on their own device. The keyed drawer has a "Demo contact" box (Email, Phone in international format, Save, "Back to my own"). It posts to `POST /api/demo/contact` (key as `X-Kaiku-Key` or `?key=`; `GET` returns the masked values, `DELETE` or empty fields clear). The override lives in `data/demo_contact.json` (gitignored) and beats `OWNER_EMAIL` / `OWNER_WHATSAPP` / the business record for the email step, the WhatsApp step, the call and the WhatsApp receipt; an inbound WhatsApp from that phone is handled exactly like the owner's. Validation: email needs `@` and a dot, phone is `+` and 8 to 15 digits (400 otherwise). Events and logs carry masks only (`e***@fonecta.fi`, `+358***123`). `POST /api/reset` keeps the override; `?contact=1` clears it. WhatsApp reaches only numbers registered in the Meta test app (SMS code, max 5); email and the call reach any address or number. Ask the person first, clear it after.
+
+## Console
+
+- `GET /console?key=<key>` (same key rule as `/judge`, 403 without it) is one phone-width page for the Q&A table: `kaiku/console/router.py`, `templates/console.html`, `static/console.js`.
+- "Who Kaiku reaches": the demo contact box (Save, Back to my own, masked state) on `/api/demo/contact`, the WhatsApp note, and the last call line from `data/call_log.jsonl` (time and ok or reason only).
+- "The customer we were given": Furry Paw Vet Clinic, the score line from `/api/score/furry-paw?quick=1` and the ON FONECTA NOW panel (`listing.js`, `/api/listing/furry-paw`).
+- "Run it": Run the chain (24.12.) on `/api/run` and Reset demo on `/api/reset` (the demo contact stays), the 'moi' reminder for the 24 h WhatsApp window, and a link to `/judge?key=...` built in the browser.
+- No full phone or email is ever in the HTML (tests/test_console.py); the page stays silent on test servers like every other page.
