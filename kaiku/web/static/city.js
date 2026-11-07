@@ -33,8 +33,20 @@
     s.sky = { "sky-color": "#0b1b24", "horizon-color": "#163746", "fog-color": C.night,
               "sky-horizon-blend": 0.6, "horizon-fog-blend": 0.6, "fog-ground-blend": 0.2,
               "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 10, 1, 12, 0] };
+    // Land keeps a faint Horizon teal above the water until the buildings take over at street zoom, so the descent
+    // never passes through a black screen; Natural Earth relief shows on the globe and fades out by zoom 8.
+    const LAND = ["interpolate", ["linear"], ["zoom"], 0, "#132530", 6, "#10202a", 10, "#0c181f", 12, "#0b151b", 14, C.night];
+    const WATER = ["interpolate", ["linear"], ["zoom"], 0, "#04070a", 9, "#06090d", 12, "#0e1c24", 14, "#12232c"];
     for (const l of s.layers) {
-      if (l.id === "background") { l.paint = Object.assign({}, l.paint, { "background-color": C.night }); }
+      if (l.id === "background") { l.paint = Object.assign({}, l.paint, { "background-color": LAND }); }
+      if (l.id === "water") { l.paint = Object.assign({}, l.paint, { "fill-color": WATER }); }
+      if (l.id === "waterway") { l.paint = Object.assign({}, l.paint, { "line-color": "#12232c" }); }
+    }
+    if (s.sources && s.sources.ne2_shaded) {
+      const i = s.layers.findIndex((l) => l.id === "background") + 1;
+      s.layers.splice(i, 0, { id: "city-relief", type: "raster", source: "ne2_shaded", maxzoom: 9,
+        paint: { "raster-opacity": ["interpolate", ["linear"], ["zoom"], 0, 0.55, 5, 0.4, 8, 0],
+                 "raster-brightness-min": 0, "raster-brightness-max": 0.32, "raster-saturation": -0.75, "raster-contrast": 0.25 } });
     }
     return s;
   }

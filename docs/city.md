@@ -118,6 +118,7 @@ data: {"id": "osm-n6784950719", "name": "Café Eino", "lon": 22.266522, "lat": 6
 ```
 
 ## Design
+Descent tint: land is a faint Horizon teal above near-black water from the globe down to zoom 13 (then the buildings take over) and the OpenFreeMap Natural Earth relief raster shows on the globe at low opacity, fading out by zoom 8, so the fly-in never passes through a black frame (first cut had ~3 s of 80 % black pixels at 2-5 s).
 Horizon palette on a black base: buildings extruded from the OpenMapTiles `building` layer (height colour #13303c / #1f5366 /
 #2f6f8c), dots amber = missing, white = known, green = approved (larger). Globe with a thin atmosphere rim (sky #0b1b24,
 horizon #163746, fog #090b0d, atmosphere fading out between zoom 10 and 12). Style fetched from OpenFreeMap at runtime, the
