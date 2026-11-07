@@ -1,4 +1,4 @@
-"""Text to speech: ElevenLabs eleven_flash_v2_5 through our server, cached by text hash in data/tts_cache/."""
+"""Text to speech: ElevenLabs eleven_v4 (the best model the account allows; Dayo 7 Nov: nothing but the best quality voice models) through our server, cached by text hash in data/tts_cache/."""
 from __future__ import annotations
 
 import hashlib
@@ -12,7 +12,7 @@ import httpx
 
 log = logging.getLogger("kaiku.voice.tts")
 CACHE = Path(__file__).resolve().parents[2] / "data" / "tts_cache"
-MODEL = "eleven_flash_v2_5"
+MODEL = "eleven_v4"
 FORMAT = "mp3_44100_64"
 MAX_CHARS = 700
 DAILY_CHARS = int(os.getenv("VOICE_TTS_DAILY_CHARS", "80000"))  # cost guard
@@ -58,7 +58,7 @@ async def synthesize(text: str, client: httpx.AsyncClient | None = None, cache_d
     try:
         r = await client.post(f"https://api.elevenlabs.io/v1/text-to-speech/{quote(voice, safe='')}?output_format={FORMAT}",
                               headers={"xi-api-key": key, "Accept": "audio/mpeg"},
-                              json={"text": text, "model_id": MODEL, "voice_settings": {"stability": 0.5, "similarity_boost": 0.8}})
+                              json={"text": text, "model_id": MODEL, "voice_settings": {"stability": 0.3, "similarity_boost": 0.75, "use_speaker_boost": True, "speed": 0.9}})
     except httpx.HTTPError as e:
         log.warning("tts request failed: %s", type(e).__name__)
         raise TtsError(502, "voice service unreachable")

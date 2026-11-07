@@ -161,7 +161,7 @@ def test_tts_and_stt_proxy_never_leak_keys(client, monkeypatch, tmp_path):
     def handler(req):
         seen[req.url.path] = req.headers.get("xi-api-key")
         if "text-to-speech" in req.url.path:
-            assert json.loads(req.content)["model_id"] == "eleven_flash_v2_5" and "voiceX" in req.url.path
+            assert json.loads(req.content)["model_id"] == "eleven_v4" and "voiceX" in req.url.path
             return httpx.Response(200, content=b"ID3fakeaudio")
         return httpx.Response(200, json={"text": "Terve Kaiku", "language_code": "fin"})
     monkeypatch.setattr(tts.httpx, "AsyncClient", _mock(handler))
