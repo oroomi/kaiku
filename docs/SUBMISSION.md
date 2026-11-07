@@ -48,7 +48,7 @@ Kaiku runs Fonecta's whole chain for holiday hours: detect the missing hours, su
 
 **What is real and what is sample.** The Yext writes, the emails, WhatsApp messages and phone calls are real (sent to the team's own contacts, or a visitor's own with consent). The clinic is fictional, its history, description and reviews are labelled samples we wrote, the demo date is a time-travel clock, and the sandbox has no publisher listings, so nothing is syndicated to Google. DISCLOSURE.md has the full table.
 
-**Links.** Live: https://kaiku.hankintaviikko.fi. Repository: https://github.com/oroomi/kaiku. Video: <YouTube link>.
+**Links.** Live: https://kaiku.hankintaviikko.fi. Repository: https://github.com/oroomi/kaiku. Video: https://youtu.be/Opg_gzlo_II.
 
 ### Built with (technologies; no limit stated)
 Python 3.12, FastAPI, Jinja2, vanilla JavaScript, SQLite, FIWARE Orion-LD (NGSI-LD) with MongoDB, Smart Data Models, MCP (ngsi-ld-mcp, our own), Fonecta Yext sandbox API, Anthropic Claude (claude-sonnet-5-5), ElevenLabs (speech to text, text to speech, phone agent), Zadarma SIP trunk, Meta WhatsApp Cloud API, SMTP (Zoho), Serper, Nager.Date, OpenStreetMap, Föli, Digitraffic AIS, Open-Meteo, MapLibre GL JS, Cloudflare Tunnel, Docker.
@@ -66,7 +66,7 @@ https://github.com/oroomi/kaiku (private until the commands in Part 3 are run; r
 https://kaiku.hankintaviikko.fi
 
 ### Demo video link
-<YouTube link> (**OWNER**: public or unlisted, 2 to 3 minutes for Fonecta, plays on the vote card)
+https://youtu.be/Opg_gzlo_II (unlisted, 2 min 1 s, plays on the vote card)
 
 ### Tech feedback (no limit stated)
 Orion-LD post-v1.12.0: datasetId instances are accepted only at entity creation (POST and PATCH on attrs, upsert and batch answer 501), so we read, merge, delete and re-create the entity under a lock. A subscription query on a key inside an object value is accepted but not evaluated, and a newly added attribute does not trigger a subscription. holidayHours is not in the Smart Data Models context. Details: docs/fiware.md and docs/broker.md. Yext sandbox: the Suggestions API returns 403 for our key, the Management API accepts an inverted interval, and the sandbox has no publisher listings. WhatsApp test number: free-form and button messages deliver only inside the 24 hour window.
@@ -89,7 +89,7 @@ Kaiku uses FIWARE as the spine of a real product, not as a side store. Integrati
 ### FIWARE award fields (the Field Guide form asks these four when FIWARE is ticked; paste as is)
 - **Technologies used (from the list):** NGSI-LD; Context Broker (Orion-LD); Smart Data Models (Store from PointOfInterest; Vehicle and WeatherObserved in Aura).
 - **How they fit the architecture (min 40 characters):** Orion-LD is the spine of Fonecta's chain, not a side store. The business is a Smart Data Models Store entity (urn:ngsi-ld:Store:furry-paw). Its attribute holidayHours carries one instance per source, told apart by datasetId (lastyear, website, google, peers) plus Kaiku's proposal, each with observedAt. A subscription on holidayHoursStatus fires Detect; the owner's tap writes the default instance (Decide); the broker's notification applies the change to the Yext listing (Apply). Our ngsi-ld-mcp server lets an AI agent read, propose and subscribe on any NGSI-LD broker while only a human can decide; the broker holds both instances, so it is also the audit log.
-- **Evidence link (https, public, no confidential data):** https://github.com/oroomi/kaiku (public from submission time), live broker view https://kaiku.hankintaviikko.fi/fiware, judge check `curl https://kaiku.hankintaviikko.fi/api/fiware/entity` (five holidayHours instances on 7 Nov 17:06Z: default + lastyear, website, google, peers), recording `<YouTube link>`.
+- **Evidence link (https, public, no confidential data):** https://github.com/oroomi/kaiku (public from submission time), live broker view https://kaiku.hankintaviikko.fi/fiware, judge check `curl https://kaiku.hankintaviikko.fi/api/fiware/entity` (five holidayHours instances on 7 Nov 17:06Z: default + lastyear, website, google, peers), recording https://youtu.be/Opg_gzlo_II.
 - **Live demo:** yes, in the Sunday final (the 3:25 to 3:50 beat of the stage script opens /fiware on the projector).
 
 ## Part 2. Slide-8 checklist, item by item
@@ -97,7 +97,7 @@ Kaiku uses FIWARE as the spine of a real product, not as a side store. Integrati
 | # | Fonecta asks for | Our answer | Where | State |
 |---|---|---|---|---|
 | 1 | Working demo of the five steps | Live now. Open the URL with the demo clock at 17.12.2026 (the live default), press Accept on Christmas Eve: Detect, Suggest, Contact, Decide, Apply with a Yext read-back. A Fonecta representative can try it on their own phone through `/console` | https://kaiku.hankintaviikko.fi, [README](../README.md) "Demo path" | done |
-| 2 | 2-3 minute video | YouTube upload | `<YouTube link>` | **OWNER**: upload and paste the link into README, this file and the form |
+| 2 | 2-3 minute video | YouTube upload | https://youtu.be/Opg_gzlo_II | uploaded 7 Nov 22:40Z, unlisted; Content ID claim on the music bed, viewable everywhere except Belarus and Russia |
 | 3 | Code repository with a README: how to run it, data sources, libraries and licences | README has the 3-command run, the data-source pointers and the licence table covering every entry of `requirements.txt` | [README](../README.md), [DISCLOSURE](../DISCLOSURE.md) | done once the repo is public (Part 3) |
 | 4 | 3-5 key data sources, where Connect would get them in production, what did not work | Five sources with a production column and a failures list | [DATA_SOURCES.md](DATA_SOURCES.md) | done |
 | 5 | Final customer messages as text | Email, WhatsApp message with Accept / Discard, chat lines, receipts, recurring question, closing channel question, discard line, call script, cold-start question; Finnish appendix | [final_messages.md](final_messages.md) | done |
@@ -133,7 +133,7 @@ Without keys the chain still runs and each lane says what is missing; a local in
 
 ## Part 3. At submission time (do NOT run before the owner says go)
 
-Run from a clean clone of the final branch, after the film is uploaded and the `<YouTube link>` is pasted into README.md and this file.
+Run from a clean clone of the final branch, after the film is uploaded and the YouTube link is pasted into README.md and this file.
 
 ### 3a. Files that must not ship
 | Path | Why |
@@ -178,5 +178,5 @@ Then redeploy the live site from the same commit with `/root/hack/bin/deploy.sh`
 
 ### 3d. Last-hour sweep (Sunday 09:00 to 09:45 EET)
 - README first screen: what and for whom, live URL, 3-command run, architecture diagram; headings Architecture, Evaluation, Disclosure.
-- `<YouTube link>` replaced everywhere (README, this file, the form); the video plays logged out.
+- YouTube link https://youtu.be/Opg_gzlo_II in README, this file and the form; the video plays logged out.
 - Form: project name, pitch, summary, About (at most 5,000 characters), repo, live link, FIWARE ticked, IP terms for every member, video; submit before 10:00 EET and check the platform shows it received.
