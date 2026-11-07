@@ -7,6 +7,8 @@ import pytest
 os.environ.setdefault("KAIKU_DB", os.path.join(tempfile.mkdtemp(prefix="kaiku-test-"), "t.sqlite"))
 os.environ["KAIKU_ROOM_KEY"] = "testkey"
 os.environ.setdefault("KAIKU_DATA_DIR", tempfile.mkdtemp(prefix="kaiku-data-"))
+if os.environ.get("KAIKU_LIVE") != "1":  # the suite never talks to the live Orion-LD (it rewrote the demo's truth instance on 7 Nov)
+    os.environ["KAIKU_BROKER_URL"] = "http://127.0.0.1:9"
 
 
 @pytest.fixture(autouse=True)

@@ -17,8 +17,8 @@ Subject and body as built by `build_message` for the 24.12. suggestion (the link
 >
 > Hi, Furry Paw Vet Clinic!
 >
-> Last year your hours that day were 9 to 13.
-> I suggest your hours on Christmas Eve (24.12.) are 9 to 13.
+> Last year your hours that day were 9-13.
+> I suggest your hours on Christmas Eve (24.12.) are 9-13.
 >
 > Approve, edit or decline with one tap, no login needed:
 > https://kaiku.hankintaviikko.fi/d/EXAMPLE-TOKEN
@@ -231,8 +231,8 @@ English gloss:
 >
 > Hi, Furry Paw Vet Clinic!
 >
-> Last year your hours that day were 9 to 13.
-> I suggest your hours on Christmas Eve (24.12.) are 9 to 13.
+> Last year your hours that day were 9-13.
+> I suggest your hours on Christmas Eve (24.12.) are 9-13.
 >
 > Approve, edit or decline with one tap, no login needed:
 > https://kaiku.example/d/EXAMPLE-TOKEN

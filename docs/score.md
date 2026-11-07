@@ -1,6 +1,6 @@
 # Listing score (`GET /api/score/{business_id}`)
 
-How up to date and complete a business's information is everywhere Connect publishes. Shown as the hero of the owner page: big number, arc fill = score/100, caption "NEEDS UPDATES · 4 OF 7 CHECKS". Code: `kaiku/score/engine.py` (pure `compute(listing, feed)`), route in `kaiku/score/router.py`.
+How up to date and complete a business's information is everywhere Connect publishes. Shown as the hero of the owner page: big number, arc fill = score/100, caption "NEEDS UPDATES · 3 OF 7 CHECKS (example; it moves with the sandbox)". Code: `kaiku/score/engine.py` (pure `compute(listing, feed)`), route in `kaiku/score/router.py`.
 
 Response: `{score, label_en, checks_ok, checks_total, checks: [{id, label_en, ok, points, weight, detail_en, source}], pending: [suggestion ids], today, as_of}`. `?fresh=1` bypasses the 30 s listing cache, `?quick=1` builds the feed without network signals.
 

@@ -298,7 +298,8 @@ def test_reset_clears_mcp_proposals(client, monkeypatch, tmp_path):
 
 
 def test_standing_permission_applies_without_asking(client, wired, _module_fakes):
-    """Learning: after a standing permission the next run for that holiday applies without a question and tells the owner."""
+    """Learning: after a standing permission the next run for that holiday applies without a question (the one-line WhatsApp
+    notice to the owner is sent only when WhatsApp is configured, which this harness turns off)."""
     from kaiku.learn import prefs
     sid, evs = _run(client, "2026-12-24")
     s = client.get(f"/api/suggestions/{sid}", headers={"x-kaiku-key": "testkey"}).json()

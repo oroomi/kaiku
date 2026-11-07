@@ -1,6 +1,6 @@
 # Submission pack: Fonecta slide 8, item by item
 
-Checked against the live product on 7 Nov 2026 01:50Z (https://kaiku.hankintaviikko.fi, main 1b4ac90). Business: the **fictional** Furry Paw Vet Clinic, Fonecta's Yext sandbox entity SinceAI07 in Vantaa. The sandbox description and the two reviews are sample text written by team VY7 and labelled so. Evaluation criteria (slide 7) are answered one by one in [EVAL.md](../EVAL.md).
+Checked against the live product on 7 Nov 2026 01:50Z (https://kaiku.hankintaviikko.fi, main 96d279d). Business: the **fictional** Furry Paw Vet Clinic, Fonecta's Yext sandbox entity SinceAI07 in Vantaa. The sandbox description and the two reviews are sample text written by team VY7 and labelled so. Evaluation criteria (slide 7) are answered one by one in [EVAL.md](../EVAL.md).
 
 ## Fields for the sinceai.app form
 | Field | Text |
@@ -43,12 +43,12 @@ git clone https://github.com/oroomi/kaiku && cd kaiku
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/uvicorn kaiku.app:app --host 127.0.0.1 --port 8210   # http://127.0.0.1:8210
 ```
-Without keys the chain still runs and each lane says what is missing; a local instance never sends email, WhatsApp or calls (`PUBLIC_URL` is not the production URL). Tests: `.venv/bin/python -m pytest -q`: 362 passed, 6 skipped on main with the box's `.env`; in a fresh checkout without SMTP settings `tests/test_email.py::test_real_smtp_path` fails (361 passed, 1 failed).
+Without keys the chain still runs and each lane says what is missing; a local instance never sends email, WhatsApp or calls (`PUBLIC_URL` is not the production URL). Tests: `.venv/bin/python -m pytest -q`: 415 passed, 6 skipped on main with the box's `.env`; in a fresh checkout without SMTP settings `tests/test_email.py::test_real_smtp_path` fails (414 passed, 1 failed (test_real_smtp_path, needs the box .env)).
 
 ## Facts a judge can check in one command each
 | Claim | Command | Value on 7 Nov 01:50Z |
 |---|---|---|
-| Listing score | `curl https://kaiku.hankintaviikko.fi/api/score/furry-paw` | 45, "Needs updates", 3 of 7 checks, 3 pending cards |
+| Listing score | `curl https://kaiku.hankintaviikko.fi/api/score/furry-paw` | for example 40, "Needs updates", 3 of 7 checks, 4 pending cards (it moves with the sandbox state) |
 | Suggestion with reason | `curl https://kaiku.hankintaviikko.fi/api/feed/furry-paw` | Christmas Eve 9-13, confidence 0.75, reasons from last year and from what Connect shows |
 | What Yext holds | `curl https://kaiku.hankintaviikko.fi/api/listing/furry-paw` | entity SinceAI07, holiday row 24.12. 9-13, description marked as sample text |
 | Chat opens empty | `curl https://kaiku.hankintaviikko.fi/api/chat/open` | `"messages": []` |

@@ -2,7 +2,7 @@
 
 **What and for whom.** Kaiku is the whole chain for holiday hours (Detect, Suggest, Contact, Decide, Apply) for the owner of a small business whose opening hours Fonecta Connect publishes. The owner gets a message instead of a login, answers in plain words ("yes", "make it 10-14", "no thanks"), and the approved hours are written to Fonecta's Yext sandbox. The demo business is the **fictional** Furry Paw Vet Clinic, Fonecta's sandbox entity SinceAI07 in Vantaa.
 
-**Live:** <https://kaiku.hankintaviikko.fi> (phone and laptop) | **Demo video:** approval cut `video/kaiku_approval_cut.mp4` (sample pages), final cut and YouTube link to follow ([docs/SUBMISSION.md](docs/SUBMISSION.md)) | **Repo:** github.com/oroomi/kaiku
+**Live:** <https://kaiku.hankintaviikko.fi> (phone and laptop) | **Demo video:** approval cut rendering on 7 Nov (sample pages); the final cut on the live page follows, YouTube link at submission | **Repo:** github.com/oroomi/kaiku
 **Challenge:** Fonecta, "Connect suggests, customer approves" | **Partner technology:** FIWARE (Orion-LD NGSI-LD broker) | **Team:** VY7, solo (Dayo) with Claude coding tools
 
 ![Kaiku home: Furry Paw Vet Clinic, Christmas Eve, Connect 9-17 versus Kaiku 9-13](docs/img/hero.jpg)
@@ -14,10 +14,10 @@ git clone https://github.com/oroomi/kaiku && cd kaiku
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/uvicorn kaiku.app:app --host 127.0.0.1 --port 8210   # http://127.0.0.1:8210
 ```
-Without keys the chain still runs and each lane says what is missing. Tests: `.venv/bin/python -m pytest -q` gives 362 passed, 6 skipped on main with the box's `.env` (run 7 Nov 2026; the skipped ones send or fetch live and need `KAIKU_LIVE=1`). In a fresh checkout without SMTP settings `tests/test_email.py::test_real_smtp_path` also fails (361 passed, 1 failed). The suite sets `KAIKU_NO_SMTP=1`, `KAIKU_FEED_NETWORK=0` and an empty `WA_TOKEN`, so it never sends or fetches.
+Without keys the chain still runs and each lane says what is missing. Tests: `.venv/bin/python -m pytest -q` gives 415 passed, 6 skipped on main with the box's `.env` (run 7 Nov 2026; the skipped ones send or fetch live and need `KAIKU_LIVE=1`). In a fresh checkout without SMTP settings `tests/test_email.py::test_real_smtp_path` also fails (414 passed, 1 failed (test_real_smtp_path, needs the box .env)). The suite sets `KAIKU_NO_SMTP=1`, `KAIKU_FEED_NETWORK=0` and an empty `WA_TOKEN`, so it never sends or fetches.
 
 ## How this meets the brief
-Fonecta's slide 8 and slide 7, answered item by item (all numbers re-checked on the live product, 7 Nov 2026, main 1b4ac90):
+Fonecta's slide 8 and slide 7, answered item by item (all numbers re-checked on the live product, 7 Nov 2026, main 96d279d):
 - **What to submit** (working demo, video, repo, data sources, final messages, cold start, deck, bonus): [docs/SUBMISSION.md](docs/SUBMISSION.md), one row per item with its link.
 - **Data sources, production source, what did not work:** [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md). **Final customer messages as text:** [docs/final_messages.md](docs/final_messages.md). **No history:** [docs/COLD_START.md](docs/COLD_START.md). **Pitch deck:** [docs/DECK.md](docs/DECK.md).
 - **Evaluation criteria** (suggestion quality, customer experience, reliability, extensibility, learning, all five steps): each answered in one paragraph with evidence at the end of [EVAL.md](EVAL.md). Honest status: Fonecta's hidden dataset is unknown to us, so suggestion quality is a self-consistency check on 10 cases we wrote, with a loader (`kaiku.suggest.backtest.load_cases`) that accepts CSV or JSON.

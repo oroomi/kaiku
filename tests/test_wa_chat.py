@@ -289,14 +289,13 @@ def test_approve_tap_applies_at_once_and_replies_with_the_receipt(fake_yext):
     assert f.texts()[0].startswith("Done. 24.12. 9-13 is saved and shows on Google, Fonecta Finder and 020202 within the hour.")
 
 
-def test_edit_button_then_text_and_decline_button(fake_yext):
+def test_edit_button_then_text_sets_the_new_hours(fake_yext):
     R.register_sent(PHONE, "t-hours", "wamid.OUT", "furry-paw")
     f = Fake()
     res = run(R.handle_payload(button("edit:t-hours"), client(f)))
     assert res["edit_requested"] == ["t-hours"] and f.texts() == [M.edit_prompt_text(None)]
     run(R.handle_payload(inbound("10-14", "wamid.T"), client(f)))
     assert fake_yext[-1][2] == [{"start": "10:00", "end": "14:00"}]
-    R.register_sent(PHONE, "t-hours", "wamid.OUT2", "furry-paw")
 
 
 def test_decline_tap_declines_via_whatsapp_and_kaiku_says_leave_it(fake_yext):
@@ -385,7 +384,7 @@ def test_tap_on_a_saved_item_confirms_and_proposes_the_next_with_a_reason(fake_y
     assert fake_yext and store.get_suggestion("t-hours").status in ("approved", "applied")
     sess = chat_router.session("wa:" + PHONE)
     sess["focus"], sess["stage"], sess["followup"] = "t-hours", None, None   # the owner taps Accept on the old message
-    run(R.handle_payload(inbound("yes", "wamid.S2"), client(f)))
+    run(R.handle_payload(button("approve:t-hours", "wamid.S2"), client(f)))   # a real Accept tap on the old message
     last = f.texts()[-1]
     assert last.startswith("Christmas Eve 24.12. is already saved (9-13). Next: Christmas period: 2 dates.")
     assert "Last year on 25.12. you were closed" in last and last.rstrip().endswith("?")

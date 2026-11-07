@@ -61,3 +61,5 @@
   .ev-badges{grid-column:1/2}
   .ev-why{grid-column:2/3;grid-row:1/4;margin:0;align-self:center}
 }
+
+@media (max-width:480px){ #kv, .kv { display:none !important } }  /* judge pages: the voice dock covered the tiles */

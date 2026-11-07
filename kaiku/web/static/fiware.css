@@ -83,3 +83,5 @@ pre.cmd{max-height:none;color:var(--green)}
   .tools{grid-template-columns:1fr}
   pre.raw,pre.cmd{font-size:10.5px}
 }
+
+@media (max-width:480px){ #kv, .kv { display:none !important } }  /* judge pages: the voice dock covered the tiles */
