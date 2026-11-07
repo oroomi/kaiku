@@ -84,7 +84,7 @@ def frames_mode(a, w, h, tmp: Path) -> dict:
         browser.close()
     out = Path(a.out)
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(fps), "-i", str(tmp / "f%05d.jpg"), "-c:v", "libx264",
-                    "-crf", "23", "-preset", "medium", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out)], check=True)
+                    "-crf", "30", "-preset", "medium", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out)], check=True)
     return {"frames": n, "fps_out": fps, "approved_counter": approved, "event_lines": events, "page_errors": errors,
             "answers_ok": sum(1 for r in results if r.get("ok")), "answers": results}
 

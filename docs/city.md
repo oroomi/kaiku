@@ -25,7 +25,8 @@ URLs: `/city` (full intro), `/city?intro=0` (land directly), `?room=1` (QR panel
    the room snapshot with `source: "fallback"` and the HUD says FALLBACK in amber. `?only=approved` is the 5 s reconciliation read.
 3. Vehicles, `GET /api/city/vehicles` and the SSE `positions` brief every 5 s: `kaiku.aura.router.read_broker()` (Vehicle and
    WeatherObserved entities kept live in the same Orion-LD by the Aura feeder). The page tweens each vehicle between two broker
-   reads (5 s linear), draws buses as cyan arrows rotated by heading with a 6-position fading trail, ships as amber diamonds.
+   reads (linear, over the measured read interval, at most 5 s; a jump over 300 m between reads snaps instead, measured
+   max 180 m in 11 s on 7 Nov), draws buses as cyan arrows rotated by heading with a 6-position fading trail, ships as amber diamonds.
 4. The subscription, `ensure_subscription()` at start-up: `subscriptionName kaiku-city-store-status`, entities type Store,
    watchedAttributes `[holidayHoursStatus]`, notification `{PUBLIC_URL}/city/notify`, normalized, attributes
    `[holidayHoursStatus, name, location]`. If a subscription with that name exists with another endpoint (a test server made
@@ -131,6 +132,12 @@ not the chain's time-travel clock).
 Playwright's virtual clock and screenshots every 50 ms of page time. Every frame is the real page and the answers,
 notifications and SSE pushes are real; vehicle motion is time-compressed because the broker positions refresh in wall time
 while frames render. `--mode realtime` uses `record_video_dir` for a machine with a GPU.
+Result on 7 Nov: 881 frames, 44.05 s, 20 fps, 1920x1080, 8 of 8 answers ok, counter 8, 8 `/city/notify` calls from Orion-LD in
+the server log, no page errors; render wall time 48 min. The first encode (crf 23) was 53 MB, so the file was re-encoded at
+crf 31 to 9.4 MB (the recorder now encodes at crf 30). The HUD clock and the event times differ by a few minutes in the film:
+event times are the broker's observedAt (wall time), the clock runs on page time.
+After the test the `kaiku-city-store-status` subscription (pointing at 8230) was deleted and the Stores reset to their seed
+state, so production creates its own subscription on its next start.
 
 ## What did not work / known edges
 - `q` on `holidayHoursStatus.status` is not evaluated by this Orion-LD build; the handler filters.
