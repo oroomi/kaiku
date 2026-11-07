@@ -6,7 +6,7 @@ const browserExecutable = arg('browser'); const out = arg('out'); const stills =
 const fr = arg('frames', '');
 const inputProps = {};
 const serveUrl = await bundle({entryPoint: path.join(here, 'src/index.ts'), publicDir: path.join(here, 'public')});
-const browser = await openBrowser('chrome', {browserExecutable, chromiumOptions: {gl: 'swangle'}, logLevel: 'warn'});
+const browser = await openBrowser('chrome', {browserExecutable, chromiumOptions: process.env.RENDER_GL === 'none' ? {} : {gl: process.env.RENDER_GL || 'swangle'}, logLevel: 'warn'});
 const composition = await selectComposition({serveUrl, id: 'Approval', inputProps, puppeteerInstance: browser, browserExecutable});
 console.log(composition.durationInFrames, 'frames');
 if (stills.length) { for (const f of stills) await renderStill({composition, serveUrl, inputProps, frame: f, output: path.join(sd, `b_${String(f).padStart(5, '0')}.png`), puppeteerInstance: browser, browserExecutable, imageFormat: 'png'}); }
