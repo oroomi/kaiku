@@ -124,11 +124,9 @@ def test_ladder_sends_one_text_with_the_chat_opening(monkeypatch):
     p = f.calls[0][3]
     assert p["type"] == "text" and p["to"] == PHONE and "interactive" not in p
     body = p["text"]["body"]
-    opening = [m["text"] for m in chat_router.opening("furry-paw", "x") if m.get("text")]
-    for line in opening:  # the same intro and suggestion lines the website chat shows on load
-        assert line in body
-    assert body.startswith("Hi Furry Paw Vet Clinic. I noticed 1 thing.")
-    assert body.endswith("Reply in your own words.") and "—" not in body
+    assert body.startswith("Hi Furry Paw Vet Clinic, Kaiku here from Fonecta Connect.")  # one item, the hand-over question
+    assert "I suggest 9-13" in body and "Reply yes, or tell me the hours." in body
+    assert body.endswith("Reply yes, or tell me the hours.") and "—" not in body
     assert s["status"] == "sent" and s["channel_log"][0]["channel"] == "whatsapp"
 
 
@@ -149,14 +147,14 @@ def test_ladder_template_path_unchanged_outside_window(monkeypatch):
     # the owner answers the template: the opening text arrives (text, not buttons)
     run(R.handle_payload(inbound("hei", "wamid.IN0"), client(f)))
     assert not any(c[3].get("type") == "interactive" for c in f.calls)
-    assert f.texts()[-1].endswith("Reply in your own words.") and len(f.texts()) == 2
+    assert f.texts()[-1].endswith("Reply yes, or tell me the hours.") and len(f.texts()) == 2
 
 
 def test_ladder_no_change_stays_plain(monkeypatch):
     monkeypatch.setattr(L.E, "owner_email", lambda s: "")
     f = Fake()
     L.contact(dict(SUG, id="t-nochange", kind="no_change", channel_log=[]), client=client(f), escalate_s=10**6)
-    assert "Reply in your own words" not in f.calls[0][3]["text"]["body"]
+    assert "Reply yes, or tell me the hours" not in f.calls[0][3]["text"]["body"]
 
 
 # ---------------------------------------------------------------- 2. inbound text -> the brain

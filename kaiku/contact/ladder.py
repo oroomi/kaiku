@@ -4,6 +4,7 @@ A decision from any channel cancels the pending steps. Language per owner (owner
 from __future__ import annotations
 
 import os
+import re
 import threading
 import time
 from datetime import datetime, timezone
@@ -74,7 +75,7 @@ def body_for(s: dict) -> str:
     return M.suggestion_text(s)
 
 
-REPLY_LINE = {"en": "Reply in your own words.", "fi": "Vastaa omin sanoin."}
+REPLY_LINE = {"en": "Reply yes, or tell me the hours.", "fi": "Vastaa kyllä tai kerro aukioloajat."}
 
 
 def buttons_enabled() -> bool:
@@ -94,15 +95,25 @@ def chat_text_for(s: dict) -> str:
             from kaiku import store  # type: ignore
             from kaiku.chat import router as CR  # type: ignore
             bid = s.get("business_id")
-            if bid and store.get_business(bid) is not None:
-                msgs = CR.opening(bid, "wa-opening")
-                lines = [m["text"] for m in msgs if m.get("text") and m.get("role") == "kaiku"]
-                if lines:
-                    try:  # the reply that follows continues on this suggestion
-                        CR.session("wa:" + owner_phone(s))["focus"] = s.get("id")
-                    except Exception:
-                        pass
-                    return "\n\n".join(lines) + "\n\n" + tail
+            b = store.get_business(bid) if bid else None
+            if b is not None:
+                # ONE item per message, the same hand-over question the website chat asks after Accept
+                from kaiku.suggest import feed as F  # type: ignore
+                en = s.get("holiday_name_en") or ""
+                d = F._dm(s["holiday_date"]) if s.get("holiday_date") else ""
+                prop = F._hshort(s.get("proposed"))
+                text = F._chat_text(s.get("message_en") or body_for(s), en, d, prop)
+                text = re.sub(r"^Hi,?\s[^!\n]*!\s*", "", text)  # the WhatsApp body greets with "Hi, <name>!"
+                text = re.sub(r"We suggest your hours are [^.]*\.", f"I suggest {prop}." if prop else "", text)
+                text = re.sub(r"\s*Approve with one tap[^.]*\.(\s*The decision is always yours\.)?", " ", text).strip()
+                if prop and "suggest" not in text.lower():
+                    text += f" I suggest {prop}."
+                name = s.get("business_name") or getattr(b, "name", None) or "there"
+                try:  # the reply that follows continues on this suggestion
+                    CR.session("wa:" + owner_phone(s))["focus"] = s.get("id")
+                except Exception:
+                    pass
+                return f"Hi {name}, Kaiku here from Fonecta Connect. {text}\n\n{tail}"
         except Exception:
             pass
     return body_for(s) + "\n\n" + tail
