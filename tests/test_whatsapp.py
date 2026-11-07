@@ -412,7 +412,7 @@ def test_ladder_escalates_to_call_when_undecided(monkeypatch):
     monkeypatch.setattr(L.E, "owner_email", lambda s: "")  # no owner email: the ladder starts at WhatsApp
     import sys, types, time
     called = []
-    mod = types.ModuleType("kaiku.contact.call"); mod.place_call = lambda s: called.append(s["id"])
+    mod = types.ModuleType("kaiku.contact.call"); mod.place_call = lambda s: (called.append(s["id"]), {"ok": True, "conversation_id": "conv_fake"})[1]
     monkeypatch.setitem(sys.modules, "kaiku.contact.call", mod)
     import kaiku.contact as pkg
     monkeypatch.setattr(pkg, "call", mod, raising=False)

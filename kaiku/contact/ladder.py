@@ -176,7 +176,7 @@ def _wa_step(s: dict, client=None, escalate_s: float | None = None) -> str:
     if is_decided(s["id"]):
         return "decided"
     if s.get("channel_log") and s["channel_log"][-1].get("channel") == "email":
-        _log(s, "whatsapp", "no decision after the email", "No reply by email, WhatsApp sent", "Ei vastausta sähköpostiin, WhatsApp lähetetty")
+        _log(s, "whatsapp", "no decision after the email", "No reply by email, WhatsApp next", "Ei vastausta sähköpostiin, seuraavaksi WhatsApp")
     _whatsapp(s, client, escalate_s)
     return "sent"
 
@@ -253,7 +253,11 @@ def _call_step(s: dict) -> str:
         _log(s, "call", "call lane not configured")
         return "not_configured"
     try:
-        call.place_call(s)
+        r = call.place_call(s) or {}
+        if not r.get("ok"):  # disabled instance, unconfigured lane or a SIP failure: never say "calling"
+            why = r.get("reason") or r.get("error") or "unknown"
+            _log(s, "call", f"call not placed: {why}", f"Call not placed ({why})", f"Puhelua ei soitettu ({why})")
+            return "failed"
         _log(s, "call", "call placed after no WhatsApp decision", "No reply on WhatsApp, Kaiku is calling", "Ei vastausta WhatsAppiin, Kaiku soittaa")
         return "placed"
     except Exception as e:

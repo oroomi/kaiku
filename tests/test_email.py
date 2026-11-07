@@ -92,7 +92,7 @@ def ladder(monkeypatch):
     monkeypatch.setenv("OWNER_WHATSAPP", "+358401234567")
     called = []
     mod = types.ModuleType("kaiku.contact.call")
-    mod.place_call = lambda s: called.append(s["id"])
+    mod.place_call = lambda s: (called.append(s["id"]), {"ok": True, "conversation_id": "conv_fake"})[1]
     monkeypatch.setitem(sys.modules, "kaiku.contact.call", mod)
     import kaiku.contact as pkg
     monkeypatch.setattr(pkg, "call", mod, raising=False)
@@ -150,7 +150,7 @@ def test_event_titles(env, ladder, monkeypatch):
     FakeTimer.made[-1].fire()
     FakeTimer.made[-1].fire()
     assert "Email drafted (dry run, no SMTP configured)" in titles
-    assert "No reply by email, WhatsApp sent" in titles
+    assert "No reply by email, WhatsApp next" in titles
     assert "No reply on WhatsApp, Kaiku is calling" in titles
 
 
