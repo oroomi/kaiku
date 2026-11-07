@@ -16,15 +16,15 @@ Fonecta: Connect Suggests, Customer Approves
 FIWARE (tick). Nothing else needs ticking for the product; ElevenLabs and Anthropic go under "Built with".
 
 ### One-line pitch / public summary line (no limit stated; 128 characters here)
-The vet closes early on Christmas Eve. Google does not know. Kaiku asks the owner, and the owner answers in one tap.
+Connect suggests, the customer approves: Kaiku runs the whole holiday-hours chain, by email, WhatsApp or a phone call, no login.
 
-(Alternative, 137 characters: Connect suggests, the customer approves: Kaiku runs the whole holiday-hours chain, by email, WhatsApp or a phone call, no login.)
+(Owner's pick, 7 Nov. The earlier line, kept as a spare: The vet closes early on Christmas Eve. Google does not know. Kaiku asks the owner, and the owner answers in one tap.)
 
 ### Public summary, what voters see (no limit stated; about 480 characters)
-Small business owners forget to add holiday hours, so Google shows the wrong ones and customers turn up at a closed door. Kaiku notices the missing hours, suggests last year's with the exact reason, and reaches the owner by email, then WhatsApp, then a phone call. The owner taps Accept or just says "make it 10-14". We write the change to Fonecta's Yext sandbox, read it back, and tell the owner we will update their information everywhere. It learns how each owner likes to be reached. It runs live, no login.
+Small business owners forget to add holiday hours, so Google shows the wrong ones and customers turn up at a closed door. Kaiku notices the missing hours, suggests last year's with the exact reason, and gives the owner three ways to be reached: email first, WhatsApp if there is no decision, and a phone call if there is still none, so one unanswered channel never ends the chain. The owner taps Accept or just says "make it 10-14". We write the change to Fonecta's Yext sandbox, read it back, and tell the owner we will update their information everywhere. It learns how each owner likes to be reached. It runs live, no login.
 
 ### Description, short (no limit stated; about 300 characters)
-Kaiku runs Fonecta's whole chain for holiday hours: detect the missing hours, suggest with the reason, contact the owner by email, WhatsApp or a phone call, decide in one tap or in plain words, apply to the Yext sandbox with a read-back. A FIWARE Orion-LD broker is the spine. Live at kaiku.hankintaviikko.fi.
+Kaiku runs Fonecta's whole chain for holiday hours: detect the missing hours, suggest with the reason, reach the owner three ways (email, then WhatsApp, then a phone call if the earlier ones go unanswered), decide in one tap or in plain words, apply to the Yext sandbox with a read-back. A FIWARE Orion-LD broker is the spine. Live at kaiku.hankintaviikko.fi.
 
 ### Description, long: "About" (limit 5,000 characters; this text is about 4,300)
 **The problem.** Fonecta Connect publishes a business's information to Google, maps, directories and AI services. Owners must log in and remember one-off changes such as holiday hours. Many forget, search results go stale, and people turn up when the business is closed.
@@ -32,7 +32,7 @@ Kaiku runs Fonecta's whole chain for holiday hours: detect the missing hours, su
 **What Kaiku does.** Kaiku is the whole chain for holiday hours, all five steps, live. The demo business is the fictional Furry Paw Vet Clinic, Fonecta's sandbox entity SinceAI07 in Vantaa.
 1. Detect. A FIWARE Orion-LD subscription fires when a holiday has no exception hours. The holiday calendar is live (Nager.Date).
 2. Suggest. Kaiku proposes last year's hours (Christmas Eve 9-13, while Connect still shows 9-17) with the reason in plain words and a confidence. Below 0.6 confidence it asks one question and proposes nothing. For Father's Day, which is a flag day and not a holiday, a vet closed on Sundays gets "no change" with the reason shown, not silence.
-3. Contact, no login. An email in plain everyday words with a decision link comes first. If nobody decides, a WhatsApp message follows with Accept and Discard buttons, and the owner can simply reply with other hours. If still nothing, Kaiku phones the owner: an ElevenLabs agent with a warm script, voice Aurora, English for the demo, dialled over a SIP trunk. A decision on any channel cancels the next step.
+3. Contact, no login, three ways. Every owner gets three channels, each tried only if the one before brought no decision, so an unanswered email never ends the chain. An email in plain everyday words with a decision link comes first. If nobody decides, a WhatsApp message follows with Accept and Discard buttons, and the owner can simply reply with other hours. If still nothing, Kaiku phones the owner: an ElevenLabs agent with a warm script, voice Aurora, English for the demo, dialled over a SIP trunk. A decision on any channel cancels the next step.
 4. Decide. Accept, Suggest a change or Discard on the page; a button in WhatsApp; a yes on the phone; or typed hours. The customer always has the last word and nothing is written before they say yes.
 5. Apply. The approved hours are written to the team's Yext sandbox entity and read back. Every receipt says "We'll update your information everywhere" and Kaiku never claims more than the read-back proves.
 
