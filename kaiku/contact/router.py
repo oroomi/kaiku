@@ -276,8 +276,9 @@ def _business_for(sid: str | None) -> str | None:
 
 def _is_owner_phone(phone: str) -> bool:
     W.load_env()
-    own = W.normalize_phone(os.environ.get("OWNER_WHATSAPP"))
-    return bool(own) and own == W.normalize_phone(phone)
+    from kaiku import demo_contact as DC
+    p = W.normalize_phone(phone)
+    return bool(p) and p in {W.normalize_phone(os.environ.get("OWNER_WHATSAPP")), W.normalize_phone(DC.phone())} - {""}
 
 
 def chat_session(phone: str) -> dict:

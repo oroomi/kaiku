@@ -13,5 +13,18 @@
     <button class="ghost" id="reset" data-pilot="reset" type="button" title="Removes the holiday hours from the Yext sandbox, clears runs and events, sets the date to 17.12.2026">Reset demo</button>
   </div>
   <p class="mono soft" id="d-msg" aria-live="polite"></p>
+  <fieldset class="dcontact" data-pilot="demo-contact">
+    <legend class="mono">Demo contact</legend>
+    <label class="dfield"><span class="mono">Email</span>
+      <input type="email" id="dc-email" autocomplete="off" inputmode="email" placeholder="name@company.fi" aria-label="Demo contact email"></label>
+    <label class="dfield"><span class="mono">Phone (international)</span>
+      <input type="tel" id="dc-phone" autocomplete="off" inputmode="tel" placeholder="+358401234567" aria-label="Demo contact phone"></label>
+    <div class="drow">
+      <button class="primary" id="dc-save" type="button">Save</button>
+      <button class="ghost" id="dc-clear" type="button">Back to my own</button>
+    </div>
+    <p class="mono soft" id="dc-msg" aria-live="polite">Using the owner's own.</p>
+    <p class="mono soft dc-note">WhatsApp reaches only numbers registered in the Meta test app (SMS code, max 5); email and the call reach any address or number. Ask the person first; clear it after.</p>
+  </fieldset>
   <a class="dlink" href="/judge">Judge view: live events</a>
 </aside>

@@ -49,6 +49,9 @@ def smtp_config() -> dict | None:
 def owner_email(s: dict) -> str:
     """OWNER_EMAIL (a real address for the demo) wins; else the suggestion's or business's owner_email."""
     W.load_env()
+    from kaiku import demo_contact as DC
+    if DC.email():  # the demo contact (set in the drawer) beats everything
+        return DC.email()
     v = (os.environ.get("OWNER_EMAIL") or "").strip() or (s.get("owner_email") or "").strip()
     if not v:
         try:
