@@ -22,7 +22,7 @@ def main() -> int:
     if not (key and aid and voice):
         print("missing ELEVENLABS_API_KEY, ELEVENLABS_AGENT_ID or ELEVENLABS_VOICE_ID in .env"); return 2
     H = {"xi-api-key": key, "Content-Type": "application/json"}
-    body = {"conversation_config": {"tts": {"voice_id": voice, "stability": 0.38, "similarity_boost": 0.75, "style": 0.45, "use_speaker_boost": True, "speed": 0.85}}}   # calmer delivery (Dayo 7 Nov: the default pace sounded hurried)
+    body = {"conversation_config": {"tts": {"voice_id": voice, "stability": 0.55, "similarity_boost": 0.75, "style": 0.1, "use_speaker_boost": True, "speed": 0.9}}}   # calmer delivery (Dayo 7 Nov: the default pace sounded hurried)
     req = urllib.request.Request(f"https://api.elevenlabs.io/v1/convai/agents/{aid}", data=json.dumps(body).encode(), method="PATCH", headers=H)
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
