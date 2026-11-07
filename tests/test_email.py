@@ -80,7 +80,7 @@ class FakeTimer:
 
 class FakeWA:
     def __init__(self): self.sent = []
-    def send_buttons(self, phone, body, btns): self.sent.append("buttons"); return {"ok": True, "message_id": "w1"}
+    def send_buttons(self, phone, body, btns): self.sent.append("buttons"); self.btns = [t for _, t in btns]; self.body = body; return {"ok": True, "message_id": "w1"}
     def send_text(self, phone, body): self.sent.append("text"); return {"ok": True, "message_id": "w1"}
 
 
@@ -100,7 +100,7 @@ def ladder(monkeypatch):
     return called
 
 
-def test_ladder_order_email_whatsapp_call(env, ladder):
+def test_ladder_order_email_then_whatsapp_buttons_then_call(env, ladder):
     wa = FakeWA()
     s = dict(SUG, id="sgl1", channel_log=[])
     L.contact(s, client=wa, escalate_s=50, email_escalate_s=20)
@@ -108,7 +108,9 @@ def test_ladder_order_email_whatsapp_call(env, ladder):
     t1 = FakeTimer.made[-1]
     assert t1.delay == 20
     t1.fire()
-    assert wa.sent == ["text"] and [c["channel"] for c in s["channel_log"]] == ["email", "whatsapp", "whatsapp"]
+    assert wa.sent == ["buttons"] and wa.btns == ["Accept", "Discard"]         # WhatsApp step = warm opener with two buttons
+    # no chat-feed card in this module (no stub feed), so the structured opener is used; it still ends with the button tail
+    assert wa.body.startswith("Hi, Furry Paw Vet Clinic!") and wa.body.endswith("To change the hours, just reply with them.") and [c["channel"] for c in s["channel_log"]] == ["email", "whatsapp", "whatsapp"]
     t2 = FakeTimer.made[-1]
     assert t2.delay == 50 and ladder == []
     t2.fire()
@@ -132,12 +134,12 @@ def test_decision_cancels_pending(env, ladder, monkeypatch):
     assert t.cancelled
 
 
-def test_no_email_goes_straight_to_whatsapp(env, ladder, monkeypatch):
+def test_no_email_goes_straight_to_whatsapp_buttons(env, ladder, monkeypatch):
     monkeypatch.delenv("OWNER_EMAIL")
     wa = FakeWA()
     s = dict(SUG, id="sgl5", channel_log=[])
     L.contact(s, client=wa, escalate_s=50)
-    assert wa.sent == ["text"] and s["channel_log"][0]["channel"] == "whatsapp"
+    assert wa.sent == ["buttons"] and wa.btns == ["Accept", "Discard"] and s["channel_log"][0]["channel"] == "whatsapp"
 
 
 def test_event_titles(env, ladder, monkeypatch):

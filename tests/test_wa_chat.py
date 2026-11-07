@@ -115,46 +115,58 @@ def start(monkeypatch=None):
 
 # ---------------------------------------------------------------- 1. the ladder message
 
-def test_ladder_sends_one_text_with_the_chat_opening(monkeypatch):
+def test_ladder_sends_one_interactive_opener_with_accept_and_discard(monkeypatch):
     monkeypatch.setattr(L.E, "owner_email", lambda s: "")
     f = Fake()
     s = dict(SUG, channel_log=[])
     L.contact(s, client=client(f), escalate_s=10**6)
     assert len(f.calls) == 1
     p = f.calls[0][3]
-    assert p["type"] == "text" and p["to"] == PHONE and "interactive" not in p
-    body = p["text"]["body"]
+    assert p["type"] == "interactive" and p["to"] == PHONE
+    btns = p["interactive"]["action"]["buttons"]
+    assert [b["reply"]["title"] for b in btns] == ["Accept", "Discard"]          # exactly two buttons
+    assert [b["reply"]["id"] for b in btns] == ["approve:t-hours", "decline:t-hours"]
+    body = p["interactive"]["body"]["text"]
     assert body.startswith("Hi Furry Paw Vet Clinic!")  # one item, a warm hand-over question
-    assert "9-13" in body and "Just reply yes, or tell me what the hours should be, and I'll take care of the rest." in body
-    assert body.endswith("Just reply yes, or tell me what the hours should be, and I'll take care of the rest.") and "—" not in body
+    assert "9-13" in body and "—" not in body
+    assert body.endswith("Tap Accept to save it or Discard to leave it. To change the hours, just reply with them.")
+    assert "Just reply yes" not in body
     assert s["status"] == "sent" and s["channel_log"][0]["channel"] == "whatsapp"
 
 
-def test_ladder_buttons_only_behind_wa_buttons(monkeypatch):
+def test_ladder_sends_one_plain_text_when_wa_buttons_is_zero(monkeypatch):
     monkeypatch.setattr(L.E, "owner_email", lambda s: "")
-    monkeypatch.setenv("WA_BUTTONS", "1")
+    monkeypatch.setenv("WA_BUTTONS", "0")
     f = Fake()
     L.contact(dict(SUG, channel_log=[]), client=client(f), escalate_s=10**6)
+    assert len(f.calls) == 1
     p = f.calls[0][3]
-    assert p["type"] == "interactive" and p["interactive"]["action"]["buttons"][0]["reply"]["id"] == "approve:t-hours"
+    assert p["type"] == "text" and "interactive" not in p
+    body = p["text"]["body"]
+    assert body.startswith("Hi Furry Paw Vet Clinic!") and "9-13" in body
+    assert body.endswith("Just reply yes, or tell me what the hours should be, and I'll take care of the rest.") and "Tap Accept" not in body
 
 
-def test_ladder_template_path_unchanged_outside_window(monkeypatch):
+def test_ladder_template_path_outside_window_then_buttons_follow_the_reply(monkeypatch):
     monkeypatch.setattr(L.E, "owner_email", lambda s: "")
     f = Fake([(400, {"error": {"code": 131047, "message": "x"}}), (200, {"messages": [{"id": "wamid.T"}]}), (200, {"messages": [{"id": "wamid.X"}]})])
     L.contact(dict(SUG, channel_log=[]), client=client(f), escalate_s=10**6)
-    assert f.calls[0][3]["type"] == "text" and f.calls[1][3]["type"] == "template"
-    # the owner answers the template: the opening text arrives (text, not buttons)
+    assert f.calls[0][3]["type"] == "interactive" and f.calls[1][3]["type"] == "template"
+    # the owner answers the template: the same warm opener arrives with Accept / Discard
     run(R.handle_payload(inbound("hei", "wamid.IN0"), client(f)))
-    assert not any(c[3].get("type") == "interactive" for c in f.calls)
-    assert f.texts()[-1].endswith("Just reply yes, or tell me what the hours should be, and I'll take care of the rest.") and len(f.texts()) == 2
+    sent = [c[3] for c in f.calls if c[3].get("status") != "read"]       # a read receipt is not a message
+    assert [m["type"] for m in sent] == ["interactive", "template", "interactive"]
+    p = sent[2]["interactive"]
+    assert [b["reply"]["title"] for b in p["action"]["buttons"]] == ["Accept", "Discard"]
+    assert p["body"]["text"].startswith("Hi Furry Paw Vet Clinic!") and p["body"]["text"].endswith("just reply with them.")
+    assert f.texts() == []
 
 
 def test_ladder_no_change_stays_plain(monkeypatch):
     monkeypatch.setattr(L.E, "owner_email", lambda s: "")
     f = Fake()
     L.contact(dict(SUG, id="t-nochange", kind="no_change", channel_log=[]), client=client(f), escalate_s=10**6)
-    assert "Just reply yes, or tell me what the hours should be" not in f.calls[0][3]["text"]["body"]
+    assert "Just reply yes, or tell me what the hours should be" not in json.dumps(f.calls[0][3])
 
 
 # ---------------------------------------------------------------- 2. inbound text -> the brain
@@ -267,11 +279,14 @@ def test_no_api_key_uses_the_keyword_parser_inside_the_brain(fake_yext, monkeypa
 
 # ---------------------------------------------------------------- 5. buttons still work
 
-def test_button_payloads_still_decide(fake_yext):
+def test_approve_tap_applies_at_once_and_replies_with_the_receipt(fake_yext):
     R.register_sent(PHONE, "t-hours", "wamid.OUT", "furry-paw")
-    res = run(R.handle_payload(button("approve:t-hours"), client(Fake())))
-    assert res["decisions"][0]["suggestion_id"] == "t-hours" and fake_yext
-    assert store.get_decisions("t-hours")[0].via == "whatsapp"
+    f = Fake()
+    res = run(R.handle_payload(button("approve:t-hours"), client(f)))
+    assert res["decisions"][0]["suggestion_id"] == "t-hours"
+    assert fake_yext == [("SinceAI07", "2026-12-24", [{"start": "09:00", "end": "13:00"}])]   # one tap applied it
+    assert store.get_decisions("t-hours")[0].via == "whatsapp" and store.get_suggestion("t-hours").status == "applied"
+    assert f.texts()[0].startswith("Done. 24.12. 9-13 is saved and shows on Google, Fonecta Finder and 020202 within the hour.")
 
 
 def test_edit_button_then_text_and_decline_button(fake_yext):
@@ -284,12 +299,14 @@ def test_edit_button_then_text_and_decline_button(fake_yext):
     R.register_sent(PHONE, "t-hours", "wamid.OUT2", "furry-paw")
 
 
-def test_decline_button(fake_yext):
+def test_decline_tap_declines_via_whatsapp_and_kaiku_says_leave_it(fake_yext):
     R.register_sent(PHONE, "t-hours", "wamid.OUT", "furry-paw")
     f = Fake()
     run(R.handle_payload(button("decline:t-hours"), client(f)))
     assert store.get_suggestion("t-hours").status == "declined" and fake_yext == []
-    assert f.texts() == [M.decline_thanks_text(None)]
+    assert store.get_decisions("t-hours")[0].action == "decline" and store.get_decisions("t-hours")[0].via == "whatsapp"
+    assert f.texts() == ["Okay, I leave it as it is."]                   # Kaiku's own line, not the legacy thank-you text
+    assert M.decline_thanks_text(None) not in f.texts()
 
 
 def test_status_log_untouched(tmp_path):

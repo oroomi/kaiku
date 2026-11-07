@@ -183,12 +183,13 @@ def test_finnish_owner_still_gets_finnish_replies():
 
 # ---------------------------------------------------------------- payloads and errors
 
-def test_button_payload():
+def test_default_buttons_are_accept_and_discard():
     p = W.WhatsAppClient.buttons_payload("+358 40 123 4567", "body")
     assert p["to"] == "358401234567" and p["type"] == "interactive"
     btns = p["interactive"]["action"]["buttons"]
-    assert [b["reply"]["title"] for b in btns] == ["Approve", "Edit", "No thanks"]
-    assert [t for _, t in W.FI_BUTTONS] == ["Hyväksy", "Muokkaa", "Ei kiitos"]
+    assert [b["reply"]["title"] for b in btns] == ["Accept", "Discard"]          # one tap accepts, one tap discards; an edit is typed
+    assert [b["reply"]["id"] for b in btns] == ["approve", "decline"]
+    assert [t for _, t in W.FI_BUTTONS] == ["Hyväksy", "Hylkää"]
     assert all(len(b["reply"]["title"]) <= 20 for b in btns)
     with pytest.raises(ValueError):
         W.WhatsAppClient.buttons_payload(PHONE, "b", [("a", "x")] * 4)
@@ -447,8 +448,7 @@ def test_template_hours_payload_shape():
             {"type": "body", "parameters": [{"type": "text", "text": t} for t in
                                             ("Furry Paw Vet Clinic", "24.12.", "9-13", "jouluaatto")]},
             {"type": "button", "sub_type": "quick_reply", "index": "0", "parameters": [{"type": "payload", "payload": "approve:sg1"}]},
-            {"type": "button", "sub_type": "quick_reply", "index": "1", "parameters": [{"type": "payload", "payload": "edit:sg1"}]},
-            {"type": "button", "sub_type": "quick_reply", "index": "2", "parameters": [{"type": "payload", "payload": "decline:sg1"}]}]}}
+            {"type": "button", "sub_type": "quick_reply", "index": "1", "parameters": [{"type": "payload", "payload": "decline:sg1"}]}]}}
 
 
 def test_ladder_template_switch(monkeypatch):
@@ -472,8 +472,8 @@ def test_ladder_english_ignores_finnish_template(monkeypatch):
     L.contact(dict(SUG, id="sge", channel_log=[]), client=client(f), escalate_s=10**6)
     p = f.calls[0][3]
     assert p["type"] == "interactive"
-    assert [b["reply"]["title"] for b in p["interactive"]["action"]["buttons"]] == ["Approve", "Edit", "No thanks"]
-    assert [b["reply"]["id"] for b in p["interactive"]["action"]["buttons"]] == ["approve:sge", "edit:sge", "decline:sge"]
+    assert [b["reply"]["title"] for b in p["interactive"]["action"]["buttons"]] == ["Accept", "Discard"]
+    assert [b["reply"]["id"] for b in p["interactive"]["action"]["buttons"]] == ["approve:sge", "decline:sge"]
     assert p["interactive"]["body"]["text"].startswith("Hi, Furry Paw Vet Clinic!")
     monkeypatch.setenv("WA_TEMPLATE_NAME_EN", "kaiku_hours_en")
     f2 = Fake([(200, {"messages": [{"id": "wamid.E2"}]})])

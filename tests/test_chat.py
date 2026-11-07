@@ -119,23 +119,28 @@ def _chat(c, sid, text):
     return c.post("/api/chat", json={"message": text, "session": sid}).json()
 
 
-def test_accept_hands_over_then_yes_applies_then_recurring_then_next(stub_feed, fake_yext):
+def test_proposal_text_carries_its_reason(stub_feed):
+    from kaiku.chat import flow
+    item = [i for i in json.loads(stub_feed.read_text())["suggestions"] if i["id"] == "t-hours"][0]
+    assert flow.proposal("furry-paw", item) == H24
+
+
+def test_accept_applies_at_once_then_recurring_then_next(stub_feed, fake_yext):
     from kaiku.app import app
     c = TestClient(app)
     r = c.post("/api/suggestions/t-hours/accept", json={"session": "s1"}).json()
-    assert r["reply"] == H24 and fake_yext == []                       # Accept writes nothing
-    assert store.get_suggestion("t-hours") is None or store.get_suggestion("t-hours").status != "applied"
-    r = _chat(c, "s1", "yes")
-    assert fake_yext == [("SinceAI07", "2026-12-24", [{"start": "09:00", "end": "13:00"}])]
+    assert r["ok"] is True
+    assert fake_yext == [("SinceAI07", "2026-12-24", [{"start": "09:00", "end": "13:00"}])]   # one click wrote it, no "yes" needed
     assert r["reply"] == "Done. 24.12. 9-13 is saved and shows on Google, Fonecta Finder and 020202 within the hour. " + RECUR
-    assert r["actions"][0]["type"] == "decided" and r["statuses"]["t-hours"] == "approved"
+    assert r["actions"][0]["type"] == "decided" and r["actions"][0]["suggestion_id"] == "t-hours"
+    assert store.get_suggestion("t-hours").status == "applied"
     ev = [e for e in store.recent_events(50) if e.suggestion_id == "t-hours"]
     assert any(e.step == "decide" and (e.detail or {}).get("via") == "web" for e in ev) and any(e.step == "apply" for e in ev)
-    assert store.get_decisions("t-hours")[0].via == "web"
+    assert store.get_decisions("t-hours")[0].via == "web" and store.get_decisions("t-hours")[0].action == "approve"
     r2 = _chat(c, "s1", "yes, every year")      # the recurring answer, NOT an approval of the next card
     assert r2["actions"] == [{"type": "standing", "suggestion_id": "t-hours", "enabled": True}] and len(fake_yext) == 1
     assert r2["reply"].startswith("Every Christmas Eve from now on, unless you tell me otherwise. Next: Two sources disagree.")
-    assert r2["statuses"]["t-conflict"] == "proposed"
+    assert r2["statuses"]["t-hours"] == "approved" and r2["statuses"]["t-conflict"] == "proposed"
     from kaiku.learn import prefs
     assert prefs.get_prefs("furry-paw")["standing_permission"]["holiday"] == "christmaseve"
 
@@ -148,11 +153,13 @@ def test_recurring_question_only_with_last_year_data(stub_feed, fake_yext):
         {"id": "t-conflict", "kind": "conflict", "title_en": "Two sources disagree", "text_en": "x", "proposed": None, "confidence": 0.5,
          "status": "proposed", "holiday_date": "2026-12-26", "reasons": []}]}))
     c = TestClient(app)
-    r = c.post("/api/suggestions/t-mid/accept", json={"session": "m1"}).json()
-    assert r["reply"].startswith("Midsummer Eve is coming. Everywhere Connect publishes still says 9-17. Do you want to change your hours on Midsummer Eve 18.6. to 10-14?")
-    out = _chat(c, "m1", "yes")["reply"]
+    item = [i for i in json.loads(stub_feed.read_text())["suggestions"] if i["id"] == "t-mid"][0]
+    from kaiku.chat import flow
+    assert flow.proposal("furry-paw", item).startswith("Midsummer Eve is coming. Everywhere Connect publishes still says 9-17. Do you want to change your hours on Midsummer Eve 18.6. to 10-14?")
+    out = c.post("/api/suggestions/t-mid/accept", json={"session": "m1"}).json()["reply"]   # one click applies
     assert out.startswith("Done. 18.6. 10-14 is saved and shows on") and "recurring" not in out
     assert "Next: Two sources disagree." in out                          # no recurring question: straight to the next card
+    assert len(fake_yext) == 1 and fake_yext[0][1] == "2027-06-18"
 
 
 def test_suggest_a_change_flow(stub_feed, fake_yext):
@@ -172,11 +179,12 @@ def test_suggest_a_change_flow(stub_feed, fake_yext):
     assert r["reply"].startswith("Okay, I will ask you each time.") and len(fake_yext) == n
 
 
-def test_no_at_any_point_leaves_it(stub_feed, fake_yext):
+def test_discard_at_once_and_no_after_a_typed_value_leave_it(stub_feed, fake_yext):
     from kaiku.app import app
     c = TestClient(app)
-    c.post("/api/suggestions/t-hours/accept", json={"session": "n1"})
-    r = _chat(c, "n1", "no")
+    c.post("/api/suggestions/t-hours/change", json={"session": "n1"})
+    assert _chat(c, "n1", "make it 10-14")["reply"] == "10-14 on 24.12., shall I save it?"
+    r = _chat(c, "n1", "no")                                              # declining the confirmation leaves it, nothing written
     assert r["reply"] == "Okay, I leave it as it is." and r["statuses"]["t-hours"] == "declined" and fake_yext == []
     assert any(e.step == "learn" for e in store.recent_events(50) if e.suggestion_id == "t-hours")
 
@@ -199,7 +207,7 @@ def test_discard_route(stub_feed, fake_yext):
     assert any(m["text"].startswith("Okay, I leave") for m in c.get("/api/chat/open?session=d1").json()["messages"])
 
 
-def test_text_kinds_proposals_and_honest_receipts(stub_feed, fake_yext, monkeypatch):
+def test_text_kinds_proposal_texts_and_honest_receipts_on_accept(stub_feed, fake_yext, monkeypatch):
     from kaiku.app import app
     stub_feed.write_text(json.dumps({"suggestions": [
         {"id": "t-desc", "kind": "description", "title_en": "Typo in your description", "text_en": "x", "proposed": "We offer vaccination.",
@@ -211,20 +219,24 @@ def test_text_kinds_proposals_and_honest_receipts(stub_feed, fake_yext, monkeypa
     calls = []
     monkeypatch.setattr(actions, "_text_apply", lambda item, text, client=None: calls.append((item["id"], text)) or
                         ({"yext_status": "ok", "verified": True} if item["kind"] == "description" else {"yext_status": "ok", "stored": True, "posted": False}))
+    from kaiku.chat import flow
+    items = {i["id"]: i for i in json.loads(stub_feed.read_text())["suggestions"]}
+    assert flow.proposal("furry-paw", items["t-desc"]) == 'Your description on Connect reads "vacination". Shall I correct it to "vaccination"? That text shows on Google and Fonecta.'
+    assert flow.proposal("furry-paw", items["t-nodesc"]) == "Your listing has no description, so searches show only your name and address. Shall I publish this one? A small clinic."
+    assert flow.proposal("furry-paw", items["t-rev"]) == 'The 3-star review has no reply yet, and it shows next to your listing. Shall I post this reply? "Thank you, sorry about the wait."'
     c = TestClient(app)
-    assert c.post("/api/suggestions/t-desc/accept", json={"session": "x1"}).json()["reply"] == 'Your description on Connect reads "vacination". Shall I correct it to "vaccination"? That text shows on Google and Fonecta.'
-    assert c.post("/api/suggestions/t-nodesc/accept", json={"session": "x2"}).json()["reply"] == "Your listing has no description, so searches show only your name and address. Shall I publish this one? A small clinic."
-    assert c.post("/api/suggestions/t-rev/accept", json={"session": "x3"}).json()["reply"] == 'The 3-star review has no reply yet, and it shows next to your listing. Shall I post this reply? "Thank you, sorry about the wait."'
-    assert _chat(c, "x1", "yes")["reply"].startswith("Done. Your description is saved and shows on Google")
-    r = _chat(c, "x3", "yes")["reply"]                       # stored, not posted: never claim a post
-    assert r.startswith("Your reply is stored. The sandbox key cannot post review comments") and "posted" not in r.replace("cannot post", "")
-    c.post("/api/suggestions/t-nodesc/change", json={"session": "x2"})   # the owner's own text replaces it
+    r = c.post("/api/suggestions/t-desc/accept", json={"session": "x1"}).json()["reply"]     # one click applies
+    assert r.startswith("Done. Your description is saved and shows on Google") and calls == [("t-desc", "We offer vaccination.")]
+    r = c.post("/api/suggestions/t-rev/accept", json={"session": "x3"}).json()["reply"]
+    assert r.startswith("Your reply is stored. The sandbox key cannot post review comments")   # stored, not posted: never claim a post
+    assert "posted" not in r.replace("cannot post", "").replace("not on the review", "")
+    c.post("/api/suggestions/t-nodesc/change", json={"session": "x2"})   # the owner's own text replaces it: this is the edit path
     assert _chat(c, "x2", "A friendly small animal clinic in Vantaa")["reply"] == 'Shall I save this as your description? "A friendly small animal clinic in Vantaa"'
     _chat(c, "x2", "yes")
     assert calls[-1] == ("t-nodesc", "A friendly small animal clinic in Vantaa")
 
 
-def test_period_accept_sets_every_member_date(stub_feed, fake_yext):
+def test_period_one_click_accept_sets_every_member_date(stub_feed, fake_yext):
     from kaiku.app import app
     mem = lambda d, n, p: {"date": d, "name_en": n, "kind": "closed" if p == "closed" else "hours", "proposed": p, "confidence": .7}
     stub_feed.write_text(json.dumps({"suggestions": [
@@ -232,20 +244,20 @@ def test_period_accept_sets_every_member_date(stub_feed, fake_yext):
          "holiday_date": "2026-12-24", "reasons": [], "proposed": [mem("2026-12-24", "Christmas Eve", [{"start": "09:00", "end": "13:00"}]),
                                                             mem("2026-12-25", "Christmas Day", "closed"), mem("2026-12-26", "St. Stephen's Day", "closed")]}]}))
     c = TestClient(app)
-    r = c.post("/api/suggestions/t-period/accept", json={"session": "p1"}).json()
-    assert r["reply"] == "The Christmas period is coming. Shall I set 24.12. 9-13; 25.12. closed; 26.12. closed?" and fake_yext == []
-    out = _chat(c, "p1", "yes")
+    from kaiku.chat import flow
+    assert flow.proposal("furry-paw", json.loads(stub_feed.read_text())["suggestions"][0]) == "The Christmas period is coming. Shall I set 24.12. 9-13; 25.12. closed; 26.12. closed?"
+    out = c.post("/api/suggestions/t-period/accept", json={"session": "p1"}).json()          # one click sets every member date
     assert [w[1] for w in fake_yext] == ["2026-12-24", "2026-12-25", "2026-12-26"]
     assert out["reply"].startswith("Done. All 3 dates are saved and show on Google, Fonecta Finder and 020202 within the hour.")
 
 
-def test_failed_write_is_not_reported_as_saved(stub_feed, monkeypatch):
+def test_failed_write_on_accept_is_not_reported_as_saved(stub_feed, monkeypatch):
     monkeypatch.setattr(chain, "apply_backend", lambda e, d, p: {"yext_status": "error", "verified": False})
     monkeypatch.setattr(chain, "whatsapp_configured", lambda: False)
     from kaiku.app import app
     c = TestClient(app)
-    c.post("/api/suggestions/t-hours/accept", json={"session": "f1"})
-    r = _chat(c, "f1", "yes")["reply"]
+    r = c.post("/api/suggestions/t-hours/accept", json={"session": "f1"}).json()["reply"]
+    assert store.get_suggestion("t-hours").status != "applied"
     assert "saved" not in r.split("could not")[0] and "did not go through" in r
 
 
@@ -268,7 +280,7 @@ def test_no_change_cannot_be_decided_and_garbage_asks(stub_feed, fake_yext):
     assert "did not catch" in out["reply"] and out["actions"] == [] and fake_yext == []
 
 
-def test_llm_failure_falls_back(stub_feed, fake_yext, monkeypatch):
+def test_llm_failure_falls_back_to_deterministic_accept_and_edit(stub_feed, fake_yext, monkeypatch):
     monkeypatch.delenv("KAIKU_CHAT_NO_LLM")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-not-real")
 
@@ -277,9 +289,11 @@ def test_llm_failure_falls_back(stub_feed, fake_yext, monkeypatch):
     monkeypatch.setattr(brain, "llm_reply", boom)
     from kaiku.app import app
     c = TestClient(app)
-    c.post("/api/suggestions/t-hours/accept", json={"session": "s4"})
-    r = c.post("/api/chat", json={"message": "yes", "session": "s4"}).json()   # the deterministic stage handler needs no model
+    r = c.post("/api/suggestions/t-hours/accept", json={"session": "s4"}).json()   # accept never needs the model
     assert r["reply"].startswith("Done. 24.12. 9-13 is saved") and len(fake_yext) == 1
+    c.post("/api/suggestions/t-conflict/change", json={"session": "s6"})
+    r = c.post("/api/chat", json={"message": "make it 10-14", "session": "s6"}).json()   # the deterministic stage handler needs no model
+    assert r["reply"] == "10-14 on 24.12., shall I save it?" and len(fake_yext) == 1
     chat_router.session("s5")["focus"] = "t-conflict"    # free text goes to the model; it fails; the words after a decision still come from the apply result
     r = c.post("/api/chat", json={"message": "hmm, okay do it", "session": "s5"}).json()
     assert r["actions"] == [] or r["reply"].startswith(("Done", "I did not catch"))
@@ -335,3 +349,13 @@ def test_suggest_change_errors(stub_feed, fake_yext):
     assert c.post("/api/suggestions/t-nochange/change", json={"session": "card2"}).status_code == 409
     assert c.post("/api/suggestions/nope/change", json={"session": "card2"}).status_code == 404
     assert c.post("/api/suggestions/t-nochange/accept", json={"session": "card2"}).json()["ok"] is False
+
+
+def test_website_chat_carries_no_buttons_or_whatsapp_tail(stub_feed, fake_yext):
+    """The Accept / Discard buttons and their 'Tap Accept...' tail belong to WhatsApp only."""
+    from kaiku.app import app
+    c = TestClient(app)
+    r = c.post("/api/suggestions/t-hours/accept", json={"session": "nb1"}).json()
+    msgs = c.get("/api/chat/open?business=furry-paw&session=nb1&full=1").json()["messages"]
+    assert "Tap Accept" not in r["reply"] and not any("button" in json.dumps(m).lower() for m in msgs)
+    assert not any("Tap Accept" in m["text"] for m in msgs)
