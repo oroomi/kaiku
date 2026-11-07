@@ -75,13 +75,14 @@
     map.addImage("bus-arrow", ARROW(), { pixelRatio: 2 });
     map.addImage("ship-diamond", DIAMOND(), { pixelRatio: 2 });
     const col = ["match", ["get", "s"], "approved", C.green, "known", C.white, C.amber];
+    const BIG = ["match", ["get", "s"], "approved", 1.7, 1];
     map.addLayer({ id: "trails", type: "line", source: "trails", layout: { "line-cap": "round" },
       paint: { "line-color": C.cyan, "line-width": 2,
                "line-opacity": ["*", ["interpolate", ["linear"], ["get", "age"], 0, 0.55, 5, 0.04], 0],
                "line-opacity-transition": { duration: 1000 } } });
     map.addLayer({ id: "st-halo", type: "circle", source: "stores",
       paint: { "circle-color": col, "circle-blur": 1,
-               "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 6, 16, 18],
+               "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, ["*", BIG, 6], 16, ["*", BIG, 18]],
                "circle-opacity": 0, "circle-opacity-transition": { duration: 1200 } } });
     map.addLayer({ id: "st-core", type: "circle", source: "stores",
       paint: { "circle-color": col, "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 1.5, 16, 4],
@@ -102,7 +103,7 @@
   function showDots() {
     if (state.dotsOn || !map.getLayer("st-core")) return;
     state.dotsOn = true;
-    map.setPaintProperty("st-halo", "circle-opacity", 0.35);
+    map.setPaintProperty("st-halo", "circle-opacity", ["match", ["get", "s"], "approved", 0.8, 0.35]);
     map.setPaintProperty("st-core", "circle-opacity", 1);
     setTimeout(() => {
       state.vehOn = true;

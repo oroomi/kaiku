@@ -28,7 +28,8 @@ body:has(.city) main{max-width:none;padding:0;margin:0}
 .cjudge{margin-left:auto;background:transparent;border:1px solid rgba(143,211,232,.45);color:var(--cyan);border-radius:999px;padding:4px 10px;font-size:10.5px;cursor:pointer}
 .cjudge:hover{background:rgba(143,211,232,.12)}
 .csent{font:300 clamp(26px,3vw,42px)/1.2 var(--serif);margin:22px 0 0 2px;max-width:24ch;text-shadow:0 2px 24px rgba(0,0,0,.6);letter-spacing:-.005em}
-.csent span{opacity:0;transition:opacity 1.4s ease}
+.csent span{display:block;opacity:0;transition:opacity 1.4s ease}
+.csent #s2{font-size:.72em;color:rgba(238,246,249,.86);margin-top:8px;max-width:30ch}
 .csent span.on{opacity:1}
 .csent em{font-style:normal;color:var(--warn)}
 
@@ -46,9 +47,9 @@ body:has(.city) main{max-width:none;padding:0;margin:0}
 
 .cattr{position:absolute;left:24px;bottom:14px;z-index:5;color:var(--ink3);font-size:9.5px;letter-spacing:.08em;max-width:calc(100vw - 48px)}
 .has-room .cattr{max-width:calc(100vw - 340px)}
-.croom{position:absolute;right:24px;bottom:40px;z-index:5;width:300px;padding:16px;display:grid;grid-template-columns:132px 1fr;gap:14px;align-items:center;border-radius:18px;background:rgba(9,20,26,.6)}
+.croom{position:absolute;right:24px;bottom:112px;z-index:5;width:340px;padding:16px;display:grid;grid-template-columns:132px 1fr;gap:14px;align-items:center;border-radius:18px;background:rgba(9,20,26,.6)}
 .croom img{background:#eef6f9;border-radius:10px;width:132px;height:132px;display:block}
-.croom p{font:300 20px/1.2 var(--serif);margin:0}
+.croom p{font:300 19px/1.25 var(--serif);margin:0}
 .croom .mono{grid-column:1/-1;color:var(--ink3);font-size:9.5px}
 
 .cdrawer{position:absolute;right:24px;top:64px;bottom:40px;width:min(560px,calc(100vw - 48px));z-index:8;padding:16px;overflow:auto;border-radius:18px;background:rgba(9,20,26,.92)}
@@ -60,17 +61,18 @@ body:has(.city) main{max-width:none;padding:0;margin:0}
 .cdcap{color:var(--ink3);font-size:10px;margin-top:14px}
 
 @media (max-width:760px){
-  .chud{left:12px;right:12px;top:56px;max-width:none}
+  .chud{left:12px;right:12px;top:92px;max-width:none}
+  .is-embed .chud{top:14px}
   .cstrip{font-size:9.5px;padding:8px 10px;gap:3px 7px}
   .cstrip b{display:none}
   .cwx{margin-left:0}
   .cjudge{margin-left:0}
   .csent{display:none}
-  .ccol{left:auto;right:12px;top:auto;bottom:34px;width:auto;min-width:132px;padding:10px 14px}
+  .ccol{left:12px;right:auto;top:auto;bottom:58px;width:auto;min-width:150px;padding:10px 14px}
   .ccol .cevents,.ccol .ccap2{display:none}
   .cbig{font-size:44px;margin:2px 0 0}
-  .cattr{left:12px;bottom:8px;font-size:8px;max-width:calc(100vw - 24px)}
-  .has-room .cattr{max-width:calc(100vw - 24px)}
+  .cattr{left:12px;bottom:8px;font-size:8px;max-width:calc(100vw - 110px)}
+  .has-room .cattr{max-width:calc(100vw - 110px)}
   .croom{display:none}
   .ctitle{top:30%}
   .cdrawer{right:12px;left:12px;top:56px;width:auto}
