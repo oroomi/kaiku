@@ -302,3 +302,43 @@ def test_period_item_does_not_break_the_chat_opening():
     from kaiku.chat.util import hours_text
     period = [{"date": "2026-12-24", "proposed": [{"start": "09:00", "end": "13:00"}]}, {"date": "2026-12-25", "proposed": "closed"}]
     assert hours_text(period) == "24.12. 9-13; 25.12. closed"
+
+
+# ---------------------------------------------------------------- 7. one WhatsApp thread: a chain-run id, "let me think", then "yes"; the ladder's call is cancelled
+
+def _chain_run_suggestion(sid="chain-x"):
+    from kaiku.schema import Suggestion
+    return Suggestion.model_validate({"id": sid, "business_id": "furry-paw", "holiday_date": "2026-12-24", "kind": "hours",
+                                      "proposed": [{"start": "09:00", "end": "13:00"}], "confidence": 0.75, "reasons": [],
+                                      "message_fi": "", "message_en": "", "status": "sent", "channel_log": []})
+
+
+def test_think_then_yes_on_a_chain_run_id_goes_through_the_brain(fake_yext):
+    """The ladder registers the chain run's own id; the brain must still answer (mapped to the feed card by date)."""
+    store.save_suggestion(_chain_run_suggestion())
+    R.register_sent(PHONE, "chain-x", None, "furry-paw")
+    f = Fake()
+    run(R.handle_payload(inbound("Uhmm let me think", "wamid.T1"), client(f)))
+    first = f.texts()[-1]
+    assert "Tap one of the buttons" not in first and "did not understand" not in first
+    assert fake_yext == []  # thinking is not a decision
+    run(R.handle_payload(inbound("yes", "wamid.T2"), client(f)))
+    assert fake_yext and store.get_suggestion("t-hours").status in ("approved", "applied")
+    assert store.get_decisions("t-hours")[0].via == "whatsapp"
+
+
+def test_whatsapp_yes_cancels_the_ladder_call(fake_yext, monkeypatch):
+    import sys, types
+    called = []
+    mod = types.ModuleType("kaiku.contact.call"); mod.place_call = lambda s: (called.append(s["id"]), {"ok": True, "conversation_id": "conv_fake"})[1]
+    monkeypatch.setitem(sys.modules, "kaiku.contact.call", mod)
+    monkeypatch.setattr(L.E, "owner_email", lambda s: "")
+    store.save_suggestion(_chain_run_suggestion("chain-y"))
+    s = dict(SUG, id="chain-y", channel_log=[])
+    f = Fake()
+    L.contact(s, client=client(f), escalate_s=0.6)  # WhatsApp text out, the call is armed for 0.6 s
+    run(R.handle_payload(inbound("yes", "wamid.T3"), client(f)))  # the owner approves on WhatsApp
+    import time
+    time.sleep(1.2)
+    assert called == [], "the call must never be placed after a WhatsApp approval"
+    assert fake_yext
