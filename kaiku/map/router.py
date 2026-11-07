@@ -1,8 +1,10 @@
 """/map, /room, /join and the room API. Owned by the map builder."""
 from __future__ import annotations
 
+import asyncio
 import hmac
 import io
+import logging
 import os
 import secrets
 import time
@@ -16,6 +18,7 @@ from kaiku.schema import Event
 from . import room
 
 router = APIRouter()
+log = logging.getLogger("kaiku.map")
 COOKIE = "kaiku_room"
 RATE_MAX, RATE_WINDOW = 3, 60.0
 _hits: dict[str, list[float]] = {}
@@ -113,6 +116,11 @@ async def answer(request: Request, payload: dict = Body(...)):
                       title_en=f"{biz['name']}: owner answered ({a['display']})", detail=dict(base, action="edit")))
     events.emit(Event(step="apply", business_id=bid, title_fi=f"{biz['name']}: piste vihreäksi",
                       title_en=f"{biz['name']}: dot turned green (demo)", detail=dict(base, note=room.NOTE)))
+    try:  # the answer goes to the broker; its subscription (not this handler) turns the /city dot green
+        from kaiku.city.router import write_answer
+        await asyncio.to_thread(write_answer, bid, a, room.HOLIDAY)
+    except Exception as exc:  # noqa: BLE001  the room answer succeeds even when the broker is down
+        log.warning("broker write skipped for %s: %s", bid, exc)
     return {"ok": True, "business_id": bid, "answer": a["display"]}
 
 

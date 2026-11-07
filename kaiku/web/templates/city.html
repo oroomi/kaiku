@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Kaiku, Turku in one broker{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="/static/vendor/maplibre5/maplibre-gl.css?v={{ asset_v() }}">
+<link rel="stylesheet" href="/static/city.css?v={{ asset_v() }}">
+{% endblock %}
+{% block content %}
+<div class="city{% if room %} has-room{% endif %}" id="city" data-pilot="city">
+  <div id="cmap" aria-label="3D map of central Turku: businesses, buses and ships read from the Orion-LD broker"></div>
+  <div class="ctitle" id="ctitle" aria-hidden="true">
+    <div class="mono">FIWARE NGSI-LD &middot; ORION-LD</div>
+    <h1>Turku, one broker</h1>
+  </div>
+
+  <section class="chud" data-pilot="city-hud" aria-live="polite">
+    <div class="cstrip glass mono" id="cstrip">
+      <span id="h-time">TURKU --:--</span><b>|</b><span id="h-xmas">CHRISTMAS EVE IN ...</span><b>|</b><span id="h-stores">... STORE ENTITIES</span><b>|</b><span id="h-buses">... BUSES</span><b>|</b><span id="h-ships">... SHIPS</span><b>|</b><span id="h-broker" class="dim">BROKER ...</span><span class="cwx" id="h-wx"></span>
+      <button type="button" class="cjudge mono" id="judge-open" data-pilot="city-judge">FOR THE JUDGE</button>
+    </div>
+    <p class="csent" id="csent"><span id="s1">Christmas Eve is coming.</span> <span id="s2"></span></p>
+  </section>
+
+  <aside class="ccol glass" data-pilot="city-approved">
+    <div class="mono ccap">APPROVED 24.12.</div>
+    <div class="cbig" id="c-approved">0</div>
+    <div class="mono ccap2" id="c-src">NOTIFIED BY ORION-LD SUBSCRIPTION</div>
+    <ol class="cevents" id="c-events" aria-label="Latest broker events"><li class="empty">Waiting for the broker to notify.</li></ol>
+  </aside>
+
+  <div class="cattr mono" id="cattr">Map &copy; OpenFreeMap &middot; OpenMapTiles &middot; OpenStreetMap contributors (ODbL) &middot; Buses: F&ouml;li &middot; Ships: Fintraffic Digitraffic &middot; Weather: Open-Meteo &middot; CC BY 4.0</div>
+
+  {% if room %}
+  <section class="croom glass" data-pilot="city-room">
+    <img src="/api/room/qr.svg" alt="QR code to join the room" width="132" height="132">
+    <p>Scan. Take over a business. Tap Approve.</p>
+    <span class="mono">ROOM ANSWERS ARE DEMO DATA</span>
+  </section>
+  {% endif %}
+
+  <aside class="cdrawer glass" id="judge" hidden aria-label="For the judge">
+    <div class="cdhead"><span class="mono">FOR THE JUDGE: READ IT YOURSELF</span><button type="button" class="mono" id="judge-close">CLOSE</button></div>
+    <p class="cdnote">The same Orion-LD this page reads. The Link header carries the Smart Data Models context; without it type=Store does not resolve.</p>
+    <pre class="cdcurl" id="judge-curl">loading</pre>
+    <div class="mono cdcap">ONE LIVE STORE ENTITY</div>
+    <pre class="cdent" id="judge-ent">loading</pre>
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/vendor/maplibre5/maplibre-gl.js?v={{ asset_v() }}"></script>
+<script src="/static/city.js?v={{ asset_v() }}" defer></script>
+{% endblock %}

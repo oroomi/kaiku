@@ -789,6 +789,11 @@ async def api_reset(request: Request, learn: int = 0, key: str = "", contact: in
     except Exception as exc:
         out["mcp_proposals_cleared"] = False
         log.warning("mcp proposals reset failed: %s", exc)
+    try:  # /city: Store statuses back to their seed values
+        from .city import reset as _city_reset
+        out["city_reset"] = await asyncio.to_thread(_city_reset)
+    except Exception as exc:
+        log.warning("city reset failed: %s", exc)
     try:
         from .broker.router import reset_dedupe
         reset_dedupe()

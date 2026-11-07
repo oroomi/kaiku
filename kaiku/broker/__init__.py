@@ -48,6 +48,7 @@ class AutoBroker:
     def delete_entity(self, *a, **k): return self._call("delete_entity", *a, **k)
     def append_instance(self, *a, **k): return self._call("append_instance", *a, **k)
     def set_default(self, *a, **k): return self._call("set_default", *a, **k)
+    def set_status(self, *a, **k): return self._call("set_status", *a, **k)
     def create_subscription(self, *a, **k): return self._call("create_subscription", *a, **k)
     def list_subscriptions(self, *a, **k): return self._call("list_subscriptions", *a, **k)
     def delete_subscription(self, *a, **k): return self._call("delete_subscription", *a, **k)

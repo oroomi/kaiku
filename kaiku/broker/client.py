@@ -89,6 +89,12 @@ class OrionClient:
             return self._write_instance(eid, attr, inst, "")
         self._req("POST", f"/entities/{eid}/attrs", json={attr: inst}, headers={"Content-Type": "application/json"})
 
+    def set_status(self, eid, attr, value, observed_at=None) -> None:
+        """Plain PATCH of one single-instance attribute (no datasetId), e.g. holidayHoursStatus."""
+        inst = {"type": "Property", "value": value, "observedAt": observed_at or now_iso()}
+        self._req("PATCH", f"/entities/{eid}/attrs", ok=(204, 207), json={attr: inst},
+                  headers={"Content-Type": "application/json"})
+
     # ---- subscriptions
     def create_subscription(self, name, watched, endpoint, q=None, entity_type="Store") -> str:
         for s in self.list_subscriptions():

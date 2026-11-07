@@ -102,6 +102,10 @@ class FallbackBroker:
         with self._lock:
             self._put(eid, attr, inst, None)
 
+    def set_status(self, eid, attr, value, observed_at=None) -> None:
+        """Same as Orion's plain PATCH: replaces the default instance and evaluates the subscriptions."""
+        self.set_default(eid, attr, value, observed_at)
+
     # ---- subscriptions
     def create_subscription(self, name, watched, endpoint, q=None, entity_type="Store") -> str:
         """endpoint: URL string or in-process callable(notification_dict). Idempotent by name."""

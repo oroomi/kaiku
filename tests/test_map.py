@@ -80,7 +80,7 @@ def test_answer_emits_events_and_updates_state(client):
     r = client.post("/api/room/answer", json={"business_id": bid, "answer": "9-13"})
     assert r.status_code == 200 and r.json()["answer"] == "9-13"
     evs = store.recent_events(500)[before:]
-    assert [e.step for e in evs] == ["decide", "apply"]
+    assert [e.step for e in evs if e.step != "broker"] == ["decide", "apply"]  # /city: the broker write may fire one broker event
     assert evs[1].business_id == bid and evs[1].detail["map"] is True and "not written to Yext" in evs[1].detail["note"]
     st = client.get("/api/room/state").json()
     assert st["counts"]["answered"] == 1 and st["latest"][0]["answer"] == "9-13"
