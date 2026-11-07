@@ -86,7 +86,7 @@
     var seen = {}, src = (i.reasons || []).map(function (r) { return r.source; }).filter(function (s) { if (!s || seen[s]) return false; seen[s] = 1; return true; })
       .map(function (s) { return esc(SRC[s] || String(s).replace(/_/g, " ")); });
     var conf = i.confidence != null ? '<span class="mono sg-conf">' + Math.round(i.confidence * 100) + " % sure</span>" : "";
-    var acts = st[0] === "proposed" ? '<div class="sg-acts"><button type="button" class="sg-accept" data-act="accept">Accept</button><button type="button" class="sg-change" data-act="change">Suggest a change</button></div>' : "";
+    var acts = st[0] === "proposed" ? '<div class="sg-acts"><button type="button" class="sg-accept" data-act="accept">Accept</button><button type="button" class="sg-change" data-act="change">Suggest a change</button><button type="button" class="sg-discard" data-act="discard">Discard</button></div>' : "";
     return '<article class="sg" data-kind="' + esc(i.kind) + '" data-status="' + st[0] + '" data-id="' + esc(i.id) + '" id="sg-' + esc(i.id) + '">' +
       '<div class="sg-top"><span class="mono sg-kind">' + esc(KIND[i.kind] || String(i.kind).replace(/_/g, " ")) + '</span><span class="mono sg-st st-' + st[0] + '">' + st[1] + "</span></div>" +
       "<h3>" + nb(esc(i.title_en || "")) + "</h3>" + (i.text_en ? '<p class="sg-text">' + nb(esc(i.text_en)) + "</p>" : "") +
@@ -101,12 +101,13 @@
     Object.keys(busy).forEach(function (id) { var el = document.querySelector('.sg[data-id="' + id.replace(/"/g, "") + '"]'); if (el) setWorking(el, true); });
     $("sug-empty").hidden = !(loaded && !items.length);
     $("sug-count").textContent = items.length ? items.length + (items.length === 1 ? " item" : " items") : "";
+    markFocus();
     window.dispatchEvent(new CustomEvent("kaiku:feed", { detail: items }));
   }
   function setWorking(el, on) {
     el.classList.toggle("working", on);
     Array.prototype.forEach.call(el.querySelectorAll("button"), function (b) { b.disabled = on; });
-    var a = el.querySelector(".sg-accept"); if (a) a.textContent = on ? "Saving..." : "Accept";
+    var a = el.querySelector(".sg-accept"); if (a) a.textContent = on ? "..." : "Accept";
   }
   $("sug-grid").addEventListener("click", function (e) {
     var b = e.target.closest && e.target.closest("button[data-act]"); if (!b) return;
@@ -114,6 +115,12 @@
     if (b.getAttribute("data-act") === "accept") {
       setWorking(el, true);
       window.dispatchEvent(new CustomEvent("kaiku:accept", { detail: { id: id, item: i, done: function () { setWorking(el, false); } } }));
+    } else if (b.getAttribute("data-act") === "discard") {
+      setWorking(el, true);
+      window.dispatchEvent(new CustomEvent("kaiku:discard", { detail: { id: id, item: i, done: function (ok) {
+        setWorking(el, false);
+        if (ok) { el.setAttribute("data-status", "declined"); el.classList.add("fading"); var st = el.querySelector(".sg-st"); if (st) { st.textContent = "declined"; st.className = "mono sg-st st-declined"; } var a = el.querySelector(".sg-acts"); if (a) a.remove(); }
+      } } }));
     } else {
       window.dispatchEvent(new CustomEvent("kaiku:change", { detail: { id: id, item: i } }));
     }
@@ -176,6 +183,9 @@
 
   /* ---------- the chat widget talks to us ---------- */
   window.addEventListener("kaiku:busy", function (m) { chatBusy = !!(m.detail && m.detail.on); });
+  var focusId = "";
+  function markFocus() { Array.prototype.forEach.call(document.querySelectorAll(".sg"), function (el) { el.classList.toggle("talking", !!focusId && el.getAttribute("data-id") === focusId); }); }
+  window.addEventListener("kaiku:focus", function (m) { focusId = (m.detail && m.detail.id) || ""; markFocus(); });
   window.addEventListener("kaiku:decided", function () { changed(); setTimeout(changed, 2500); });
 
   /* ---------- boot ---------- */

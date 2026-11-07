@@ -199,29 +199,40 @@ async def decide(business_id: str, suggestion_id: str, action: str, edited_hours
         if edited is None:
             return {"ok": False, "error": "edited_hours must be 'closed' or [{start:'HH:MM',end:'HH:MM'}] with start before end"}
     members = item.get("members") or [None]
+    subs = None
+    if item["kind"] == "period" and not item.get("members"):
+        from . import flow
+        subs = flow.undecided_members(business_id, item)   # a real period: one decision per date not yet decided
+        if not subs:
+            return {"ok": False, "error": "already decided"}
+        members = [m["id"] for m in subs]
     results = []
-    for m in members:
-        sub = item if m is None else (F.find(business_id, m) or {**item, "id": m, "members": None})
+    for n, m in enumerate(members):
+        if subs is not None:
+            sub = subs[n]
+        else:
+            sub = item if m is None else (F.find(business_id, m) or {**item, "id": m, "members": None})
         sub = {**sub, "members": None}
         results.append(await _decide_one(business_id, sub, action, edited, via))
     ok = all(r.get("ok") for r in results)
     first = next((r for r in results if r.get("ok")), results[0])
-    out = {**first, "ok": ok, "suggestion_id": suggestion_id, "action": action,
+    out = {**first, "ok": ok, "suggestion_id": suggestion_id, "action": action, "count": len(results),
            "final_hours": hours_text(edited) if action == "edit" else (hours_text(item.get("proposed")) if action == "approve" else None)}
-    if ok and action in ("approve", "edit") and item["kind"] in ("holiday_hours", "period", "conflict"):
+    if len(results) > 1:   # one failed write must show: yext is "ok" only when every date went through
+        out["yext"] = "ok" if all(r.get("yext") == "ok" for r in results if r.get("ok")) else "failed"
+    if ok and action in ("approve", "edit") and item["kind"] in ("holiday_hours", "period", "conflict") and has_last_year(business_id, item):
         out["follow_up_question"] = follow_up(item, out["final_hours"])
     return out
 
 
+def has_last_year(business_id: str, item: dict) -> bool:
+    from . import flow
+    return flow.has_last_year(business_id, item)
+
+
 def follow_up(item: dict, final: str) -> str:
-    name = item.get("holiday_name_en") or item.get("title_en") or "this holiday"
-    ly = item.get("last_year")
-    lyt = hours_text(ly) if ly else ""
-    if lyt and lyt == final:
-        return f"Last year {lyt}, this year {final} again. Want me to do this every {name}?"
-    if lyt:
-        return f"This year {final}, last year {lyt}. Want me to use {final} every {name}?"
-    return f"Want me to do this every {name}?"
+    from . import flow
+    return flow.RECURRING_Q
 
 
 async def set_standing_permission(business_id: str, suggestion_id: str, enabled: bool, via: str = "web") -> dict:
@@ -231,6 +242,10 @@ async def set_standing_permission(business_id: str, suggestion_id: str, enabled:
     if not enabled:
         return {"ok": True, "standing_permission": False}
     from ..learn import prefs
+    if item["kind"] == "period" and not item.get("members"):
+        from . import flow
+        ms = flow.period_members(business_id, item)
+        item = ms[0] if ms else item
     sid = (item.get("members") or [item["id"]])[0]
     s = store.get_suggestion(sid) or materialize(business_id, item)
     p = await asyncio.to_thread(prefs.record_decision, business_id, chain._s_dict(s),

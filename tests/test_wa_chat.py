@@ -200,7 +200,8 @@ def test_whatsapp_approval_runs_the_web_chat_path(fake_yext, monkeypatch):
     ev = [e for e in store.recent_events(50) if e.suggestion_id == "t-hours"]
     assert any(e.step == "decide" and (e.detail or {}).get("via") == "whatsapp" for e in ev) and any(e.step == "apply" for e in ev)
     body = f.texts()[0]
-    assert body.startswith("Done, Christmas Eve 9-13 is saved.") and body.endswith("Want me to do this every Christmas Eve?")
+    assert body.startswith("Done. 24.12. 9-13 is saved and shows on Google, Fonecta Finder and 020202 within the hour.")
+    assert body.endswith("You changed this last year as well. Do you want to make it recurring, this time of the year?")
     assert res["decisions"][0]["action"] == "approve"
     # standing permission: yes to the follow-up, same tool as the web chat
     run(R.handle_payload(inbound("yes", "wamid.Y2"), client(f)))

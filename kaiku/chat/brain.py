@@ -8,6 +8,7 @@ import re
 
 from . import actions as A
 from . import feed as F
+from . import flow
 from . import parser as P
 from .util import hours_text, is_pending
 
@@ -34,7 +35,11 @@ Business: {name}, {address}. Today in the demo clock: {today}.
 Suggestions (id | kind | title | proposed | last year | status | reason):
 {feed}
 Under discussion: {focus}
-Follow-up awaiting an answer for: {followup}"""
+Stage: {stage}
+Follow-up awaiting an answer for: {followup}
+
+Stages: "proposed" = Kaiku already showed the owner a proposal for the card under discussion; a yes applies it. "ask_new" = Kaiku asked what the value should be. "confirm" = the owner gave a value and Kaiku asked 'shall I save it?'. none = nothing was proposed yet: a bare yes decides nothing, ask which card they mean.
+After a decide call returns ok, answer with the single word Done: the system adds the confirmation, the recurring question and the next card itself. Never write that something is saved, posted or live yourself."""
 
 FI = {
     "again": "En ymmärtänyt. Sano kyllä, ei tai tunnit, esimerkiksi 10-14.",
@@ -78,9 +83,14 @@ def pending_items(items):
 
 
 def focus_of(items, sess) -> dict | None:
+    """The card under discussion. Only an explicit focus counts (Accept, Suggest a change, a hand-off, the WhatsApp opening);
+    a bare 'yes' on a chat that proposed nothing never approves a card nobody mentioned. WhatsApp sessions may fall back to
+    the first waiting card because their opening listed it."""
     pend = pending_items(items)
     f = next((i for i in pend if i["id"] == sess.get("focus")), None)
-    return f or (pend[0] if pend else None)
+    if f or sess.get("via") != "whatsapp":
+        return f
+    return pend[0] if pend else None
 
 
 def _feed_lines(items) -> str:
@@ -98,7 +108,7 @@ def build_system(biz, items, sess, lang: str) -> str:
     return SYSTEM.format(name=biz.name, address=biz.address, lang="Finnish" if lang == "fi" else "English", max_words=MAX_WORDS,
                          today=timetravel.today().isoformat(), feed=_feed_lines(items),
                          focus=f"{f['id']} ({f['title_en']})" if f else "nothing",
-                         followup=f"{fu['id']} ({fu['title_en']})" if fu else "none")
+                         followup=f"{fu['id']} ({fu['title_en']})" if fu else "none", stage=sess.get("stage") or "none")
 
 
 TOOLS = [
@@ -121,7 +131,7 @@ TOOLS = [
 class Turn:
     """Collects what the tools did during one chat turn."""
     def __init__(self, bid, sess):
-        self.bid, self.sess, self.actions, self.last_decide = bid, sess, [], None
+        self.bid, self.sess, self.actions, self.last_decide, self.last_item = bid, sess, [], None, None
 
     async def run(self, name, args):
         if name == "get_feed":
@@ -132,8 +142,9 @@ class Turn:
                                self.sess.get("via", "web"), edited_text=args.get("edited_text"))
             if r.get("ok"):
                 self.last_decide = r
+                self.last_item = F.find(self.bid, str(args.get("suggestion_id", "")))
                 self.actions.append({"type": "decided", "suggestion_id": r["suggestion_id"], "action": r["action"], "status": r.get("status")})
-                self.sess["followup"] = r["suggestion_id"] if r.get("follow_up_question") else None
+                self.sess["followup"] = r["suggestion_id"] if r.get("follow_up_question") and r.get("yext") == "ok" else None
                 self.sess["focus"] = None
             return r
         if name == "set_standing_permission":
@@ -179,37 +190,21 @@ async def llm_reply(biz, items, sess, message, lang, turn: Turn) -> str:
 
 
 async def fallback_reply(items, sess, message, lang, turn: Turn) -> str:
+    """No key (or the API failed): yes / no / hours / the owner's own text against the explicit focus."""
     M = FI if lang == "fi" else EN
     p = P.parse(message)
-    fu = sess.get("followup")
-    if fu and p and p["action"] in ("approve", "decline"):
-        yes = p["action"] == "approve"
-        await turn.run("set_standing_permission", {"suggestion_id": fu, "enabled": yes})
-        nxt = focus_of(F.get_feed(turn.bid)["suggestions"], sess)
-        return M["perm_yes" if yes else "perm_no"] + (f" Next: {nxt['title_en']}." if nxt and lang != "fi" else "")
     f = focus_of(items, sess)
-    if f is not None and f["kind"] in ("description", "review") and (p is None or p["action"] == "change") and len(message.split()) >= 4:
-        r = await turn.run("decide", {"suggestion_id": f["id"], "action": "edit", "edited_text": message.strip()})
-        return M["saved"].format(what="your wording") if r.get("ok") else M["error"]
+    if f is not None and f["kind"] in ("description", "review") and (p is None or p["action"] in ("change", "edit")) and len(message.split()) >= 3:
+        return await flow.apply_and_say(turn, turn.bid, sess, f, "edit", edited_text=message.strip())
     if p is None:
         return M["again"]
     if p["action"] == "change":
-        return M["which"]
+        return flow.start_change(sess, f) if f else M["which"]
     if f is None:
-        return M["nothing"]
-    args = {"suggestion_id": f["id"], "action": p["action"], "edited_hours": p.get("edited")}
-    if f["kind"] in ("description", "review") and p["action"] == "edit":
-        args["edited_text"] = message.strip()
-    r = await turn.run("decide", args)
-    if not r.get("ok"):
-        return M["which"] if r.get("needs_hours") else M["error"]
-    if p["action"] == "decline":
-        return M["declined"]
-    what = (("the reply" if f["kind"] == "review" else "the description") if f["kind"] in ("description", "review")
-            else f"{f.get('holiday_name_en') or f['title_en']} {r.get('final_hours')}")
-    if f["kind"] == "review" and not r.get("posted"):
-        return "Reply stored. The sandbox key cannot post review comments, so it is not on the review yet."
-    return (M["saved"].format(what=what) + " " + (r.get("follow_up_question") or "")).strip()
+        return "I have not proposed anything yet. Accept a suggestion above and I will talk you through it." if lang != "fi" else M["nothing"]
+    if p["action"] == "edit" and f["kind"] in ("description", "review"):
+        return M["again"]
+    return await flow.apply_and_say(turn, turn.bid, sess, f, p["action"], edited_hours=p.get("edited"))
 
 
 async def respond(bid: str, sess: dict, message: str) -> tuple[str, list]:
@@ -218,21 +213,23 @@ async def respond(bid: str, sess: dict, message: str) -> tuple[str, list]:
     lang = "fi" if biz and getattr(biz, "owner_language", "en") == "fi" else "en"
     items = F.get_feed(bid).get("suggestions", [])
     turn = Turn(bid, sess)
+    det = await flow.handle(turn, sess, message) if lang != "fi" else None
+    if det is not None:
+        return det, turn.actions
     reply = None
     if os.environ.get("ANTHROPIC_API_KEY") and not os.environ.get("KAIKU_CHAT_NO_LLM"):
         try:
             reply = await llm_reply(biz, items, sess, message, lang, turn)
-            if turn.last_decide and turn.last_decide.get("follow_up_question") and turn.last_decide["follow_up_question"] not in reply:
-                reply = reply.rstrip() + " " + turn.last_decide["follow_up_question"]
         except Exception as exc:
             log.warning("chat LLM failed (%s), using the fallback parser", type(exc).__name__)
             reply = None
             if turn.actions:  # the LLM already acted: never repeat a decision, just report it
-                reply = EN["saved"].format(what="that") + " " + ((turn.last_decide or {}).get("follow_up_question") or "")
+                reply = "Done."
+    if turn.last_decide is not None and turn.last_item is not None:   # the words after a decision are the apply result's, not the model's
+        a = turn.actions[-1]["action"] if turn.actions else "approve"
+        return flow.finish(bid, sess, turn.last_item, a, turn.last_decide), turn.actions
     if reply is None:
         reply = await fallback_reply(items, sess, message, lang, turn)
-    q = (turn.last_decide or {}).get("follow_up_question")
-    if q and q in reply:  # the one follow-up is never trimmed away
-        body = trim_words(reply.replace(q, "").strip(), max(8, MAX_WORDS - len(q.split())))
-        return (body + " " + q).strip(), turn.actions
+        if turn.last_decide is not None:
+            return reply, turn.actions
     return trim_words(reply), turn.actions
