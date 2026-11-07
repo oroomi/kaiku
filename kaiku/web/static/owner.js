@@ -33,16 +33,22 @@
     fill.setAttribute("stroke-dashoffset", 1 - Math.max(0.001, t));
   }
   var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
-  var shownN = 0, numTarget = 0;
+  var shownN = 0, numTarget = 0, running = false, heroSeen = true;
+  /* the frame loop runs only while something moves (chain or chat busy, the dot easing, the number counting) and only
+     while the hero is on screen; at rest there is no requestAnimationFrame at all */
+  function active() { return ((chainRunning || chatBusy || !sc) && !reduce) || Math.abs(arc.target - arc.t) > 0.002 || (sc && shownN !== numTarget); }
+  function kick() { if (!running) { running = true; requestAnimationFrame(loop); } }
   function loop(ts) {
-    requestAnimationFrame(loop);
+    if (!heroSeen && sc) { arc.t = arc.target; place(arc.t); shownN = numTarget; $("score-n").textContent = String(Math.round(shownN)); running = false; return; }
     if ((chainRunning || chatBusy || !sc) && !reduce) { arc.t = 0.5 - 0.5 * Math.cos(ts / 2400 * Math.PI * 2); place(arc.t); }
     else if (Math.abs(arc.target - arc.t) > 0.002) { arc.t += (arc.target - arc.t) * 0.06; place(arc.t); }
     if (sc && shownN !== numTarget) {   /* the big number follows the dot */
       shownN += (numTarget - shownN) * 0.12; if (Math.abs(numTarget - shownN) < 0.5) shownN = numTarget;
       $("score-n").textContent = String(Math.round(shownN));
     }
+    if (active() && (heroSeen || !sc)) requestAnimationFrame(loop); else running = false;
   }
+  if (window.IntersectionObserver) new IntersectionObserver(function (es) { heroSeen = es[es.length - 1].isIntersecting; if (heroSeen) kick(); }).observe($("hero"));
   var HOL = { "12-24": "Christmas", "12-25": "Christmas", "12-26": "Christmas", "12-31": "New Year's Eve", "01-01": "New Year", "01-06": "Epiphany" };
   function dm(date) { return parseInt(date.slice(8), 10) + "." + parseInt(date.slice(5, 7), 10) + "."; }
   function whenOf(list) {
@@ -61,13 +67,14 @@
     if (reduce) { shownN = numTarget; $("score-n").textContent = String(numTarget); }
     $("big-cap").textContent = (sc.label_en || "").toUpperCase() + " · " + sc.checks_ok + " OF " + sc.checks_total + " CHECKS";
     $("score-n").setAttribute("title", "Listing score " + sc.score + " of 100. " + sc.checks.map(function (c) { return (c.ok ? "ok: " : "fix: ") + c.label_en; }).join("; "));
+    kick();
     var du = evs.decide_url && pend ? evs.decide_url : "";
     $("decide-row").hidden = !du; if (du) $("decide-go").href = du;
   }
   var scoreBusy = false;
   function loadScore(fresh) {
     if (scoreBusy && !fresh) return Promise.resolve(); scoreBusy = true;
-    return jget("/api/score/" + encodeURIComponent(BIZ) + (fresh ? "?fresh=1" : "")).then(function (j) { sc = j; paint(); window.dispatchEvent(new CustomEvent("kaiku:score", { detail: j })); })
+    return jget("/api/score/" + encodeURIComponent(BIZ) + (fresh ? "?fresh=1" : "")).then(function (j) { var same = sc && JSON.stringify(sc) === JSON.stringify(j); sc = j; if (same) return; paint(); window.dispatchEvent(new CustomEvent("kaiku:score", { detail: j })); })
       .catch(function () { /* keep the last score on screen */ }).then(function () { scoreBusy = false; });
   }
 
@@ -94,13 +101,27 @@
       '<div class="sg-meta">' + (h ? '<span class="mono sg-hours">' + nb(esc(h)) + "</span>" : "") + conf + "</div>" +
       (src.length ? '<p class="mono sg-src">' + src.join(" · ") + "</p>" : "") + acts + "</article>";
   }
+  var lastSig = "";
   function renderSuggestions() {
-    var busy = {};   /* keep a card's "working" state across the 10 s refresh */
-    Array.prototype.forEach.call(document.querySelectorAll(".sg.working"), function (el) { busy[el.getAttribute("data-id")] = 1; });
-    $("sug-grid").innerHTML = items.map(card).join("");
-    Object.keys(busy).forEach(function (id) { var el = document.querySelector('.sg[data-id="' + id.replace(/"/g, "") + '"]'); if (el) setWorking(el, true); });
+    /* only touch the DOM when the feed changed: a poll tick with the same payload paints nothing and re-animates nothing */
+    var htmls = items.map(card), sig = htmls.join("");
     $("sug-empty").hidden = !(loaded && !items.length);
     $("sug-count").textContent = items.length ? items.length + (items.length === 1 ? " item" : " items") : "";
+    if (sig === lastSig) return; lastSig = sig;
+    var grid = $("sug-grid"), have = {};
+    Array.prototype.forEach.call(grid.children, function (el) { have[el.getAttribute("data-id")] = el; });
+    var frag = [];
+    items.forEach(function (i, n) {
+      var old = have[i.id], el;
+      if (old && old._h === htmls[n]) { el = old; delete have[i.id]; }
+      else {
+        var t = document.createElement("div"); t.innerHTML = htmls[n]; el = t.firstChild; el._h = htmls[n];
+        if (old) { el.style.animation = "none"; if (old.classList.contains("working")) setWorking(el, true); delete have[i.id]; }
+      }
+      frag.push(el);
+    });
+    Object.keys(have).forEach(function (k) { have[k].remove(); });
+    frag.forEach(function (el, n) { if (grid.children[n] !== el) grid.insertBefore(el, grid.children[n] || null); });
     markFocus();
     window.dispatchEvent(new CustomEvent("kaiku:feed", { detail: items }));
   }
@@ -169,7 +190,7 @@
     var isLadder = addEvent(e);
     if (isLadder && !scheduled) scheduled = setTimeout(function () { scheduled = 0; sendLadder(); }, 80);
     if (live) {
-      if (e.step === "detect") { chainRunning = true; clearTimeout(chainTimer); chainTimer = setTimeout(function () { chainRunning = false; }, 60000); }
+      if (e.step === "detect") { chainRunning = true; kick(); clearTimeout(chainTimer); chainTimer = setTimeout(function () { chainRunning = false; }, 60000); }
       if (e.step === "learn" || (e.detail && e.detail.error)) { chainRunning = false; clearTimeout(chainTimer); }
       if (e.step === "suggest" || e.step === "decide" || e.step === "apply" || e.step === "learn") { loadFeed(); if (e.step === "apply" || e.step === "decide" || e.step === "learn") { loadScore(true); window.dispatchEvent(new CustomEvent("kaiku:refresh", { detail: { fresh: true } })); } }
     }
@@ -182,7 +203,7 @@
     });
 
   /* ---------- the chat widget talks to us ---------- */
-  window.addEventListener("kaiku:busy", function (m) { chatBusy = !!(m.detail && m.detail.on); });
+  window.addEventListener("kaiku:busy", function (m) { chatBusy = !!(m.detail && m.detail.on); kick(); });
   var focusId = "";
   function markFocus() { Array.prototype.forEach.call(document.querySelectorAll(".sg"), function (el) { el.classList.toggle("talking", !!focusId && el.getAttribute("data-id") === focusId); }); }
   window.addEventListener("kaiku:focus", function (m) { focusId = (m.detail && m.detail.id) || ""; markFocus(); });
@@ -192,5 +213,6 @@
   jget("/api/business/" + encodeURIComponent(BIZ)).then(function (b) { biz = b; paint(); }).catch(function () {});
   loadScore(); loadFeed(true).then(function () { return loadFeed(); });
   setInterval(function () { if (!document.hidden) { loadFeed(); loadScore(); } }, 10000);
-  place(0); requestAnimationFrame(loop); paint();
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) { loadFeed(); loadScore(); } });
+  place(0); kick(); paint();
 })();

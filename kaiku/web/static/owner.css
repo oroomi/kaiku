@@ -116,3 +116,24 @@ main{padding-bottom:calc(110px + env(safe-area-inset-bottom))}
   .invite{font-size:20px}
 }
 .chat-form{scroll-margin-bottom:28px}
+
+/* ---- v5 (owner UX, 7 Nov): the chat is one screen tall, the page does not freeze ---- */
+/* Glass blurs a smooth gradient, so the blur is only paid on the hero and the chat; the tall cards and listing panels are plain glass. */
+.w-sug,.w-listing{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(255,255,255,.07)}
+.arc-wrap{contain:layout style}
+.w-listing{content-visibility:auto;contain-intrinsic-size:auto 560px}
+.sg{contain:layout style}
+
+/* Chat: exactly one screen tall (grid rows auto / minmax(0,1fr) / auto), the log scrolls inside, the input stays pinned. The height never changes when the chat opens, so nothing shifts. */
+.w-chat{display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-height:0;height:max(480px,calc(100vh - 28px));height:max(480px,calc(100dvh - 28px));scroll-margin-top:14px;align-self:start}
+.w-chat .chat-log,.w-chat .chat-log:empty{height:auto;min-height:0;flex:none;overflow-y:auto}
+.w-chat .chat-form{margin-top:12px}
+.w-chat .w-head{margin-bottom:10px}
+@media (min-width:900px){
+  .w-chat .chat-log{height:auto;min-height:0}
+  .w-listing{align-self:start}
+}
+@media (max-width:899px){
+  .w-chat .chat-log{height:auto;min-height:0}
+  .w-chat{height:max(440px,calc(100vh - 20px));height:max(440px,calc(100dvh - 20px));scroll-margin-top:10px}
+}

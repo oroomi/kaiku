@@ -37,3 +37,25 @@ At the Joki Q&A a visitor may want the email, the WhatsApp message and the call 
 - "The customer we were given": Furry Paw Vet Clinic, the score line from `/api/score/furry-paw?quick=1` and the ON FONECTA NOW panel (`listing.js`, `/api/listing/furry-paw`).
 - "Run it": Run the chain (24.12.) on `/api/run` and Reset demo on `/api/reset` (the demo contact stays), the 'moi' reminder for the 24 h WhatsApp window, and a link to `/judge?key=...` built in the browser.
 - No full phone or email is ever in the HTML (tests/test_console.py); the page stays silent on test servers like every other page.
+
+## Owner UX pass (7 Nov): one-screen chat, calm hand-off, no freeze
+
+Owner's report (Chrome, Windows laptop): "when i click on edit, the page moves weirdly to the chat, and the chat screen isnt even full, and it keeps freezing after a few scrolls".
+
+- Chat: `.w-chat` is a grid with rows `auto / minmax(0,1fr) / auto` and a height of one screen (`max(480px, 100dvh - 28px)`, 440 px floor and `100dvh - 20px` under 900 px). The log scrolls inside, the input is pinned, and because the height never changes there is no layout shift when the chat opens (measured 1440x900: chat top 14 px, 872 px tall, input bottom 867 px; 1280x720: 692 px; 390x844: 824 px).
+- Hand-off: Suggest a change / Accept do one smooth `scrollIntoView({block:"start"})` (skipped if the chat is already in place), show the typing dots at once, and focus the input with `preventScroll` after the scroll. The page scroll position changes in one direction only (Playwright: 1 direction, no reversal). The cards stay one swipe or scroll up.
+- Freeze, measured with Playwright + Chromium at 6x CPU throttle, owner page, 10 wheel scrolls (5 down, 5 up) at 300 ms plus one 10 s poll tick; headless software rendering does not show the GPU stall itself, so the fix is aimed at what the numbers and the code show:
+
+| 1440x900 | before | after |
+|---|---|---|
+| long tasks (PerformanceObserver) | 1 to 2 (75 to 80 ms) | 0 |
+| fps during scroll | 56 | 59 |
+| requestAnimationFrame calls in 14 s | about 1000 (the arc loop never stopped) | about 100 (runs only while the dot or number moves and the hero is on screen) |
+| DOM nodes | 220 | 220 |
+| elements with backdrop-filter or filter | 10 (2 glows with filter:blur(70px), 4 glass panels at blur 18 + saturate) | 6 (glows are radial gradients, blur only on hero and chat at 10 px) |
+| setInterval timers | 3 (owner 10 s, listing 10 s, chat 1.5 s) | 2 (chat's 1.5 s `placeSys` timer removed) |
+| `/api/feed`, `/api/score`, `/api/listing` per 14 s | 1 each | 1 each, but a same payload no longer repaints |
+
+- Polling: the feed repaints only changed cards (unchanged cards are kept, replaced cards do not replay the `in` animation), `/api/score` and the listing skip identical payloads, and polling also refreshes on `visibilitychange`. The SSE stream `/api/events` is a single connection and was not a cost. No scroll or resize handler does layout work (there are none).
+- CSS: `.w-sug` and `.w-listing` lost backdrop-filter (a blur over a smooth gradient is invisible and was the biggest repaint surface on scroll), `content-visibility:auto` on the listing, `contain` on the arc and the cards.
+- Known, not mine: on a test server with `KAIKU_FEED_NETWORK=0` the review/description cards return 404 from `/api/suggestions/{id}/change`, so the Kaiku reply to Suggest a change was verified by typing in the chat instead; `tests/test_email.py::test_real_smtp_path` fails on the base branch too.

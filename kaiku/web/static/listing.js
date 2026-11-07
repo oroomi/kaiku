@@ -58,10 +58,12 @@
     var rv = d.reviews;
     h.push(row("REVIEWS", rv == null ? none() : rv.count ? esc(rv.count + (rv.count === 1 ? " review" : " reviews") + (rv.average != null ? ", average " + rv.average : "")) : '<span class="l-plain">No reviews yet</span>') +
       (revC.length ? '<p class="l-note">' + revC.length + (revC.length === 1 ? " reply is" : " replies are") + " waiting " + link(revC[0], "see suggestion") + "</p>" : ""));
-    host.innerHTML = h.join("");
+    var html = h.join("");
+    if (html !== lastHtml) { lastHtml = html; host.innerHTML = html; }   /* same payload: no repaint */
     if (d.entity_id) $("l-src").textContent = "WHAT CONNECT PUBLISHES TODAY · YEXT SANDBOX " + String(d.entity_id).toUpperCase();
     $("l-read").textContent = "READ " + readAt(d.read_at) + " FROM THE SANDBOX ENTITY";
   }
+  var lastHtml = "";
   function readAt(iso) {
     try { return new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Europe/Helsinki", hour12: false }).format(new Date(iso)); } catch (e) { return ""; }
   }

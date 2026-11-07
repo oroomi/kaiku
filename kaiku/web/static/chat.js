@@ -102,7 +102,13 @@
     return fetch(u, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
   }
-  function toChat() { root.scrollIntoView({ behavior: reduce() ? "auto" : "smooth", block: "center" }); }
+  /* one smooth scroll that lands with the chat panel at the top of the screen (it is exactly one screen tall, see owner.css),
+   so its first message and the input are both visible; no second scroll, focus never scrolls */
+  function toChat() {
+    var r = root.getBoundingClientRect();
+    if (Math.abs(r.top - 14) < 8) return;
+    root.scrollIntoView({ behavior: reduce() ? "auto" : "smooth", block: "start" });
+  }
   function kaikuSays(t) { if (!t) return; add({ role: "kaiku", kind: "chat", text: t }); tell("kaiku", t); }
   /* Accept hands over: nothing is written, Kaiku's proposal appears here and the card is the focus */
   window.addEventListener("kaiku:accept", function (m) {
@@ -115,11 +121,11 @@
   });
   window.addEventListener("kaiku:change", function (m) {
     var d = m.detail || {}; if (!d.id) return;
-    toChat();
-    setTimeout(function () { try { msg.focus({ preventScroll: true }); } catch (e) {} }, reduce() ? 0 : 350);
+    toChat(); typing(true);
+    setTimeout(function () { try { msg.focus({ preventScroll: true }); } catch (e) {} }, reduce() ? 0 : 600);
     post("/api/suggestions/" + encodeURIComponent(d.id) + "/change", { business_id: BIZ, session: SID })
-      .then(function (j) { kaikuSays(j.reply); root.classList.add("ctx"); focusEv(j.focus); })
-      .catch(function () { /* nothing pending to change: stay quiet */ });
+      .then(function (j) { typing(false); kaikuSays(j.reply); root.classList.add("ctx"); focusEv(j.focus); })
+      .catch(function () { typing(false); /* nothing pending to change: stay quiet */ });
   });
   window.addEventListener("kaiku:discard", function (m) {
     var d = m.detail || {}; if (!d.id) return;
@@ -138,7 +144,6 @@
     if (!sys) { sys = document.createElement("div"); sys.className = "sys mono"; sys.setAttribute("data-pilot", "ladder"); }
     sys.textContent = t; placeSys();
   });
-  setInterval(placeSys, 1500);
 
   /* ---------- demo drawer: only for the key holder ---------- */
   function initDrawer() {
