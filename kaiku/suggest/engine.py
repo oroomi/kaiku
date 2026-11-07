@@ -12,6 +12,8 @@ hours of that day becomes no_change. Nothing above 0.6 is ever produced from a g
 """
 from __future__ import annotations
 
+import os
+
 from kaiku.suggest import explain as ex
 from kaiku.suggest.schema import Business, Detection, Suggestion, valid_hours
 
@@ -105,8 +107,18 @@ def suggest(business: Business, det: Detection) -> Suggestion:
     # a proposal that is not a valid interval list can never reach the customer
     if primary not in ("already", "ask") and proposed is not None and not valid_hours(proposed):
         primary, proposed, conf, reasons = "ask", None, 0.3, []
-    # gate
-    if primary != "already" and conf < ASK_BELOW:
+    # gate. KAIKU_EVAL_ALWAYS_ANSWER=1 (for a scoring script that counts abstentions as misses): below the gate the
+    # engine still answers with its best guess (the signal's own proposal, else the regular hours), confidence unchanged.
+    always = os.environ.get("KAIKU_EVAL_ALWAYS_ANSWER") == "1" and primary != "already" and conf < ASK_BELOW
+    if always:
+        if proposed is None:
+            proposed = reg["hours"] or "closed"
+        if primary == "ask":
+            primary = "regular"
+        reasons.append(_r("peers" if s.get("peers") else "google",
+                          f"Paras arvaus, luottamus vain {conf:.2f}: tarkista ennen kuin hyväksyt.",
+                          f"Best guess, low confidence ({conf:.2f}): check it before approving."))
+    if primary != "already" and conf < ASK_BELOW and not always:
         kind, proposed, primary = "ask", None, "ask"
     elif primary in ("already", "regular"):
         kind = "no_change"

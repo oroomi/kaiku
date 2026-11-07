@@ -47,3 +47,6 @@ Kaiku checks what Google shows through Serper places (`SERPER_API_KEY`). The sta
 
 ## What this does not show
 Accuracy on real businesses, any other country, or Fonecta's hidden data. Peer priors are the author's judgement (`data/peer_priors.json`, labelled). The website parser is tested on a mocked page only. Fonecta's scoring format is unknown; `backtest.load_cases` guesses CSV and JSON headers and writes the Suggestion contract as JSON lines, and one line would add a flat hours string if the script wants one.
+
+## Run it on your own data: /eval
+`/eval` is a page where a CSV or JSON file (2 MB, 500 rows) is run through the same engine and `backtest.metrics` offline, with per-row answers, reasons, the column mapping used (remappable) and a JSON-lines download of the Suggestion contract. It starts with our 10 sample cases, labelled as ours. See `docs/eval_page.md`. `KAIKU_EVAL_ALWAYS_ANSWER=1` makes the engine answer below the 0.6 gate for scripts that count abstentions as misses.

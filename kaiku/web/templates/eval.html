@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Kaiku eval, run it on your data{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/eval.css?v={{ asset_v() }}">{% endblock %}
+{% block content %}
+<div class="ev" id="ev" data-ask-below="{{ ask_below }}">
+  <section class="glass ev-hero" data-pilot="eval-hero">
+    <p class="mono ev-kick">EVAL &middot; SUGGESTION QUALITY</p>
+    <h1 class="ev-sentence">Give Kaiku your opening hours and holidays. See what it would suggest, and why.</h1>
+    <p class="ev-sub">CSV or JSON, up to 2 MB and 500 rows. It runs here in a few seconds, offline, and is never stored.</p>
+    <form id="ev-form" class="ev-drop" data-pilot="eval-drop">
+      <label class="ev-zone" id="ev-zone" for="ev-file">
+        <span class="ev-zone-main" id="ev-zone-main">Drop a file here, or tap to choose</span>
+        <span class="mono ev-zone-sub">.csv &middot; .json</span>
+        <input type="file" id="ev-file" accept=".csv,.json,text/csv,application/json" hidden>
+      </label>
+      <div class="ev-actions">
+        <button type="button" class="primary" id="ev-run" disabled>Run on this file</button>
+        <button type="button" class="ghost" id="ev-sample">Back to our sample</button>
+      </div>
+    </form>
+    <p class="ev-safe mono">NO NETWORK &middot; NO YEXT WRITE &middot; NOBODY IS CONTACTED{% if always_answer %} &middot; ALWAYS-ANSWER MODE ON{% endif %}</p>
+  </section>
+
+  <section class="glass ev-res" id="ev-res" aria-live="polite" data-pilot="eval-results">
+    <header class="ev-head"><span class="mono" id="ev-label">SAMPLE RUN</span><span class="mono soft" id="ev-sub"></span></header>
+    <p class="ev-err" id="ev-err" hidden role="alert"></p>
+    <div class="ev-metrics" id="ev-metrics"></div>
+    <p class="ev-dl" id="ev-dl-wrap"><a id="ev-dl" class="mono" href="#" download="kaiku_suggestions.jsonl">Download results (JSON lines, the Suggestion contract)</a></p>
+    <div class="ev-rows" id="ev-rows"></div>
+  </section>
+
+  <section class="glass ev-map" id="ev-map" data-pilot="eval-mapping">
+    <header class="ev-head"><span class="mono">HOW WE READ YOUR COLUMNS</span></header>
+    <p class="ev-maptext" id="ev-maptext"></p>
+    <form id="ev-remap" class="ev-remap" hidden></form>
+  </section>
+
+  <section class="glass ev-how" data-pilot="eval-how">
+    <header class="ev-head"><span class="mono">HOW WE SCORE OURSELVES</span></header>
+    <p class="ev-p"><b>Abstain policy.</b> Below confidence <b>{{ ask_below }}</b> Kaiku asks the owner instead of guessing. A <i>no change</i> answer is a real answer: it counts as a hit when the day really is the regular day. Hit rate counts only rows with an expected value; asks are shown separately.</p>
+    <p class="ev-p">Three things your scoring script may do differently, and what we would change:</p>
+    <ul class="ev-list">
+      <li><b>It expects hours every time.</b> Set <code>KAIKU_EVAL_ALWAYS_ANSWER=1</code>: the engine then answers below the gate with its best guess (the source's own proposal, else the regular hours), keeps the low confidence number and says so in the reasons.</li>
+      <li><b>It scores an abstention as a miss.</b> Same flag. Without it the hit rate is shown over all rows and over answered rows, so both readings are visible.</li>
+      <li><b>It reads one flat hours string.</b> Every row here carries <code>hours_flat</code> (<code>09:00-13:00</code> or <code>closed</code>, empty for an ask). The Suggestion contract file keeps the structured form; a flat column is one line in the exporter.</li>
+    </ul>
+    <p class="ev-p soft">Every number on this page is computed by <code>kaiku.suggest.backtest</code> in the request. Method: docs/eval_page.md.</p>
+  </section>
+</div>
+<script type="application/json" id="ev-sample-data">{{ sample_json|safe }}</script>
+{% endblock %}
+{% block scripts %}<script src="/static/eval.js?v={{ asset_v() }}" defer></script>{% endblock %}
