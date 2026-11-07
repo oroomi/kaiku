@@ -8,7 +8,7 @@ The page's chat opens empty; `chat.router.opening` still builds the old opening 
 Only an explicit focus counts (Accept, Suggest a change, a hand-off, the WhatsApp opening). A bare "yes" with no proposal decides nothing: "I have not proposed anything yet. Accept a suggestion above and I will talk you through it."
 
 ## Flow
-1. **Accept** -> proposal (nothing written), stage `proposed`.
+1. **Accept** on a card applies at once (step 2 and 3 below follow). The proposal texts below are what Kaiku asks when it moves to the next item, and what a typed "yes" on a focused item answers; every proposal carries its reason.
    - holiday_hours: "<Season> is coming. Do you want to change your hours on <holiday name> <date> to <hours>? Everywhere Connect publishes still says <regular hours that day>." Season = "Christmas" for 24.12. to 6.1., else the holiday name ("Midsummer Eve is coming"). Closed proposal: "Do you want to mark <name> <date> as closed?". No proposed hours: "I have no ready hours for ... What should they be?" (stage ask_new).
    - period: "The <period name> is coming: <date list>. Shall I set all of them?" (only the dates not yet decided).
    - description: `Shall I correct "vacination" to "vaccination" in your description?`; missing: "Your listing has no description. Shall I publish this one? <draft>".

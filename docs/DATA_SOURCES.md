@@ -1,8 +1,17 @@
 # Data sources
 
-Eight sources, five of them in the holiday chain. For each: licence, how we use it, where Connect would get it in production, what did not work. Live: Nager.Date (refresh), Föli, Digitraffic, Open-Meteo, OSM (cached at build time). Files: the business's own hours and last-year exceptions (sample data for Furry Paw), peer priors (hand-made).
+Slide 8 asks for 3 to 5 key data sources, where Connect would get them in production, and what did not work. The five that feed the holiday chain are in the table; the sections below give licence, use and failures for each. Three more sources (OpenStreetMap, Föli and Digitraffic, Open-Meteo) serve the Turku map, the room and the FIWARE entry and are listed after. Checked against the running product on 7 Nov 2026 (main 1b4ac90).
 
-## The five key sources for the holiday chain
+## The five key sources at a glance
+| # | Source | What it tells the chain | Where Connect would get it in production | What did not work |
+|---|---|---|---|---|
+| 1 | Public holidays: Nager.Date (live refresh over `data/holidays_fi_2026.json`, 38 dates) | which days are holidays, public or not | Connect's own holiday calendar per country (or the same API) | no uudenvuodenaatto, so we add it as a non-public day; movable days matched by name |
+| 2 | The business's own regular hours and last year's exceptions: Yext sandbox entity SinceAI07 (live read) plus `data/furry_paw.json` (sample history) | the main proposal ("last year 9-13") and whether anything is missing | Connect's published hours and its exception-hours history per entity | the sandbox has no history, so last year is a labelled sample; Yext accepts an inverted interval (13:00 to 9:00), so we validate locally |
+| 3 | The business's own website | a line with the holiday name or date plus a time or "suljettu" | the crawl Connect already does for listings | the sample site `furrypaw.example` does not resolve, so the signal returns nothing; the parser is tested on a mocked page only |
+| 4 | What Google shows now: Serper places | whether the public listing disagrees with our proposal | Google Business Profile API through Connect's own publishing state | live call made on 7 Nov with the key set: for the fictional clinic it returns no hours (`{"status": "unknown"}`), so the message names Connect's published hours instead |
+| 5 | Category peers: `data/peer_priors.json` | cold start: what similar businesses do on that holiday | Connect's customer base: the share of similar businesses that closed or shortened hours on each holiday | hand-made placeholder; nothing to test it against until Fonecta's data arrives; never above 0.65 confidence |
+
+## Detail per source
 ### 1. Public holidays: Nager.Date
 - Licence: MIT (the API is free, no key). URL: nager.date, `PublicHolidays/2026/FI`.
 - How we use it: `data/holidays_fi_2026.json` bundled; a live refresh (5 s timeout) rewrites it if older than 30 days. We add flag days such as isänpäivä as `public_holiday=false`.
@@ -24,7 +33,7 @@ Eight sources, five of them in the holiday chain. For each: licence, how we use 
 - Licence: Serper's terms (paid API). Google content is shown only as a status.
 - How we use it: `google_now`, only with `SERPER_API_KEY`; otherwise `{"status":"unknown"}`. Google is named in a message only when hours came back.
 - Production: Google Business Profile API through Connect's own publishing state.
-- Did not work: no key on the build box and the demo business is fictional, so the status is unknown and untested live.
+- Did not work: the demo business is fictional, so Serper has no listing for it. The key is set and a live call on 7 Nov returned `{"status": "unknown"}`.
 
 ### 5. Category peers
 - Licence: ours. `data/peer_priors.json` is hand-made (author's judgement of Finnish practice) and labelled so.
@@ -52,9 +61,17 @@ Eight sources, five of them in the holiday chain. For each: licence, how we use 
 - Nager.Date has no uudenvuodenaatto.
 - Our Orion-LD build rejects `datasetId` writes after the entity is created (501), so the client deletes and re-creates the entity. Subscriptions with `q` on an object value do not match, so the router filters.
 - The Yext sandbox has no publishers, so "where it shows" is an honest statement, not a live sync.
-- ElevenLabs key permissions: the key we have lacks the convai permissions (401 missing_permissions), so the Conversational AI agent for the call lane could not be created; speech to text and text to speech work.
-- Zadarma phone number verification: the account needed a login and verification step; no number was bought by 6 Nov.
-- Serper: no key, Google signal unverified.
+- The call lane first failed on ElevenLabs key permissions (401 missing_permissions) and on Zadarma number verification; both were fixed on 6 Nov and the call was placed and answered at 21:24Z and 21:46:53Z (`data/call_log.jsonl`, docs/call.md).
+- Serper: works, but a fictional business has no Google listing, so the Google signal is untested on a real match.
 
-## Bonus: a live source replacing a dataset file
-Holidays refresh live from Nager.Date over the bundled file. Learned: the bundled file is the safety net, and the live source needed an explicit timeout and a fallback to stay demo-safe. The map's businesses are a cached live Overpass fetch.
+## Bonus: live sources that replaced dataset files, and what we learned
+Slide 8 asks for at least one dataset file replaced by a live source. Four live sources are in the product, each with a receipt from 7 Nov 2026:
+
+| File it replaces or avoids | Live source | Receipt | What we learned |
+|---|---|---|---|
+| Holiday list | Nager.Date `PublicHolidays/{year}/FI`, rewritten into `data/holidays_fi_2026.json` (38 dates, 2025 to 6.1.2027); `curl` of the API returned 200 on 7 Nov | file `source` field names the API; `kaiku/detect/holidays.py::build_cache` | the live source has no New Year's Eve and no flag days, so we add them; it needs a 5 s timeout and the bundled file as fallback to stay demo-safe |
+| The clinic's hours, holiday rows, description, reviews as the owner sees them | Yext sandbox entity SinceAI07 read through the Management API for the "On Fonecta now" panel and the listing score | `GET /api/listing/furry-paw` returns entity SinceAI07 with `read_at`; `GET /api/score/furry-paw` returns score 45 (3 of 7 checks) computed from it | the sandbox had no description or reviews, so the team wrote labelled samples; the sandbox has no publishers, so "where it shows" is a statement, not a syndication; the write is real and we read it back |
+| 40 placeholder points on the map | OpenStreetMap via Overpass: 813 Turku businesses, `fallback: false`, fetched 6 Nov 19:15Z | `data/turku_businesses.json` (`count` 813) | Overpass is often at capacity, so the loader tries three mirrors with backoff; only 2 of 813 mention 24 Dec, so history is never invented |
+| No file at all (no static sample exists for these) | Föli SIRI (buses), Digitraffic AIS (ships), Open-Meteo (weather) into the Orion-LD broker | `GET /api/aura/status` on 7 Nov 01:55Z: ships 44, weather 1, buses 0 (night, no buses running) | Digitraffic needs gzip and a `Digitraffic-User` header; Föli sends no heading, so we derive it from movement |
+
+The honest limit: the holiday history ("last year 9-13") is still a labelled sample, because the sandbox holds none. That is the one input a pilot with real Connect data would replace first.
