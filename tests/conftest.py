@@ -17,7 +17,8 @@ def _never_send_mail(monkeypatch):
     monkeypatch.setenv("KAIKU_NO_SMTP", "1")
     monkeypatch.setenv("KAIKU_FEED_NETWORK", "0")  # the suggestions engine never fetches websites during tests
     monkeypatch.setenv("KAIKU_NO_CALL", "1")  # no test ever dials the owner
-    for k in ("SMTP_HOST", "SMTP_FROM", "SMTP_USER", "SMTP_PASS", "OWNER_EMAIL", "ELEVENLABS_API_KEY", "WA_TOKEN", "WA_PHONE_ID"):
+    for k in ("SMTP_HOST", "SMTP_FROM", "SMTP_USER", "SMTP_PASS", "OWNER_EMAIL", "ELEVENLABS_API_KEY", "WA_TOKEN", "WA_PHONE_ID",
+              "KAIKU_REVIEW_CARDS"):  # the live .env caps review cards for the demo; tests use the engine default
         monkeypatch.delenv(k, raising=False)
 
 

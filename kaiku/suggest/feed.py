@@ -10,6 +10,7 @@ fn(business_id, today, client) -> list[card dict] and must return [] when it has
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 from datetime import date, timedelta
@@ -300,6 +301,10 @@ def review_loader(business_id: str, today: date, client, limit: int = 3) -> list
         open_.append((int(round(float(rating))), text, rid, r))
     open_.sort(key=lambda x: (x[0] > 3, x[0]))
     cards = []
+    try:  # the demo shows one review card at a time (KAIKU_REVIEW_CARDS=1 in .env); the engine default is 3
+        limit = int(os.environ.get("KAIKU_REVIEW_CARDS") or limit)
+    except ValueError:
+        pass
     for rating, text, rid, r in open_[:limit]:
         reply, by_brain = src.draft_reply(rating, text, name, lang)
         sample = from_sample or src.is_sample_review(r)

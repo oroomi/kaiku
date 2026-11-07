@@ -58,7 +58,7 @@ def test_healthz_and_home(client):
     for word in ("SAMPLE HISTORY", "LIVE EVENTS", "Run the chain", "data-say", 'id="quick"'):
         assert word not in html
     assert "Furry Paw Vet Clinic" in html and 'id="composer"' in html and "SUGGESTIONS FOR FURRY PAW VET CLINIC" in html
-    assert "Tell Kaiku, or hold space to talk" in html and "ON FONECTA NOW" in html and "YEXT SANDBOX SINCEAI07" in html and "MESSAGE TO THE OWNER" not in html and 'id="score-n"' in html
+    assert "Type, or hold space to talk" in html and "ON FONECTA NOW" in html and "YEXT SANDBOX SINCEAI07" in html and "MESSAGE TO THE OWNER" not in html and 'id="score-n"' in html
     assert "—" not in html
     order = [html.index(x) for x in ('id="hero"', 'id="suggestions"', 'id="chat"', 'id="listing"')]
     assert order == sorted(order)  # hero, suggestions, then chat + ON FONECTA NOW
