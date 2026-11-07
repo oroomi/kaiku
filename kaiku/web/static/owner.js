@@ -25,6 +25,7 @@
   var biz = null, items = [], evs = {}, steps = {}, chainRunning = false, chainTimer = 0, chatBusy = false, sc = null, loaded = false;
 
   /* ---------- hero: the listing score ---------- */
+  function setN(v) { $("score-n").innerHTML = String(v) + '<span class="pct">%</span>'; }   /* the score is out of 100, so it reads as a percentage */
   var track = $("arc-track"), fill = $("arc-fill"), dot = $("dot"), halo = $("dot-halo");
   var LEN = track.getTotalLength(), arc = { t: 0, target: 0 };
   function place(t) {
@@ -39,12 +40,12 @@
   function active() { return ((chainRunning || chatBusy || !sc) && !reduce) || Math.abs(arc.target - arc.t) > 0.002 || (sc && shownN !== numTarget); }
   function kick() { if (!running) { running = true; requestAnimationFrame(loop); } }
   function loop(ts) {
-    if (!heroSeen && sc) { arc.t = arc.target; place(arc.t); shownN = numTarget; $("score-n").textContent = String(Math.round(shownN)); running = false; return; }
+    if (!heroSeen && sc) { arc.t = arc.target; place(arc.t); shownN = numTarget; setN(Math.round(shownN)); running = false; return; }
     if ((chainRunning || chatBusy || !sc) && !reduce) { arc.t = 0.5 - 0.5 * Math.cos(ts / 2400 * Math.PI * 2); place(arc.t); }
     else if (Math.abs(arc.target - arc.t) > 0.002) { arc.t += (arc.target - arc.t) * 0.06; place(arc.t); }
     if (sc && shownN !== numTarget) {   /* the big number follows the dot */
       shownN += (numTarget - shownN) * 0.12; if (Math.abs(numTarget - shownN) < 0.5) shownN = numTarget;
-      $("score-n").textContent = String(Math.round(shownN));
+      setN(Math.round(shownN));
     }
     if (active() && (heroSeen || !sc)) requestAnimationFrame(loop); else running = false;
   }
@@ -64,7 +65,7 @@
     else { var w = whenOf(list); en = name + ": " + pend + (pend === 1 ? " thing" : " things") + " to fix" + (w ? " before " + w : "") + "."; }
     $("headline").textContent = nb(en);
     arc.target = Math.max(0, Math.min(100, sc.score)) / 100; numTarget = sc.score;
-    if (reduce) { shownN = numTarget; $("score-n").textContent = String(numTarget); }
+    if (reduce) { shownN = numTarget; setN(numTarget); }
     $("big-cap").textContent = (sc.label_en || "").toUpperCase() + " · " + sc.checks_ok + " OF " + sc.checks_total + " CHECKS";
     $("score-n").setAttribute("title", "Listing score " + sc.score + " of 100. " + sc.checks.map(function (c) { return (c.ok ? "ok: " : "fix: ") + c.label_en; }).join("; "));
     kick();

@@ -59,6 +59,7 @@ main{padding-bottom:calc(110px + env(safe-area-inset-bottom))}
 .figure{bottom:3%}
 .score-n{font:300 clamp(64px,19vw,92px)/1 var(--sans);letter-spacing:-.04em;font-variant-numeric:tabular-nums}
 @media (min-width:900px){.score-n{font-size:96px}}
+.score-n .pct{font-size:.42em;letter-spacing:0;margin-left:.06em;opacity:.85}
 .w-listing{padding:16px;min-width:0;display:flex;flex-direction:column}
 .l-src{margin:-4px 0 10px;font-size:10px;letter-spacing:.1em}
 .l-body{display:flex;flex-direction:column;gap:0}
