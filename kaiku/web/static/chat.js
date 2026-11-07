@@ -171,6 +171,20 @@
         .catch(function () { note("Could not start the chain"); })
         .then(function () { btn.disabled = false; });
     });
+    function dcNote(t) { $("dc-msg").textContent = t; }
+    function dcShow(j) { dcNote(j && j.set ? "Set: " + [j.email, j.phone].filter(Boolean).join(", ") : "Using the owner's own."); }
+    fetch("/api/demo/contact", { headers: hdr() }).then(function (r) { return r.json(); }).then(dcShow).catch(function () {});
+    $("dc-save").addEventListener("click", function () {
+      var body = JSON.stringify({ email: $("dc-email").value, phone: $("dc-phone").value });
+      fetch("/api/demo/contact", { method: "POST", headers: Object.assign({ "Content-Type": "application/json" }, hdr()), body: body })
+        .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.detail || "Could not save"); return j; }); })
+        .then(function (j) { $("dc-email").value = ""; $("dc-phone").value = ""; dcShow(j); })
+        .catch(function (e) { dcNote(e.message); });
+    });
+    $("dc-clear").addEventListener("click", function () {
+      fetch("/api/demo/contact", { method: "DELETE", headers: hdr() }).then(function (r) { return r.json(); })
+        .then(function (j) { $("dc-email").value = ""; $("dc-phone").value = ""; dcShow(j); }).catch(function () { dcNote("Could not clear"); });
+    });
     $("reset").addEventListener("click", function () {
       var b = $("reset"); b.disabled = true; note("Resetting...");
       fetch("/api/reset", { method: "POST", headers: hdr() })

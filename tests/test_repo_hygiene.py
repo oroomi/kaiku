@@ -12,5 +12,5 @@ def test_no_virtualenv_is_tracked():
 
 def test_no_runtime_data_is_tracked():
     for f in ("data/kaiku.sqlite", "data/wa_sends.jsonl", "data/wa_status.jsonl", "data/call_log.jsonl",
-              "data/email_log.jsonl", "data/text_declines.jsonl", "data/decide_tokens.json", "data/chat_sessions.json"):
+              "data/email_log.jsonl", "data/text_declines.jsonl", "data/decide_tokens.json", "data/chat_sessions.json", "data/demo_contact.json"):
         assert _tracked(f) == "", f

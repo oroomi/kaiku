@@ -60,6 +60,8 @@ templates.env.globals["asset_v"] = asset_v
 app.mount("/static", NoCacheStatic(directory=str(WEB / "static")), name="static")
 app.include_router(events.router)
 app.include_router(chain.router)
+from . import demo_contact as _demo_contact  # noqa: E402
+app.include_router(_demo_contact.router)
 
 # Module routers: broker, contact, decide, voice, map, learn, mcp_bridge, aura. A missing module is fine.
 @app.middleware("http")

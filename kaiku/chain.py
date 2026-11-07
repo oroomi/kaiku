@@ -732,7 +732,7 @@ def yext_reset() -> dict:
 
 
 @router.post("/api/reset")
-async def api_reset(request: Request, learn: int = 0, key: str = ""):
+async def api_reset(request: Request, learn: int = 0, key: str = "", contact: int = 0):
     """Demo reset: zero holiday rows on the sandbox, no suggestions or events, broker seeded again, clock 2026-12-17.
     Needs KAIKU_ROOM_KEY as ?key= or header X-Kaiku-Key (403 otherwise)."""
     want = os.environ.get("KAIKU_ROOM_KEY", "")
@@ -742,6 +742,10 @@ async def api_reset(request: Request, learn: int = 0, key: str = ""):
     for t in list(_tasks):
         t.cancel()
     out: dict = {}
+    if contact:  # the demo contact stays for the session unless ?contact=1
+        from . import demo_contact
+        demo_contact.clear()
+        out["demo_contact_cleared"] = True
     try:  # a scheduled WhatsApp-to-call escalation must not fire after the demo was reset
         from .contact import ladder as _ladder
         _ladder.cancel_pending()

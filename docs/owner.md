@@ -25,3 +25,7 @@ Status: the engine builds every card `proposed`. `kaiku.chat.feed.with_decisions
 The feed's network build takes seconds (one HTTP signal per holiday), so the chat and the cards paint first from `network=0` and then upgrade; a slow build is cached for 30 s.
 
 Demo drawer (holiday picker, Run the chain, time travel, Reset): `/owner/drawer`, key holders only, opened by `?key=...#drawer`. The live events strip is on `/judge?key=...` only.
+
+## Demo contact
+
+At the Joki Q&A a visitor may want the email, the WhatsApp message and the call on their own device. The keyed drawer has a "Demo contact" box (Email, Phone in international format, Save, "Back to my own"). It posts to `POST /api/demo/contact` (key as `X-Kaiku-Key` or `?key=`; `GET` returns the masked values, `DELETE` or empty fields clear). The override lives in `data/demo_contact.json` (gitignored) and beats `OWNER_EMAIL` / `OWNER_WHATSAPP` / the business record for the email step, the WhatsApp step, the call and the WhatsApp receipt; an inbound WhatsApp from that phone is handled exactly like the owner's. Validation: email needs `@` and a dot, phone is `+` and 8 to 15 digits (400 otherwise). Events and logs carry masks only (`e***@fonecta.fi`, `+358***123`). `POST /api/reset` keeps the override; `?contact=1` clears it. WhatsApp reaches only numbers registered in the Meta test app (SMS code, max 5); email and the call reach any address or number. Ask the person first, clear it after.

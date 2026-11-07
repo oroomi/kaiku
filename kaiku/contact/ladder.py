@@ -59,6 +59,9 @@ def escalate_after_s() -> float:
 def owner_phone(s: dict) -> str:
     """Demo rule: every recipient is the owner's own phone from .env (OWNER_WHATSAPP). Real owners never get contacted."""
     W.load_env()
+    from kaiku import demo_contact as DC
+    if DC.phone():  # the demo contact (set in the drawer) beats OWNER_WHATSAPP
+        return W.normalize_phone(DC.phone())
     return W.normalize_phone(os.environ.get("OWNER_WHATSAPP") or s.get("owner_whatsapp"))
 
 
