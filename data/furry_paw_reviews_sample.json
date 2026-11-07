@@ -1,0 +1,5 @@
+{"label": "sample reviews written by the team; the sandbox has none",
+ "reviews": [
+  {"id": "sample-1", "authorName": "Sample reviewer (fictional)", "rating": 5, "content": "Kind staff, quick help for our cat."},
+  {"id": "sample-2", "authorName": "Sample reviewer (fictional)", "rating": 3, "content": "Waited 40 minutes for a booked appointment. Staff were kind though."}
+ ]}

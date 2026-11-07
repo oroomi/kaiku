@@ -27,7 +27,8 @@ Rules:
 - If a follow-up is awaiting an answer: "yes" calls set_standing_permission(enabled true), "no" calls it with enabled false and you say you will ask again each time. Then name the next waiting item in a few words.
 - If decide returns an error, say so plainly and nothing was changed.
 - Items of kind no_change need nothing. Mention one only if asked, in one line: nothing to change and why.
-- If the owner asks something the data does not answer, say you do not know. Stay on opening hours.
+- Items of kind description (typo fix or a drafted description) and review (a drafted reply to a review) work the same way: "yes" calls decide(approve) and the drafted text in the item is saved. If the owner suggests a change, call decide(edit) with edited_text set to the owner's exact wording (never your own rewrite). "no": decide(decline). Never say a review reply was posted unless the decide result says posted true; if it says stored, say it is stored for now.
+- If the owner asks something the data does not answer, say you do not know. Stay on the business listing: opening hours, the description and review replies.
 
 Business: {name}, {address}. Today in the demo clock: {today}.
 Suggestions (id | kind | title | proposed | last year | status | reason):
@@ -106,6 +107,7 @@ TOOLS = [
     {"name": "decide", "description": "Record the owner's decision on one suggestion and run the chain (broker, Yext, learn). Only after the owner said so.",
      "input_schema": {"type": "object", "properties": {
          "suggestion_id": {"type": "string"}, "action": {"type": "string", "enum": ["approve", "edit", "decline"]},
+         "edited_text": {"type": "string", "description": "for edit of a description or review reply: the owner's own exact text"},
          "edited_hours": {"description": "for edit: the string closed, or a list of {start,end} as HH:MM", "anyOf": [
              {"type": "string", "enum": ["closed"]},
              {"type": "array", "items": {"type": "object", "properties": {"start": {"type": "string"}, "end": {"type": "string"}}, "required": ["start", "end"]}}]}},
@@ -127,7 +129,7 @@ class Turn:
                                     for i in F.get_feed(self.bid).get("suggestions", [])]}
         if name == "decide":
             r = await A.decide(self.bid, str(args.get("suggestion_id", "")), str(args.get("action", "")), args.get("edited_hours"),
-                               self.sess.get("via", "web"))
+                               self.sess.get("via", "web"), edited_text=args.get("edited_text"))
             if r.get("ok"):
                 self.last_decide = r
                 self.actions.append({"type": "decided", "suggestion_id": r["suggestion_id"], "action": r["action"], "status": r.get("status")})
@@ -186,6 +188,9 @@ async def fallback_reply(items, sess, message, lang, turn: Turn) -> str:
         nxt = focus_of(F.get_feed(turn.bid)["suggestions"], sess)
         return M["perm_yes" if yes else "perm_no"] + (f" Next: {nxt['title_en']}." if nxt and lang != "fi" else "")
     f = focus_of(items, sess)
+    if f is not None and f["kind"] in ("description", "review") and (p is None or p["action"] == "change") and len(message.split()) >= 4:
+        r = await turn.run("decide", {"suggestion_id": f["id"], "action": "edit", "edited_text": message.strip()})
+        return M["saved"].format(what="your wording") if r.get("ok") else M["error"]
     if p is None:
         return M["again"]
     if p["action"] == "change":
@@ -193,12 +198,17 @@ async def fallback_reply(items, sess, message, lang, turn: Turn) -> str:
     if f is None:
         return M["nothing"]
     args = {"suggestion_id": f["id"], "action": p["action"], "edited_hours": p.get("edited")}
+    if f["kind"] in ("description", "review") and p["action"] == "edit":
+        args["edited_text"] = message.strip()
     r = await turn.run("decide", args)
     if not r.get("ok"):
         return M["which"] if r.get("needs_hours") else M["error"]
     if p["action"] == "decline":
         return M["declined"]
-    what = f"{f.get('holiday_name_en') or f['title_en']} {r.get('final_hours')}"
+    what = (("the reply" if f["kind"] == "review" else "the description") if f["kind"] in ("description", "review")
+            else f"{f.get('holiday_name_en') or f['title_en']} {r.get('final_hours')}")
+    if f["kind"] == "review" and not r.get("posted"):
+        return "Reply stored. The sandbox key cannot post review comments, so it is not on the review yet."
     return (M["saved"].format(what=what) + " " + (r.get("follow_up_question") or "")).strip()
 
 

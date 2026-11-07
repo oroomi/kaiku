@@ -19,6 +19,7 @@ from typing import Callable, Optional
 from kaiku.detect import holidays as hol
 from kaiku.detect.engine import detect
 from kaiku.suggest import explain as ex
+from kaiku.suggest import sources as src
 from kaiku.suggest.engine import DS, suggest
 from kaiku.suggest.schema import Business, valid_hours
 
@@ -198,41 +199,125 @@ def _yext_client():
     return YextSandbox()
 
 
+def _owner_lang(business_id: str) -> str:
+    try:
+        from kaiku import store
+        b = store.get_business(business_id)
+        return "fi" if b is not None and getattr(b, "owner_language", "en") == "fi" else "en"
+    except Exception:
+        return "en"
+
+
+def _short_hash(text: str) -> str:
+    import hashlib
+    return hashlib.sha1(text.encode()).hexdigest()[:6]
+
+
+def _sample_reason() -> dict:
+    return {"source": "sample", "dataset_id": "urn:kaiku:src:sample", "text_en": src.SAMPLE_NOTE_EN, "text_fi": src.SAMPLE_NOTE_FI}
+
+
 def description_loader(business_id: str, today: date, client) -> list[dict]:
-    """Only when the Yext entity has a description that is too short to help a customer. Never writes text for them."""
-    ent = client.get_entity(_entity_id(business_id))
+    """Yext entity description: missing -> a draft by Kaiku; present -> typos (word list first, then the brain)."""
+    eid = _entity_id(business_id)
+    ent = client.get_entity(eid)
     desc = (ent.get("description") or "").strip()
-    if not desc or len(desc) >= 40:
+    ds = "urn:kaiku:src:yext:description"
+    if not desc:
+        name = ent.get("name") or business_id
+        addr = ent.get("address") or {}
+        address = ", ".join(x for x in (addr.get("line1"), addr.get("city")) if x) or "address not given"
+        cat = ent.get("categories") or {}
+        cat_txt = ", ".join(str(v) for vs in cat.values() for v in (vs if isinstance(vs, list) else [vs]))
+        text, by_brain = src.draft_description(name, cat_txt, address, src.hours_summary(ent.get("hours") or {}))
+        return [{"id": f"feed-{business_id}-description-missing", "kind": "description",
+                 "title_en": "Your listing has no description", "title_fi": "Listauksessanne ei ole kuvausta",
+                 "text_en": f"Customers see no description of {name}. Here is a draft you could publish (draft by Kaiku): \"{text}\"",
+                 "text_fi": f"{name} ei näy kuvausta asiakkaille. Tässä Kaikun luonnos (luonnos: Kaiku): \"{text}\"",
+                 "proposed": text, "confidence": 0.6, "holiday_date": None, "status": "proposed", "entity_id": eid,
+                 "reasons": [{"source": "yext", "dataset_id": ds, "text_en": "The Yext entity has no description field",
+                              "text_fi": "Yext-kohteella ei ole kuvauskenttää"},
+                             {"source": "kaiku_draft", "dataset_id": "urn:kaiku:src:kaiku:draft",
+                              "text_en": "draft by Kaiku from your name, category, address and opening hours" + ("" if by_brain else " (template)"),
+                              "text_fi": "Kaikun luonnos nimestä, kategoriasta, osoitteesta ja aukioloajoista"}]}]
+    typos = src.find_typos(desc)
+    if not typos:
         return []
-    cats = ent.get("categories") or {}
-    return [{"id": f"feed-{business_id}-description", "kind": "description",
-             "title_en": "Your business description is very short", "title_fi": "Yrityskuvauksenne on hyvin lyhyt",
-             "text_en": f"Your description is only {len(desc)} characters: \"{desc}\". Want to add a sentence about what you do?",
-             "text_fi": f"Kuvauksenne on vain {len(desc)} merkkiä: \"{desc}\". Lisätäänkö lause siitä, mitä teette?",
-             "proposed": None, "confidence": 0.5,
-             "reasons": [{"source": "yext", "dataset_id": "urn:ngsi-ld:dataset:kaiku:yext",
-                          "text_en": f"Yext entity description: \"{desc}\"; categories: {json.dumps(cats)}",
-                          "text_fi": f"Yextin kuvaus: \"{desc}\""}], "status": "proposed"}]
+    fixed = src.apply_typos(desc, typos)
+    if fixed == desc:
+        return []
+    shown = typos[:3]
+    quoted_en = "; ".join(f'"{t["wrong"]}" should be "{t["right"]}"' for t in shown)
+    quoted_fi = "; ".join(f'"{t["wrong"]}" pitäisi olla "{t["right"]}"' for t in shown)
+    reasons = [{"source": "yext", "dataset_id": ds, "text_en": f"Yext entity description: \"{src.quote(desc, 120)}\"",
+                "text_fi": f"Yextin kuvaus: \"{src.quote(desc, 120)}\""}]
+    if src.is_sample_description(desc):
+        reasons.append(_sample_reason())
+    return [{"id": f"feed-{business_id}-description-typo-{_short_hash(desc)}", "kind": "description",
+             "title_en": "Typo in your description", "title_fi": "Kirjoitusvirhe yrityskuvauksessanne",
+             "text_en": f"{quoted_en}. Shall I fix it?", "text_fi": f"{quoted_fi}. Korjaanko sen?",
+             "proposed": fixed, "confidence": 0.9, "holiday_date": None, "status": "proposed", "entity_id": eid,
+             "typos": shown, "reasons": reasons}]
 
 
-def review_loader(business_id: str, today: date, client) -> list[dict]:
-    """Unanswered reviews of 3 stars or less, quoted verbatim from the reviews endpoint. Empty sandbox: no cards."""
-    res = client._req("GET", "/reviews")
-    cards = []
-    for r in (res.get("reviews") or []):
-        rating = r.get("rating")
-        text = (r.get("content") or r.get("comment") or "").strip()
-        if rating is None or rating > 3 or not text or r.get("comments") or r.get("response"):
+def _replied(rid: str) -> bool:
+    from kaiku.apply.yext import reply_log_path
+    p = reply_log_path()
+    try:
+        return p.exists() and any(json.loads(l).get("review_id") == rid for l in p.read_text().splitlines() if l.strip())
+    except (OSError, ValueError):
+        return False
+
+
+def _sample_reviews() -> list[dict]:
+    p = ROOT / "data" / "furry_paw_reviews_sample.json"
+    return json.loads(p.read_text()).get("reviews", []) if p.exists() else []
+
+
+def review_loader(business_id: str, today: date, client, limit: int = 3) -> list[dict]:
+    """Unanswered reviews, 3 stars or less first, quoted verbatim. Reads the Yext Reviews API; when the sandbox has none,
+    the team's labelled sample file is used and every card says so."""
+    eid = _entity_id(business_id)
+    reviews, from_sample = [], False
+    try:
+        reviews = client.list_reviews(eid)
+    except Exception:
+        reviews = []
+    if not reviews:
+        reviews, from_sample = _sample_reviews(), True
+    lang = _owner_lang(business_id)
+    name = "the business"
+    try:
+        name = client.get_entity(eid).get("name") or name
+    except Exception:
+        pass
+    open_ = []
+    for r in reviews:
+        rating, text = r.get("rating"), (r.get("content") or r.get("comment") or "").strip()
+        rid = str(r.get("id") or r.get("reviewId") or "")
+        if rating is None or not text or not rid or r.get("comments") or r.get("response") or _replied(rid):
             continue
-        rid = str(r.get("id") or r.get("reviewId") or len(cards))
-        cards.append({"id": f"feed-{business_id}-review-{rid}", "kind": "review",
+        open_.append((int(round(float(rating))), text, rid, r))
+    open_.sort(key=lambda x: (x[0] > 3, x[0]))
+    cards = []
+    for rating, text, rid, r in open_[:limit]:
+        reply, by_brain = src.draft_reply(rating, text, name, lang)
+        sample = from_sample or src.is_sample_review(r)
+        reasons = [{"source": "sample_reviews" if from_sample else "yext_reviews",
+                    "dataset_id": "urn:kaiku:src:sample:reviews" if from_sample else "urn:kaiku:src:yext:reviews",
+                    "text_en": f"Review {rid}, {rating} stars, no reply yet" + (" (file: data/furry_paw_reviews_sample.json)" if from_sample else ""),
+                    "text_fi": f"Arvostelu {rid}, {rating} tähteä, ei vastausta"},
+                   {"source": "kaiku_draft", "dataset_id": "urn:kaiku:src:kaiku:draft",
+                    "text_en": "reply drafted by Kaiku" + ("" if by_brain else " (template)") + ", for you to approve or change",
+                    "text_fi": "Kaikun luonnostelema vastaus, hyväksyttävänä tai muokattavana"}]
+        if sample:
+            reasons.append(_sample_reason())
+        q = src.quote(text)
+        cards.append({"id": f"feed-{business_id}-review-{rid}", "kind": "review", "review_id": rid, "entity_id": eid,
+                      "rating": rating, "author": r.get("authorName"),
                       "title_en": f"A {rating}-star review has no reply", "title_fi": f"{rating} tähden arvostelu ilman vastausta",
-                      "text_en": f"Review: \"{text}\". Want me to draft a reply for you to approve?",
-                      "text_fi": f"Arvostelu: \"{text}\". Luonnostellaanko vastaus hyväksyttäväksi?",
-                      "proposed": None, "confidence": 0.5,
-                      "reasons": [{"source": "yext", "dataset_id": "urn:ngsi-ld:dataset:kaiku:yext-reviews",
-                                   "text_en": f"Review {rid}, {rating} stars, no reply yet", "text_fi": f"Arvostelu {rid}, {rating} tähteä, ei vastausta"}],
-                      "status": "proposed"})
+                      "text_en": f"\"{q}\" Here is a reply you could post:", "text_fi": f"\"{q}\" Tässä vastaus, jonka voisit julkaista:",
+                      "proposed": reply, "confidence": 0.7, "holiday_date": None, "status": "proposed", "reasons": reasons})
     return cards
 
 
