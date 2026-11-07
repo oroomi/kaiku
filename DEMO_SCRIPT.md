@@ -13,7 +13,7 @@ Last line: "Say yes in the chat, or answer the WhatsApp text, and the hours are 
 ## 2-minute version
 | Time | Beat |
 |---|---|
-| 0:00-0:15 | Opener, then the hero sentence and arc on `/`: Christmas Eve 24.12., Connect 9-17 versus Kaiku 9-13, "75 % sure" |
+| 0:00-0:15 | Opener, then the listing score and arc on `/` and the Christmas Eve card: Connect 9-17 versus Kaiku 9-13 |
 | 0:15-0:40 | Chat with Kaiku: it opens with "I noticed 2 things", the Christmas Eve bubble ("Last year you were open 9-13 ... I suggest 9-13") and the Christmas period of 6 dates, 24.12. to 6.1. (24.12. 9-13; 25.12. closed; 26.12. closed; 31.12. 9-15; 1.1. closed; 6.1. closed). Point at the cards under SUGGESTIONS FOR FURRY PAW VET CLINIC with their reasons |
 | 0:40-1:05 | Contact: MESSAGE TO THE OWNER shows the thread. Email with the decision link first, then after 60 s with no decision one WhatsApp text (same conversation, on the phone). Show the phone |
 | 1:05-1:30 | Decide: type "yes" in the chat (or reply "yes" on WhatsApp). Kaiku says what was saved and asks "Want me to do this every Christmas Eve?". Apply: written to Yext SinceAI07 and read back (`/judge?key=...`). Say: "saved to the Yext entity and confirmed; in production Connect passes it on to Google and the other channels" |
@@ -30,11 +30,11 @@ If a judge arrives mid-demo, stop: "Let me start from the top: Connect suggests,
 ## Hard questions
 1. Who is it for? The owner of a small business whose hours Fonecta Connect publishes: a vet, a cafe, a salon. The demo business is the fictional Furry Paw Vet Clinic, Fonecta's sandbox entity.
 2. What was built this weekend? Everything except our MIT voice-pilot library, the `/root/hack/bin` process scripts, public APIs and data, the Yext sandbox, our VPS and tunnel. See DISCLOSURE.md: bell commit e2f7382.
-3. How is it measured? Honestly: 10 hand-made cases, self-consistency only. We built a backtest with a pluggable loader and have not seen Fonecta's data. 308 tests pass offline.
+3. How is it measured? Honestly: 10 hand-made cases, self-consistency only. We built a backtest with a pluggable loader and have not seen Fonecta's data. 362 tests pass offline.
 4. What breaks first at scale? The suggestions engine fetches the business website and Google signals per business on every build. One build for the demo clinic made 6 HTTP calls in 1.6 s warm; with real websites it grows per business and is cached only 30 s. The chat paints first without those signals.
 5. Does it really reach Google? Not in the sandbox: it has no publisher listings. The Yext write is real and read back. The Yext Suggestions API returns 403 for our key, so we write the entity directly.
 6. Does it really contact the owner? Yes, to the team's own contact details: an email sent 6 Nov 23:48:04Z, a WhatsApp text 23:49:08Z (free-form text needs Meta's 24 hour window; the templates are pending approval), and a call that was answered, approved and written to Yext at 21:46:53Z.
-7. What if the AI is wrong? A suggestion is shown only at 75 % or more; below that Kaiku asks. The owner always has the last word, and the keyword parser answers if the model is down.
+7. What if the AI is wrong? Below 0.6 confidence Kaiku asks and proposes nothing. The owner always has the last word, and the keyword parser answers if the model is down.
 
 ## Table checklist
 - Laptop on power, phone on the live URL, QR card, one-page PILOT x10, 60-second screen recording on the phone as fallback.
