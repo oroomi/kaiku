@@ -169,7 +169,7 @@ def test_english_webhook_flow_replies_in_english():
     R.register_sent(PHONE, "sg1", "wamid.CTX", None, "en")
     run(R.handle_payload(button_payload("edit"), client(f)))
     r = run(R.handle_payload(text_payload("sorry what"), client(f)))
-    assert r["decisions"] == [] and any("Sorry, I did not understand" in str(c[3]) for c in f.calls)
+    assert r["decisions"] == [] and any("take your time" in str(c[3]) for c in f.calls)
     r = run(R.handle_payload(text_payload("9am-1pm", mid="wamid.IN9"), client(f)))
     assert r["decisions"][0]["edited"] == [{"start": "09:00", "end": "13:00"}]
 

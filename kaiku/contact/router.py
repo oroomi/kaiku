@@ -226,6 +226,28 @@ def session_id(phone: str) -> str:
     return "wa:" + W.normalize_phone(phone)
 
 
+def feed_id_for(bid: str, sid: str | None) -> str | None:
+    """The chat feed card behind a suggestion id: sid itself when the feed lists it, else the holiday card with the
+    same business and holiday date (a chain run stores its suggestion under its own id, the feed under feed-<biz>-...)."""
+    if not sid:
+        return None
+    try:
+        from kaiku import store  # type: ignore
+        from kaiku.chat import feed as F  # type: ignore
+        if F.find(bid, sid) is not None:
+            return sid
+        sg = store.get_suggestion(sid)
+        day = getattr(sg, "holiday_date", None) if sg else None
+        if not day or getattr(sg, "business_id", bid) != bid:
+            return None
+        for i in F.get_feed(bid).get("suggestions", []):
+            if i.get("kind") == "holiday_hours" and i.get("holiday_date") == day:
+                return i["id"]
+    except Exception:
+        return None
+    return None
+
+
 def _business_for(sid: str | None) -> str | None:
     """The chat business behind a suggestion (or the demo business): None when the chat does not know it."""
     try:
@@ -242,10 +264,9 @@ def _business_for(sid: str | None) -> str | None:
     for c in cands:
         if not c or store.get_business(c) is None:
             continue
-        if sid:  # an id the chat feed does not list belongs to somebody else: the keyword parser handles it
+        if sid:  # an id the chat feed does not list (not even by holiday date) belongs to somebody else
             try:
-                from kaiku.chat import feed as F  # type: ignore
-                if F.find(c, sid) is None:
+                if feed_id_for(c, sid) is None:
                     continue
             except Exception:
                 continue
@@ -274,6 +295,11 @@ async def chat_turn(phone: str, text: str, bid: str, focus: str | None = None) -
     s["t"] = time.time()
     if focus:
         s["focus"] = focus
+    ids = {i["id"] for i in F.get_feed(bid).get("suggestions", [])}
+    if s.get("focus") not in ids:  # a chain-run id, or nothing after a restart: focus the feed card for the last sent suggestion
+        fid = feed_id_for(bid, s.get("focus") or _load()["latest"].get(phone))
+        if fid:
+            s["focus"] = fid
     msg = (text or "").strip()[:MAX_MSG]
     reply, acts = await brain.respond(bid, s, msg)
     s["hist"] += [("user", msg), ("assistant", reply)]

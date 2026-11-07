@@ -288,6 +288,20 @@ async def on_decision(decision) -> bool:
     if fut is not None and not fut.done():
         fut.set_result(Decision(**{k: v for k, v in d.items() if k in Decision.model_fields}))
         return True
+    # a decision on the chat feed card (feed-<biz>-holiday_hours-<date>) resolves the chain run waiting for that holiday,
+    # so one approval on the page, in the chat or on WhatsApp finishes the run and cancels the ladder's call
+    m = re.match(r"feed-(.+)-holiday_hours-(\d{4}-\d{2}-\d{2})$", sid or "")
+    if m:
+        for wsid, wfut in list(_waiters.items()):
+            try:
+                sg = store.get_suggestion(wsid)
+            except Exception:
+                sg = None
+            if sg and sg.business_id == m.group(1) and sg.holiday_date == m.group(2) and not wfut.done():
+                _waiters.pop(wsid, None)
+                dd = {**d, "suggestion_id": wsid}
+                wfut.set_result(Decision(**{k: v for k, v in dd.items() if k in Decision.model_fields}))
+                return True
     return False
 
 

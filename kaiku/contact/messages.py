@@ -348,7 +348,8 @@ def unknown_reply_text_fi() -> str:
 
 
 def unknown_reply_text_en() -> str:
-    return "Sorry, I did not understand that. Tap one of the buttons, or write the hours like 9-13, or 'closed'."
+    return ("No rush at all, take your time. I'll leave everything as it is until you tell me. "
+            "When you're ready, just reply yes, or tell me the hours, like 9-13 or closed.")
 
 
 # ---------------------------------------------------------------- language dispatch (English is the default)
