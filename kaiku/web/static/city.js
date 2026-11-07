@@ -346,7 +346,9 @@
       setInterval(reconcile, 5000);
       fetch("/api/city/vehicles").then((r) => r.json()).then(onPositions).catch(() => {});
       requestAnimationFrame(loop);
-      if (INTRO) fly(); else land();
+      window.__city.ready = true;
+      window.__city.start = () => (INTRO ? fly() : land());
+      if (P.get("hold") !== "1") window.__city.start(); // ?hold=1: the recorder starts the fly-in on its first frame
     });
     addEventListener("keydown", (e) => {
       if (e.target.closest && e.target.closest("input,textarea,button")) return;
