@@ -47,3 +47,9 @@ Claude claude-sonnet-5-5: the chat brain (three tools: decide, standing permissi
 
 ## Data sources and licences
 See docs/DATA_SOURCES.md.
+
+## Sample description and sample reviews (declared)
+The Yext sandbox entity SinceAI07 has no description and no reviews. We wrote one sample description (with a deliberate typo,
+"vacination") and two sample reviews ("Sample reviewer (fictional)") ourselves and put them in the sandbox through the Management and
+Reviews APIs (`tools/seed_sandbox.py`; fallback file `data/furry_paw_reviews_sample.json`). They are fictional, labelled as such in the text
+and in every card's reason row. Typo corrections and review replies are drafted by Anthropic claude-sonnet-5-5 (GenAI) and only applied after the owner approves.

@@ -80,3 +80,19 @@ Kinds, each only when real data supports it (no data, no card; nothing is invent
 - `no_change`: the engine says no change (Father's Day 8.11., not a public holiday and closed on Sundays) shown as a reliability card with its reason.
 - `description`, `review`: pluggable loaders (`register_loader`) reading the Yext entity description and the reviews endpoint. Sandbox 6.11.2026: `GET /reviews` returns 200 with 0 reviews, the entity has no description, so neither card appears.
 `ask` suggestions (not enough data) are not feed cards; they go through the chain as before.
+
+## Description and review sources (kinds `description`, `review`)
+Loaders in `kaiku/suggest/feed.py`, helpers in `kaiku/suggest/sources.py`. Both read Yext live and return `[]` without data.
+- **description**: missing -> "Your listing has no description" with a short draft (brain from name, category, address, hours;
+  template fallback; labelled "draft by Kaiku"). Present -> typo pass: word list + double space + lower-case sentence start
+  first, then the brain in strict JSON (`{"typos":[{"wrong","right"}]}`, each `wrong` must be a real substring, cached 10 min,
+  fallback empty). Card "Typo in your description", `proposed` = the corrected full text, confidence 0.9, reason dataset
+  `urn:kaiku:src:yext:description`.
+- **review**: unanswered Yext reviews (Reviews API), 3 stars or less first, up to 3 cards. Text = quote (<= 160 chars) + "Here is a reply you could post:", `proposed` = the drafted reply
+  (<= 60 words, no promises or discounts, Finnish for `owner_language: fi`, template when the brain is unavailable), confidence 0.7.
+  Source `yext_reviews`; if the sandbox has no reviews, `data/furry_paw_reviews_sample.json` (source `sample_reviews`).
+- **Sample data is labelled.** The sandbox entity SinceAI07 shipped with no description and no reviews. `tools/seed_sandbox.py`
+  (idempotent) writes the sample description and two sample reviews; every card that comes from them carries the reason row
+  "source: sample description/reviews written by the team". Not real customer data.
+- Cards: `holiday_date: null`, extra fields `entity_id`, `review_id`, `rating`, `typos`.
+- Not done: the Suggestions API is 403 for our key, so nothing is read from Yext's own suggestion engine.

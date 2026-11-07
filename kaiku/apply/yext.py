@@ -11,6 +11,7 @@ from pathlib import Path
 import httpx
 
 BASE = "https://api-sandbox.yext.com/v2/accounts/me"
+REVIEWS_BASE = "https://sbx-api.yextapis.com/v2/accounts/me"  # the Reviews API lives on the sandbox gateway
 API_VERSION = "20241101"
 TIMEOUT = 10.0
 DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
@@ -38,6 +39,11 @@ def _load_key() -> str:
     if not key:
         raise YextError("YEXT_API_KEY missing")
     return key
+
+
+def reply_log_path() -> Path:
+    """Where approved review replies go when the key cannot post comments (KAIKU_REPLIES_FILE overrides, for tests)."""
+    return Path(os.environ.get("KAIKU_REPLIES_FILE") or (DATA_DIR / "review_replies.jsonl"))
 
 
 def has_key() -> bool:
@@ -95,9 +101,9 @@ class YextSandbox:
         self.base = base
         self.timeout = timeout
 
-    def _req(self, method: str, path: str, body: dict | None = None) -> dict:
+    def _req(self, method: str, path: str, body: dict | None = None, base: str | None = None, query: dict | None = None) -> dict:
         try:
-            r = httpx.request(method, f"{self.base}{path}", params={"api_key": self._key, "v": API_VERSION},
+            r = httpx.request(method, f"{base or self.base}{path}", params={"api_key": self._key, "v": API_VERSION, **(query or {})},
                               json=body, timeout=self.timeout)
         except httpx.HTTPError as e:
             raise YextError(f"network: {type(e).__name__}") from None
@@ -116,6 +122,31 @@ class YextSandbox:
 
     def update_entity(self, entity_id: str, fields: dict) -> dict:
         return self._req("PUT", f"/entities/{entity_id}", fields)
+
+    # ---------- description ----------
+    def get_description(self, entity_id: str) -> str:
+        return (self.get_entity(entity_id).get("description") or "").strip()
+
+    def set_description(self, entity_id: str, text: str) -> dict:
+        """PUT only the description field (other fields stay), read it back. Raises YextError when not verified."""
+        self.update_entity(entity_id, {"description": text})
+        back = self.get_description(entity_id)
+        if back != text.strip():
+            raise YextError("description not verified on read-back")
+        return {"description": back}
+
+    # ---------- reviews (sandbox gateway) ----------
+    def list_reviews(self, entity_id: str) -> list[dict]:
+        res = self._req("GET", "/reviews", base=REVIEWS_BASE, query={"entityIds": entity_id})
+        return res.get("reviews") or []
+
+    def create_review(self, entity_id: str, author: str, content: str, rating: int) -> str:
+        res = self._req("POST", "/reviews", {"entityId": entity_id, "authorName": author, "content": content,
+                                             "rating": rating, "publisherId": "FIRSTPARTY"}, base=REVIEWS_BASE)
+        return str(res.get("id"))
+
+    def post_review_comment(self, review_id: str, content: str) -> dict:
+        return self._req("POST", f"/reviews/{review_id}/comments", {"content": content}, base=REVIEWS_BASE)
 
     def get_hours(self, entity_id: str) -> dict:
         return self.get_entity(entity_id).get("hours", {}) or {}
@@ -191,4 +222,63 @@ def apply_suggestion(entity_id: str, holiday_date: str, proposed, client: YextSa
             out["yext_status"] = "error:written but not found on read-back"
     except (YextError, ValueError, KeyError, OSError) as e:
         out["yext_status"] = f"error:{e}"
+    return out
+
+
+def apply_description(entity_id: str, text: str, client: YextSandbox | None = None) -> dict:
+    """PUT the description, read it back, verify. Never raises."""
+    out = {"yext_status": "ok", "entity_id": entity_id, "written": text, "verified": False, "environment": "sandbox",
+           "what": "description"}
+    try:
+        text = (text or "").strip()
+        if not text or len(text) > 7500:
+            raise ValueError("description must be 1-7500 characters")
+        c = client or YextSandbox()
+        c.update_entity(entity_id, {"description": text})
+        ent = c.get_entity(entity_id)
+        out["entity_version"] = ent.get("meta", {}).get("timestamp")
+        out["verified"] = (ent.get("description") or "").strip() == text
+        if not out["verified"]:
+            out["yext_status"] = "error:written but not found on read-back"
+    except (YextError, ValueError, KeyError, OSError) as e:
+        out["yext_status"] = f"error:{e}"
+    return out
+
+
+def apply_review_reply(entity_id: str, review_id: str, text: str, client: YextSandbox | None = None,
+                       sample: bool = False) -> dict:
+    """Post the reply as a comment on the review. If the key cannot, store it in data/review_replies.jsonl and say so.
+    result['posted'] is True only when the read-back shows our comment on the review. Never raises."""
+    out = {"yext_status": "ok", "entity_id": entity_id, "review_id": review_id, "written": text, "posted": False,
+           "stored": False, "verified": False, "environment": "sandbox", "what": "review_reply", "post_error": None}
+    text = (text or "").strip()
+    if not text or len(text) > 4000:
+        out["yext_status"] = "error:reply must be 1-4000 characters"
+        return out
+    posted_err = None
+    if sample or str(review_id).startswith("sample-"):
+        posted_err = "sample review from a file, there is nothing in Yext to comment on"
+    else:
+        try:
+            c = client or YextSandbox()
+            c.post_review_comment(review_id, text)
+            out["posted"] = True
+            try:
+                mine = [r for r in c.list_reviews(entity_id) if str(r.get("id")) == str(review_id)]
+                out["verified"] = bool(mine) and any((cm.get("content") or "").strip() == text for cm in (mine[0].get("comments") or []))
+            except YextError:
+                pass
+        except (YextError, KeyError) as e:
+            posted_err = str(e)
+    if not out["posted"]:
+        out["post_error"] = posted_err
+        try:
+            p = reply_log_path()
+            p.parent.mkdir(parents=True, exist_ok=True)
+            with p.open("a") as f:
+                f.write(json.dumps({"at": datetime.now(timezone.utc).isoformat(), "entity_id": entity_id, "review_id": review_id,
+                                    "reply": text, "posted": False, "post_error": posted_err}, ensure_ascii=False) + "\n")
+            out["stored"] = True
+        except OSError as e:
+            out["yext_status"] = f"error:{e}"
     return out

@@ -75,23 +75,26 @@ class FakeClient:
         self.desc, self.reviews = desc, reviews
 
     def get_entity(self, i):
-        return {"description": self.desc, "categories": {"fonecta": ["E1700"]}}
+        e = {"name": "Furry Paw Vet Clinic", "address": {"line1": "Tikkurilantie 9", "city": "Vantaa"}, "categories": {"fonecta": ["E1700"]}}
+        if self.desc:
+            e["description"] = self.desc
+        return e
 
-    def _req(self, m, p):
-        return {"reviews": self.reviews}
+    def list_reviews(self, i):
+        return self.reviews
 
 
 def test_loaders_return_nothing_without_data():
-    c = FakeClient(None, [])
-    assert feed.description_loader("furry-paw", date(2026, 11, 6), c) == []
-    assert feed.review_loader("furry-paw", date(2026, 11, 6), c) == []
+    c = FakeClient("A clean description.", [])
+    assert feed.description_loader("furry-paw", date(2026, 11, 6), c) == []   # present and clean: no card
+    assert all(x["reasons"][0]["source"] == "sample_reviews" for x in feed.review_loader("furry-paw", date(2026, 11, 6), c))  # empty sandbox: labelled sample file
 
 
 def test_loaders_use_real_values_only():
-    c = FakeClient("Vets.", [{"id": 7, "rating": 2, "content": "Long wait."}, {"id": 8, "rating": 5, "content": "Great"}])
-    assert feed.description_loader("furry-paw", date(2026, 11, 6), c)[0]["kind"] == "description"
+    c = FakeClient("We offer vacination.", [{"id": 7, "rating": 2, "content": "Long wait."}, {"id": 8, "rating": 5, "content": "Great"}])
+    assert feed.description_loader("furry-paw", date(2026, 11, 6), c)[0]["proposed"] == "We offer vaccination."
     r = feed.review_loader("furry-paw", date(2026, 11, 6), c)
-    assert len(r) == 1 and "Long wait." in r[0]["text_en"]
+    assert [x["rating"] for x in r] == [2, 5] and "Long wait." in r[0]["text_en"]
 
 
 def test_endpoint():
