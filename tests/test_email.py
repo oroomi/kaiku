@@ -156,7 +156,7 @@ def test_event_titles(env, ladder, monkeypatch):
 
 def test_standing_question_both_languages():
     en = M.standing_question_text(SUG)
-    assert en == "Last year 9 to 13, this year 9 to 13 again. Want me to do this every Christmas Eve?"
+    assert en == "You changed this last year as well. Do you want to make it recurring, this time of the year?"
     fi = M.standing_question_text(dict(SUG, owner_language="fi"))
-    assert fi == "Viime vuonna 9-13, tänä vuonna taas 9-13. Tehdäänkö näin joka jouluaatto?"
+    assert fi == "Muutit tämän myös viime vuonna. Haluatko tehdä tästä toistuvan, joka vuosi tähän aikaan?"
     assert "—" not in en + fi

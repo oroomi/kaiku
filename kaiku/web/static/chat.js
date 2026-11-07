@@ -34,40 +34,29 @@
   function toEnd() { requestAnimationFrame(function () { thread.scrollTop = thread.scrollHeight; }); }
   function tell(role, text, replay) { try { window.dispatchEvent(new CustomEvent("kaiku:chat", { detail: { role: role, text: text, replay: !!replay } })); } catch (e) {} }
   function busyEv(on) { try { window.dispatchEvent(new CustomEvent("kaiku:busy", { detail: { on: on } })); } catch (e) {} }
-  function add(m, animate, noScroll) { var el = bubble(m, animate !== false); thread.appendChild(el); if (!noScroll) toEnd(); return el; }
+  function add(m, animate, noScroll) { inviteOff(); var el = bubble(m, animate !== false); thread.appendChild(el); if (!noScroll) toEnd(); return el; }
   function typing(on) {
     var t = $("typing");
     if (on && !t) { t = document.createElement("div"); t.id = "typing"; t.className = "msg-k typing"; t.innerHTML = '<div class="b"><i></i><i></i><i></i></div>'; thread.appendChild(t); toEnd(); }
     if (!on && t) t.remove();
   }
 
-  /* ---------- opening: Kaiku's messages from the suggestions feed, then anything new that arrives ---------- */
-  var first = true, logCount = 0, loading = false;
-  function load(quick) {
-    if (loading) return Promise.resolve(); loading = true;
-    return jget((quick ? "/api/chat/open?quick=1&business=" : "/api/chat/open?business=") + encodeURIComponent(BIZ) + "&session=" + encodeURIComponent(SID)).then(function (j) {
+  /* ---------- opening: the chat starts EMPTY (an invitation, no bubbles). Only what this session already said is restored ---------- */
+  var first = true, loading = false;
+  var INVITE = '<p class="invite">Nothing to type yet. Accept a suggestion above and I will talk you through it, or tell me what changed in your own words.<small>Text here, or hold space and talk</small></p>';
+  function inviteOn() { if (!thread.querySelector(".invite") && !thread.querySelector(".msg-k,.msg-u")) thread.insertAdjacentHTML("beforeend", INVITE); }
+  function inviteOff() { var i = thread.querySelector(".invite"); if (i) i.remove(); }
+  function load() {
+    if (loading || !first) return Promise.resolve(); loading = true;
+    return jget("/api/chat/open?business=" + encodeURIComponent(BIZ) + "&session=" + encodeURIComponent(SID)).then(function (j) {
+      first = false;
       var ms = j.messages || [];
-      if (first) {
-        first = false; var i = 0;
-        (function next() {
-          if (i >= ms.length) { logCount = ms.filter(function (m) { return m.kind === "chat"; }).length; return; }
-          var m = ms[i++]; add(m, true, true); if (m.kind === "chat") tell(m.role === "user" ? "user" : "kaiku", m.text, true); setTimeout(next, i < 5 ? (reduce() ? 0 : 280) : 0);
-        })();
-        return;
-      }
-      ms.forEach(function (m) {
-        if (!m.suggestion_id) return;
-        if (shown[m.suggestion_id]) { if (shown[m.suggestion_id]._m.status !== m.status) setStatus(m.suggestion_id, m.status); return; }
-        var twin = m.holiday_date && Object.keys(shown).map(function (k) { return shown[k]; }).filter(function (el) { return el._m.holiday_date === m.holiday_date && el._m.item_kind === m.item_kind; })[0];
-        if (twin) { /* the chain run gave the same holiday a stored id: same bubble, new id */
-          delete shown[twin._m.suggestion_id]; twin._m = m; twin.setAttribute("data-sid", m.suggestion_id); shown[m.suggestion_id] = twin;
-          twin.querySelector(".b").innerHTML = nb(esc(m.text)) + tagFor(m);
-        } else add(m, true);
-      });
-    }).catch(function () {
-      if (first) { first = false; add({ role: "kaiku", kind: "intro", text: "I cannot reach my notes right now. Please try again in a moment." }); }
-    }).then(function () { loading = false; });
+      ms.forEach(function (m) { add(m, false, true); if (m.kind === "chat") tell(m.role === "user" ? "user" : "kaiku", m.text, true); });
+      if (!ms.length) inviteOn(); else toEnd();
+      if (j.focus) { root.classList.add("ctx"); focusEv(j.focus); }
+    }).catch(function () { first = false; inviteOn(); }).then(function () { loading = false; });
   }
+  function focusEv(id) { try { window.dispatchEvent(new CustomEvent("kaiku:focus", { detail: { id: id || "" } })); } catch (e) {} }
   function reduce() { return window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches; }
 
   /* ---------- sending ---------- */
@@ -82,6 +71,7 @@
       .then(function (j) {
         typing(false); add({ role: "kaiku", kind: "chat", text: j.reply }); tell("kaiku", j.reply);
         Object.keys(j.statuses || {}).forEach(function (k) { setStatus(k, j.statuses[k]); });
+        focusEv(j.focus); root.classList.toggle("ctx", !!j.focus);
         try { window.dispatchEvent(new CustomEvent("kaiku:decided")); } catch (e) {}
         return j.reply;
       })
@@ -97,27 +87,36 @@
     return fetch(u, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
   }
+  function toChat() { root.scrollIntoView({ behavior: reduce() ? "auto" : "smooth", block: "center" }); }
+  function kaikuSays(t) { if (!t) return; add({ role: "kaiku", kind: "chat", text: t }); tell("kaiku", t); }
+  /* Accept hands over: nothing is written, Kaiku's proposal appears here and the card is the focus */
   window.addEventListener("kaiku:accept", function (m) {
     var d = m.detail || {}; if (!d.id || busy) { if (d.done) d.done(); return; }
-    busy = true; typing(true); busyEv(true);
+    busy = true; typing(true); busyEv(true); toChat();
     post("/api/suggestions/" + encodeURIComponent(d.id) + "/accept", { business_id: BIZ, session: SID })
-      .then(function (j) { typing(false); add({ role: "kaiku", kind: "chat", text: j.reply }); tell("kaiku", j.reply); })
-      .catch(function () { typing(false); var t = "That did not go through. Please try again."; add({ role: "kaiku", kind: "chat", text: t }); tell("kaiku", t); })
-      .then(function () { busyEv(false); busy = false; if (d.done) d.done(); try { window.dispatchEvent(new CustomEvent("kaiku:decided")); } catch (e) {} });
+      .then(function (j) { typing(false); kaikuSays(j.reply); if (j.ok) { root.classList.add("ctx"); focusEv(j.focus); } })
+      .catch(function () { typing(false); kaikuSays("That did not go through. Please try again."); })
+      .then(function () { busyEv(false); busy = false; if (d.done) d.done(); setTimeout(function () { try { msg.focus({ preventScroll: true }); } catch (e) {} }, 400); });
   });
   window.addEventListener("kaiku:change", function (m) {
     var d = m.detail || {}; if (!d.id) return;
-    root.scrollIntoView({ behavior: reduce() ? "auto" : "smooth", block: "center" });
+    toChat();
     setTimeout(function () { try { msg.focus({ preventScroll: true }); } catch (e) {} }, reduce() ? 0 : 350);
     post("/api/suggestions/" + encodeURIComponent(d.id) + "/change", { business_id: BIZ, session: SID })
-      .then(function (j) { add({ role: "kaiku", kind: "chat", text: j.reply }); tell("kaiku", j.reply); root.classList.add("ctx"); })
+      .then(function (j) { kaikuSays(j.reply); root.classList.add("ctx"); focusEv(j.focus); })
       .catch(function () { /* nothing pending to change: stay quiet */ });
+  });
+  window.addEventListener("kaiku:discard", function (m) {
+    var d = m.detail || {}; if (!d.id) return;
+    post("/api/suggestions/" + encodeURIComponent(d.id) + "/discard", { business_id: BIZ, session: SID })
+      .then(function (j) { if (d.done) d.done(!!j.ok); if (j.ok) { kaikuSays(j.reply); root.classList.remove("ctx"); focusEv(""); } })
+      .catch(function () { if (d.done) d.done(false); })
+      .then(function () { try { window.dispatchEvent(new CustomEvent("kaiku:decided")); } catch (e) {} });
   });
   var sys = null;
   function placeSys() {
     if (!sys) return;
-    var intro = thread.querySelector(".intro");
-    if (intro) { if (intro.nextSibling !== sys) thread.insertBefore(sys, intro.nextSibling); } else if (sys.parentNode !== thread) thread.insertBefore(sys, thread.firstChild);
+    if (sys.parentNode !== thread || thread.firstChild !== sys) thread.insertBefore(sys, thread.firstChild);
   }
   window.addEventListener("kaiku:sysline", function (m) {
     var t = (m.detail && m.detail.text) || ""; if (!t) return;
@@ -158,7 +157,7 @@
     loadToday();
     $("tt-date").addEventListener("change", function () {
       var v = $("tt-date").value; if (!v) return;
-      travel(v).then(function () { note("Time travel: today is now " + v.split("-").reverse().join(".")); return load(); }).catch(function () { note("Time travel failed"); });
+      travel(v).then(function () { note("Time travel: today is now " + v.split("-").reverse().join(".")); }).catch(function () { note("Time travel failed"); });
     });
     $("run").addEventListener("click", function () {
       var date = $("date").value, btn = $("run"); btn.disabled = true; note("Running the chain...");
@@ -183,8 +182,7 @@
 
   /* new suggestions (a chain run from the drawer, a WhatsApp tap) show up as new bubbles */
   var pollTimer = 0;
-  function poll(n) { clearInterval(pollTimer); var i = 0; pollTimer = setInterval(function () { load(); if (++i >= n) clearInterval(pollTimer); }, 2500); }
-  setInterval(function () { if (!document.hidden && !busy) load(); }, 8000);
+  function poll() { /* new suggestions show up as cards (owner.js polls the feed); the chat stays quiet until the owner talks */ }
 
-  load(true).then(function () { return load(); }); initDrawer();
+  load(); initDrawer();
 })();

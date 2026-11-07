@@ -296,18 +296,12 @@ def receipt_text_en(r: dict) -> str:
 
 
 def standing_question_text_en(s: dict) -> str:
-    """Asked after an approval: offer to repeat the change every year."""
-    hol = (s.get("holiday_name_en") or "this day").strip()
-    ly = en_hours(_hours_of(_last_year(s)))
-    pr = en_hours("closed" if s.get("kind") == "closed" else s.get("proposed"))
-    return f"Last year {ly}, this year {pr} again. Want me to do this every {hol}?"
+    """Asked after an approval, only when the business changed this day last year as well: offer to make it recurring."""
+    return "You changed this last year as well. Do you want to make it recurring, this time of the year?"
 
 
 def standing_question_text_fi(s: dict) -> str:
-    hol = holiday_name(s).lower()
-    ly = fi_hours(_hours_of(_last_year(s)))
-    pr = fi_hours("closed" if s.get("kind") == "closed" else s.get("proposed"))
-    return f"Viime vuonna {ly}, tänä vuonna taas {pr}. Tehdäänkö näin joka {hol}?"
+    return "Muutit tämän myös viime vuonna. Haluatko tehdä tästä toistuvan, joka vuosi tähän aikaan?"
 
 
 def standing_question_text(s: dict) -> str:

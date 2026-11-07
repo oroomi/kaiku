@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import re
 import time
 
 from fastapi import APIRouter, HTTPException, Request
@@ -12,6 +11,7 @@ from .. import events, store
 from . import actions as A
 from . import brain
 from . import feed as F
+from . import flow
 from .util import hours_text, is_pending
 
 router = APIRouter()
@@ -21,7 +21,7 @@ MAX_MSG = 400
 
 
 def session(sid: str) -> dict:
-    s = _sessions.setdefault(sid or "default", {"hist": [], "log": [], "focus": None, "followup": None, "t": time.time()})
+    s = _sessions.setdefault(sid or "default", {"hist": [], "log": [], "focus": None, "followup": None, "stage": None, "pending": None, "t": time.time()})
     if len(_sessions) > 200:  # demo-sized housekeeping
         for k in sorted(_sessions, key=lambda k: _sessions[k]["t"])[:50]:
             _sessions.pop(k, None)
@@ -73,8 +73,18 @@ def opening(business_id: str, sess_id: str = "default", network: bool = True) ->
 
 
 @router.get("/api/chat/open")
-def chat_open(business: str = "furry-paw", session: str = "default", quick: int = 0):
-    return {"business_id": business, "messages": opening(business, session, network=not quick)}
+def chat_open(business: str = "furry-paw", session: str = "default", quick: int = 0, full: int = 0):
+    """The page's chat opens EMPTY: only what this session already said. full=1 returns Kaiku's old opening too
+    (intro + one line per suggestion), which WhatsApp and API callers use through opening()."""
+    if store.get_business(business) is None:
+        raise HTTPException(404, "unknown business")
+    if full:
+        return {"business_id": business, "messages": opening(business, session, network=not quick)}
+    return {"business_id": business, "messages": list(session_of(session)["log"]), "focus": session_of(session).get("focus")}
+
+
+def session_of(sid: str) -> dict:
+    return session(sid)
 
 
 @router.post("/api/chat")
@@ -94,8 +104,10 @@ async def chat(body: ChatIn):
     items = F.get_feed(body.business_id).get("suggestions", [])
     f = brain.focus_of(items, s)
     s["focus"] = f["id"] if f else None
+    if not f:
+        s["stage"] = None
     statuses = {i["id"]: i.get("status", "proposed") for i in items}
-    return {"reply": reply, "actions": acts, "statuses": statuses}
+    return {"reply": reply, "actions": acts, "statuses": statuses, "focus": s["focus"]}
 
 
 @router.get("/api/chat/keyed")
@@ -117,50 +129,66 @@ class AcceptIn(BaseModel):
     session: str = "default"
 
 
-@router.post("/api/suggestions/{suggestion_id}/accept")
-async def accept(suggestion_id: str, body: AcceptIn | None = None):
-    """One click on a card: the very same decide(...) path the chat uses, action approve, via web.
-    Kaiku's confirmation and the standing-permission question go into the chat session so the next 'yes' answers it."""
-    body = body or AcceptIn()
+ContextIn = AcceptIn
+
+
+def _item_or_404(body: AcceptIn, suggestion_id: str) -> dict:
     if store.get_business(body.business_id) is None:
         raise HTTPException(404, "unknown business")
     item = F.find(body.business_id, suggestion_id)
-    try:
-        r = await A.decide(body.business_id, suggestion_id, "approve", via="web")
-    except Exception as exc:  # a card kind the chain cannot apply yet must not 500 the page
-        log.warning("accept %s: %s", suggestion_id, type(exc).__name__)
-        r = {"ok": False, "error": "could not apply"}
-    _listing_changed(body.business_id)
+    if item is None:
+        raise HTTPException(404, "unknown suggestion")
+    return item
+
+
+@router.post("/api/suggestions/{suggestion_id}/accept")
+async def accept(suggestion_id: str, body: AcceptIn | None = None):
+    """Accept hands over to Kaiku: nothing is written. Kaiku's pre-written proposal goes into the chat and the card becomes the
+    session focus; the owner's 'yes' (text, voice or WhatsApp) applies it through actions.decide."""
+    body = body or AcceptIn()
+    item = _item_or_404(body, suggestion_id)
     s = session(body.session)
     s["t"] = time.time()
+    if item["kind"] == "no_change" or not is_pending(item):
+        return {"ok": False, "error": f"already {item.get('status')}" if item["kind"] != "no_change" else "nothing to decide",
+                "reply": "That one is already decided." if item["kind"] != "no_change" else "That one needs no change.", "status": item.get("status"), "actions": []}
+    if s.get("focus") == item["id"] and s.get("stage") in ("proposed", "ask_new") and not s.get("followup"):
+        return {"ok": True, "repeat": True, "reply": None, "focus": item["id"], "actions": []}
+    line = flow.start_proposal(body.business_id, s, item)
+    s["log"].append({"role": "kaiku", "kind": "chat", "text": line})
+    s["hist"] += [("user", f"(accepted on the card: {item.get('title_en', suggestion_id)})"), ("assistant", line)]
+    return {"ok": True, "reply": line, "focus": item["id"], "stage": s["stage"], "actions": []}
+
+
+@router.post("/api/suggestions/{suggestion_id}/discard")
+async def discard(suggestion_id: str, body: AcceptIn | None = None):
+    """Discard: the same decide path as a 'no' (action decline, via web, a learn event). Kaiku writes one line."""
+    body = body or AcceptIn()
+    item = _item_or_404(body, suggestion_id)
+    s = session(body.session)
+    s["t"] = time.time()
+    if item["kind"] == "no_change" or not is_pending(item):
+        return {"ok": False, "error": "nothing to discard", "reply": "That one is already decided.", "status": item.get("status"), "actions": []}
+    try:
+        r = await A.decide(body.business_id, item["id"], "decline", via="web")
+    except Exception as exc:
+        log.warning("discard %s: %s", suggestion_id, type(exc).__name__)
+        r = {"ok": False, "error": "could not discard"}
     if not r.get("ok"):
-        reply = brain.EN["error"]
-        if r.get("needs_hours"):
-            reply = "I have no ready text for that one yet. Tell me what it should say."
-        elif str(r.get("error", "")).startswith("already"):
-            reply = "That one is already decided."
-        return {"ok": False, "error": r.get("error"), "reply": reply, "status": (item or {}).get("status"), "actions": []}
-    what = f"{(item or {}).get('holiday_name_en') or (item or {}).get('title_en') or 'that'} {r.get('final_hours') or ''}".strip()
-    fu = re.sub(r" \d{1,2}\.\d{1,2}\.(?=[?.])", "", r.get("follow_up_question") or "")   # "every Christmas Eve 24.12.?" reads as "every Christmas Eve?"
-    reply = (brain.EN["saved"].format(what=what) + " " + fu).strip()
-    s["followup"] = suggestion_id if r.get("follow_up_question") else None
-    s["focus"] = None
-    s["log"].append({"role": "kaiku", "kind": "chat", "text": reply})
-    s["hist"] += [("user", f"(accepted on the card: {(item or {}).get('title_en', suggestion_id)})"), ("assistant", reply)]
-    return {"ok": True, "reply": reply, "status": r.get("status"), "yext": r.get("yext"), "verified": r.get("verified"),
-            "actions": [{"type": "decided", "suggestion_id": suggestion_id, "action": "approve", "status": r.get("status")}]}
-
-
-class ContextIn(BaseModel):
-    business_id: str = "furry-paw"
-    session: str = "default"
+        return {"ok": False, "error": r.get("error"), "reply": brain.EN["error"], "status": item.get("status"), "actions": []}
+    line = flow.discard_text(item)
+    if s.get("focus") == item["id"]:
+        flow.reset(s)
+    s["log"].append({"role": "kaiku", "kind": "chat", "text": line})
+    s["hist"] += [("user", f"(discarded on the card: {item.get('title_en', suggestion_id)})"), ("assistant", line)]
+    return {"ok": True, "reply": line, "status": r.get("status"),
+            "actions": [{"type": "decided", "suggestion_id": item["id"], "action": "decline", "status": r.get("status")}]}
 
 
 @router.post("/api/suggestions/{suggestion_id}/change")
-def suggest_change(suggestion_id: str, body: ContextIn | None = None):
-    """'Suggest a change' on a card: that suggestion becomes the chat's current context, so the owner's next message
-    ('make it 10-14', 'closed') is decided against it. Kaiku's line goes into the session log."""
-    body = body or ContextIn()
+def suggest_change(suggestion_id: str, body: AcceptIn | None = None):
+    """'Suggest a change' hands over too: Kaiku says what he suggested and why, and asks what it should be."""
+    body = body or AcceptIn()
     item = F.find(body.business_id, suggestion_id)
     if item is None:
         raise HTTPException(404, "unknown suggestion")
@@ -168,10 +196,7 @@ def suggest_change(suggestion_id: str, body: ContextIn | None = None):
         raise HTTPException(409, "nothing to change on this one")
     s = session(body.session)
     s["t"] = time.time()
-    s["focus"] = item["id"]
-    s["followup"] = None
-    line = (f"You want to change {item.get('title_en') or 'this'}. Tell me the new hours, or what is wrong, "
-            "by text or by holding space to talk.")
+    line = flow.start_change(s, item)
     s["log"].append({"role": "kaiku", "kind": "chat", "text": line})
     s["hist"] += [("user", f"(wants to change: {item.get('title_en')})"), ("assistant", line)]
     return {"ok": True, "reply": line, "focus": item["id"]}
