@@ -14,7 +14,7 @@ git clone https://github.com/oroomi/kaiku && cd kaiku
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/uvicorn kaiku.app:app --host 127.0.0.1 --port 8210   # http://127.0.0.1:8210
 ```
-Without keys the chain still runs and each lane says what is missing. Tests: `.venv/bin/python -m pytest -q` gives 454 passed, 7 skipped (the skipped ones send or fetch live and need `KAIKU_LIVE=1`) on 7 Nov 2026 with the box's `.env`. In a fresh checkout without SMTP settings `tests/test_email.py::test_real_smtp_path` also fails (it needs the box's SMTP settings). The suite sets `KAIKU_NO_SMTP=1`, `KAIKU_FEED_NETWORK=0`, `KAIKU_NO_CALL=1` and an empty `WA_TOKEN`, so it never sends, calls or fetches.
+Without keys the chain still runs and each lane says what is missing. Tests: `.venv/bin/python -m pytest -q` gives 466 passed, 7 skipped (the skipped ones send or fetch live and need `KAIKU_LIVE=1`) on 7 Nov 2026 with the box's `.env`. In a fresh checkout without SMTP settings `tests/test_email.py::test_real_smtp_path` also fails (it needs the box's SMTP settings). The suite sets `KAIKU_NO_SMTP=1`, `KAIKU_FEED_NETWORK=0`, `KAIKU_NO_CALL=1` and an empty `WA_TOKEN`, so it never sends, calls or fetches.
 
 ## How this meets the brief
 Fonecta's slide 8 and slide 7, answered item by item (all numbers re-checked on the live product, 7 Nov 2026):

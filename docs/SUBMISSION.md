@@ -111,7 +111,7 @@ git clone https://github.com/oroomi/kaiku && cd kaiku
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/uvicorn kaiku.app:app --host 127.0.0.1 --port 8210   # http://127.0.0.1:8210
 ```
-Without keys the chain still runs and each lane says what is missing; a local instance never sends email, WhatsApp or calls (`PUBLIC_URL` is not the production URL). Tests: `.venv/bin/python -m pytest -q` gives 454 passed, 7 skipped on the box with its `.env` (7 Nov 2026); in a fresh checkout `tests/test_email.py::test_real_smtp_path` also fails because it needs the box's SMTP settings.
+Without keys the chain still runs and each lane says what is missing; a local instance never sends email, WhatsApp or calls (`PUBLIC_URL` is not the production URL). Tests: `.venv/bin/python -m pytest -q` gives 466 passed, 7 skipped on the box with its `.env` (7 Nov 2026); in a fresh checkout `tests/test_email.py::test_real_smtp_path` also fails because it needs the box's SMTP settings.
 
 ## Facts a judge can check in one command each
 | Claim | Command | Value on 7 Nov 11:20Z |
@@ -162,7 +162,7 @@ git rm -r kaiku/web/static/mock_v3.html kaiku/web/static/mock_v3b.html video scr
        data/yext_snapshot_20261106T234652157574Z.json
 # optional, see table: git rm CLAUDE.md DESIGN.md
 .venv/bin/python -m pytest -q tests/test_repo_hygiene.py        # 3 passed
-.venv/bin/python -m pytest -q                                   # 454 passed, 1 failed (smtp) on the box
+.venv/bin/python -m pytest -q                                   # 466 passed, 1 failed (smtp) on the box
 git commit -m "Prepare public release: remove mock pages and film tooling
 
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
