@@ -383,14 +383,14 @@
 
   // ---------------------------------------------------------------- judge drawer
   $("judge-open").addEventListener("click", async () => {
-    $("judge").hidden = false;
+    $("judge").hidden = false; $("city").classList.add("has-judge");
     try {
       const d = await (await fetch("/api/city/judge")).json();
       $("judge-curl").textContent = d.curl;
       $("judge-ent").textContent = d.entity ? JSON.stringify(d.entity, null, 2) : "no data: the broker did not answer";
     } catch (e) { $("judge-ent").textContent = "no data"; }
   });
-  $("judge-close").addEventListener("click", () => { $("judge").hidden = true; });
+  $("judge-close").addEventListener("click", () => { $("judge").hidden = true; $("city").classList.remove("has-judge"); });
 
   init();
 })();

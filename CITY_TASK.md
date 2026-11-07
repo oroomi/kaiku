@@ -5,7 +5,7 @@ Timebox: 2.5 h. Commit every 20-30 min on task/city. End with RESULT line (see C
 
 ## What it is
 One full-screen page, /city. A cinematic fly-in from a black night globe down into Turku at a tilt with 3D buildings; 813 real
-Turku businesses (OpenStreetMap) as glowing dots, each an NGSI-LD Store entity in our Orion-LD broker; 135 Foli buses and 45 AIS
+Turku businesses (OpenStreetMap) as glowing dots, each an NGSI-LD Store entity in our Orion-LD broker; about 100-135 Föli buses (whatever is live) and 45 AIS
 ships moving, from the same broker; a weather chip. When a person in the room answers "are you open on Christmas Eve?" on their
 phone (existing /join flow), the owner's answer is written to the broker, an NGSI-LD subscription fires, and THAT notification
 turns the dot green with a pulse on the big screen. The dot never turns green from a poll of room_state; it turns green from the
@@ -33,7 +33,7 @@ Palette = Horizon (CLAUDE.md): night #090b0d / #0c1418, teal #163746 / #2f6f8c, 
    tween over the poll interval, setData at most 20 Hz). Ships: amber diamonds. Bus trails: the last 6 positions as a short
    fading line (one line layer, opacity by age), cheap, like the deck.gl trips look. Vehicles fade in 1 s after the dots.
 6. HUD (glass, Plex Mono small caps, Inter, Newsreader): top-left strip "TURKU 19:42 | CHRISTMAS EVE IN 47 DAYS | 813 STORE
-   ENTITIES | 135 BUSES | 45 SHIPS | ORION-LD LIVE" (every number from a data call; "no data" when missing; "FALLBACK" in amber
+   ENTITIES | 108 BUSES | 45 SHIPS | ORION-LD LIVE" (every number from a data call; "no data" when missing; "FALLBACK" in amber
    when the broker is down). Under it, after landing, the one Newsreader sentence builds in two stages: "Christmas Eve is
    coming." then "2 of 813 businesses here have told the map their hours." (numbers from /api/city/stores). Right side, a
    narrow glass column: APPROVED <n> (count-up), the last 6 broker events. Bottom-left: attribution (OpenFreeMap, OpenMapTiles,

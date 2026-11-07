@@ -52,13 +52,16 @@ body:has(.city) main{max-width:none;padding:0;margin:0}
 .croom p{font:300 19px/1.25 var(--serif);margin:0}
 .croom .mono{grid-column:1/-1;color:var(--ink3);font-size:9.5px}
 
-.cdrawer{position:absolute;right:24px;top:64px;bottom:40px;width:min(560px,calc(100vw - 48px));z-index:8;padding:16px;overflow:auto;border-radius:18px;background:rgba(9,20,26,.92)}
+.cdrawer{position:absolute;right:24px;top:150px;bottom:104px;width:min(560px,calc(100vw - 48px));z-index:8;padding:16px;overflow:auto;border-radius:18px;background:rgba(9,20,26,.92)}
 .cdhead{display:flex;justify-content:space-between;align-items:center;color:var(--cyan)}
 .cdhead button{background:none;border:1px solid var(--edge);color:var(--ink2);border-radius:999px;padding:4px 10px;cursor:pointer}
 .cdnote{color:var(--ink2);font-size:13px}
 .cdcurl,.cdent{font:12px/1.5 var(--mono);white-space:pre-wrap;word-break:break-all;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px;color:var(--ink)}
 .cdcurl{color:var(--cyan)}
 .cdcap{color:var(--ink3);font-size:10px;margin-top:14px}
+/* drawer open: it sits below the HUD and above the orb row; the columns it would cover are hidden, the attribution stops at its left edge */
+.has-judge .ccol,.has-judge .croom{display:none}
+.has-judge .cattr,.has-room.has-judge .cattr{max-width:calc(100vw - 640px)}
 
 @media (max-width:760px){
   .chud{left:12px;right:12px;top:92px;max-width:none}
@@ -75,6 +78,7 @@ body:has(.city) main{max-width:none;padding:0;margin:0}
   .has-room .cattr{max-width:calc(100vw - 110px)}
   .croom{display:none}
   .ctitle{top:30%}
-  .cdrawer{right:12px;left:12px;top:56px;width:auto}
+  .cdrawer{right:12px;left:12px;top:100px;bottom:96px;width:auto}
+  .has-judge .chud,.has-judge .cattr{display:none}
 }
 @media (prefers-reduced-motion:reduce){.ctitle,.csent span{transition:none}.cevents li{animation:none}}
