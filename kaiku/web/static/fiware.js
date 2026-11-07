@@ -106,7 +106,10 @@
       $("c-bus").textContent = c.buses == null ? "no data" : c.buses;
       $("c-ship").textContent = c.ships == null ? "no data" : c.ships;
       $("c-wx").textContent = c.weather == null ? "no data" : (c.weather ? "observed" : "no data");
-      $("aura-cap").textContent = d.last_polled ? "Captured " + d.last_polled + " (source: " + d.source + ")." : "Source: " + d.source + ".";
+      var lp = d.last_polled, cap = "";
+      if (lp && typeof lp === "object") { cap = Object.keys(lp).map(function (k) { return k + " " + String(lp[k]).slice(11, 19); }).join(", "); }
+      else if (lp) { cap = String(lp); }
+      $("aura-cap").textContent = cap ? "Captured " + cap + " UTC (source: " + d.source + ")." : "Source: " + d.source + ".";
       $("ver").textContent = d.broker && d.broker !== "down" ? "Orion-LD " + d.broker : "broker down, no data";
     }).catch(function () { stamp("r4"); stamp("r5"); ["c-bus", "c-ship", "c-wx"].forEach(function (i) { $(i).textContent = "no data"; }); $("ver").textContent = "no data"; });
   }
