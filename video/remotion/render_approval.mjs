@@ -1,4 +1,4 @@
-import path from 'node:path'; import {fileURLToPath} from 'node:url';
+import path from 'node:path'; import fs from 'node:fs'; import {fileURLToPath} from 'node:url';
 import {bundle} from '@remotion/bundler'; import {renderMedia, renderStill, selectComposition, openBrowser} from '@remotion/renderer';
 const here = path.dirname(fileURLToPath(import.meta.url)); const argv = process.argv.slice(2);
 const arg = (k, d) => { const i = argv.indexOf('--' + k); return i >= 0 ? argv[i + 1] : d; };
@@ -6,6 +6,7 @@ const browserExecutable = arg('browser'); const out = arg('out'); const stills =
 const fr = arg('frames', '');
 const inputProps = {};
 const serveUrl = await bundle({entryPoint: path.join(here, 'src/index.ts'), publicDir: path.join(here, 'public')});
+process.on('exit', () => { try { fs.rmSync(serveUrl, {recursive: true, force: true}); } catch {} }); // ops 7 Nov: each chunk left a 389 MB bundle in /tmp (83 piled up, disk 95%); remove it when this process ends
 const browser = await openBrowser('chrome', {browserExecutable, chromiumOptions: process.env.RENDER_GL === 'none' ? {} : {gl: process.env.RENDER_GL || 'swangle'}, logLevel: 'warn'});
 const composition = await selectComposition({serveUrl, id: 'Approval', inputProps, puppeteerInstance: browser, browserExecutable});
 console.log(composition.durationInFrames, 'frames');
