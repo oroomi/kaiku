@@ -77,7 +77,7 @@ async def _persist_chat_sessions(request, call_next):
     return response
 
 
-for _m in ["broker", "contact", "decide", "voice", "map", "learn", "suggest", "chat", "mcp_bridge", "aura", "score", "listing"]:
+for _m in ["broker", "contact", "decide", "voice", "map", "learn", "suggest", "chat", "mcp_bridge", "aura", "score", "listing", "evalpage"]:
     try:
         app.include_router(importlib.import_module(f"kaiku.{_m}.router").router)
     except ImportError:
