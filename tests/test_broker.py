@@ -125,3 +125,11 @@ def test_live_orion_multi_instance():
     got = client_mod.instances(c.get_entity(eid), "holidayHours")
     assert set(got) == {"lastyear", "google", "default"}
     c.delete_entity(eid)
+
+
+def test_router_skips_city_osm_stores():
+    from kaiku.broker.router import handle_notification
+    note = {"subscriptionId": "urn:x", "data": [{"id": "urn:ngsi-ld:Store:osm-n1", "type": "Store",
+            "holidayHours": {"type": "Property", "value": {"date": "2026-12-24", "hours": "closed"}, "observedAt": "2026-11-07T19:00:00Z"},
+            "holidayHoursStatus": {"type": "Property", "value": {"date": "2026-12-24", "status": "missing"}}}]}
+    assert handle_notification(note) == []

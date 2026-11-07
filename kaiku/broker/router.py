@@ -88,6 +88,8 @@ def handle_notification(note: dict) -> list[dict]:
     fired = []
     for ent in note.get("data", []):
         biz = ent.get("id", "").rsplit(":", 1)[-1]
+        if biz.startswith("osm-"):
+            continue  # /city's 813 Turku Stores: POST /city/notify owns their events, so a room answer is not a chain event
         st = ent.get("holidayHoursStatus")
         for inst in as_list(st) if st else []:
             v = inst.get("value") or {}
