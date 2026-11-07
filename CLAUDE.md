@@ -35,6 +35,11 @@ The Yext write NEVER depends on the broker being up: broker/fallback.py keeps th
 - Secrets only in /root/hack/kaiku/.env (chmod 600, gitignored). Never print secret values. Never touch any other secrets
   file on the box. If a key is missing, mark BLOCKED in your report and build against a fake.
 - Demo language: English everywhere a visitor or the owner sees text; Finnish per owner_language; no em dashes; dates 24.12., times 9-13.
+- OUTBOUND SAFETY: WhatsApp messages, emails and phone calls leave ONLY from the production instance
+  (PUBLIC_URL=https://kaiku.hankintaviikko.fi). Every test server runs with PUBLIC_URL=http://127.0.0.1:82xx and is silent
+  by design (kaiku.contact.whatsapp.outbound_allowed); never set KAIKU_ALLOW_OUTBOUND=1 outside production. The test
+  suite strips WA_TOKEN, ELEVENLABS_API_KEY and SMTP and sets KAIKU_NO_CALL=1 (tests/conftest.py). 6 Nov: a verifier's
+  test server rang the owner's phone six times through the inherited ElevenLabs key.
 - Never `pkill -f`/`killall`. Stop servers by port (`fuser -k PORT/tcp`) or systemd unit. Commit every 20-30 min.
 
 ## Stack and layout (fixed; do not rename)

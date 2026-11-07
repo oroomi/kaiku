@@ -219,7 +219,10 @@ def _whatsapp(s: dict, client: W.WhatsAppClient | None = None, escalate_s: float
             _schedule_call(s, escalate_s if escalate_s is not None else escalate_after_s())
     else:
         _log(s, "whatsapp", f"failed: {r.get('error')}")
-        _schedule_call(s, 0)  # WhatsApp unreachable: go straight to step 2
+        if client.configured and not r.get("blocked"):
+            _schedule_call(s, 0)  # WhatsApp unreachable: go straight to step 2
+        else:  # no WhatsApp on this instance: the call waits its normal turn and never fires at once
+            _schedule_call(s, escalate_s if escalate_s is not None else escalate_after_s())
     return s
 
 

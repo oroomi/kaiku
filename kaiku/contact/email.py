@@ -30,7 +30,7 @@ def _now() -> str:
 
 def smtp_config() -> dict | None:
     """SMTP settings from env, or None when not configured (dry run). KAIKU_NO_SMTP=1 forces the dry run (the test suite)."""
-    if os.environ.get("KAIKU_NO_SMTP") == "1":
+    if os.environ.get("KAIKU_NO_SMTP") == "1" or not W.outbound_allowed():
         return None
     W.load_env()
     host = (os.environ.get("SMTP_HOST") or "").strip()

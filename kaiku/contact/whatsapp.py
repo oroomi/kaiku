@@ -67,6 +67,19 @@ def httpx_transport(method: str, url: str, headers: dict, payload: dict | None, 
         return r.status_code, {"raw": r.text[:300]}
 
 
+PRODUCTION_URL = "https://kaiku.hankintaviikko.fi"
+
+
+def outbound_allowed() -> bool:
+    """Real WhatsApp messages, emails and phone calls leave ONLY from the production instance (PUBLIC_URL) or with
+    KAIKU_ALLOW_OUTBOUND=1. A builder's or verifier's server on 127.0.0.1 inherits the live keys from .env and must
+    never reach the owner's phone or inbox (6 Nov: a test server rang the owner six times)."""
+    if os.environ.get("KAIKU_ALLOW_OUTBOUND") == "1":
+        return True
+    load_env()  # PUBLIC_URL may live only in .env (the service unit also exports it)
+    return (os.environ.get("PUBLIC_URL") or "").rstrip("/").startswith(PRODUCTION_URL)
+
+
 class WhatsAppClient:
     def __init__(self, token: str | None = None, phone_id: str | None = None, transport: Transport | None = None,
                  log_path: Path | None = None):
@@ -127,6 +140,10 @@ class WhatsAppClient:
     def _post(self, payload: dict, kind: str, path: str = "messages") -> dict:
         if not self.configured:
             res = {"ok": False, "error": "WA_TOKEN / WA_PHONE_ID not set", "blocked": True}
+            self._log(kind, payload, res)
+            return res
+        if self.transport is httpx_transport and not outbound_allowed():
+            res = {"ok": False, "error": "outbound disabled on this instance (PUBLIC_URL is not production)", "blocked": True}
             self._log(kind, payload, res)
             return res
         headers = {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"}

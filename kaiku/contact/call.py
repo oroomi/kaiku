@@ -378,6 +378,9 @@ def place_call(suggestion: dict, to_number: str | None = None, api: Api | None =
     if not (agent_id and phone_id):
         _log({"suggestion_id": sid, "ok": False, "reason": "call lane not configured"})
         return {"ok": False, "reason": "call lane not configured"}
+    if api is None and (os.environ.get("KAIKU_NO_CALL") == "1" or not W.outbound_allowed()):  # a fake Api = a test
+        _log({"suggestion_id": sid, "ok": False, "reason": "calls disabled on this instance"})
+        return {"ok": False, "reason": "calls disabled on this instance"}
     to = to_number or os.environ.get("OWNER_WHATSAPP") or suggestion.get("owner_whatsapp")
     if not W.normalize_phone(to):
         return {"ok": False, "reason": "no recipient number"}
