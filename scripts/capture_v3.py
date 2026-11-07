@@ -59,7 +59,7 @@ def main(which):
         if which == "decide":
             r = requests.post(f"{B}/api/run?business=furry-paw&date=2026-12-24").json(); sid = r["suggestion_id"]; time.sleep(5)
             url = requests.get(f"{B}/api/suggestions/{sid}").json(); print(url.get("channel_log")); url = B + "/d/" + DECIDE_TOKEN(sid)
-            c = br.new_context(viewport={"width":390,"height":844}, device_scale_factor=2, is_mobile=True, has_touch=True, record_video_dir=str(OUT/"tmp"), record_video_size={"width":780,"height":1688})
+            c = br.new_context(viewport={"width":390,"height":844}, device_scale_factor=2, is_mobile=True, has_touch=True, record_video_dir=str(OUT/"tmp"), record_video_size={"width":390,"height":844})
             pg = c.new_page(); t0 = time.time(); pg.goto(url, wait_until="load"); pg.add_style_tag(content="#kv{display:none!important}")  # capture only: the voice orb sits on the Call button at 390 px
             pg.wait_for_timeout(2500); pg.screenshot(path=str(OUT/"decide_open.png"))
             b = pg.locator(".btn.go").first.bounding_box(); pg.touchscreen.tap(b["x"]+b["width"]/2, b["y"]+b["height"]/2); marks["tap"] = T()

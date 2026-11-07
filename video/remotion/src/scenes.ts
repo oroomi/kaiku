@@ -2,7 +2,7 @@
 export type Cap = {a: number; b: number; text: string; id: string};
 export type Scene = {id: string; kind: 'desk' | 'phone' | 'trailer' | 'end'; src?: string; from?: number; dur: number; caps: Cap[]; tap?: number; rate?: number; sample?: boolean; still?: boolean; zoom?: {s: number; ox: number; oy: number}; slot?: string};
 export const FPS = 30;
-const HALF = true;
+const HALF = true; // phone clips: playwright's 780x1688 video holds the 390x844 page in its top-left quarter; v3/phone.mp4 and v3/decide.mp4 are that quarter cropped (upscaled 2x in v3/, native in v3h/)
 const V = HALF ? 'v3h/' : 'v3/';
 const C = HALF ? 'caph/' : 'cap/';
 export const SCENES: Scene[] = [
@@ -13,8 +13,8 @@ export const SCENES: Scene[] = [
   // 3 chain + phone decision (first cut captures, same captions)
   {id: 'c1', kind: 'desk', src: C + 'desktop.mp4', from: 7.0, dur: 4, caps: [{id: 'c1', a: 0.2, b: 3.9, text: 'Broker subscription fires: hours missing.'}]},
   {id: 'c2', kind: 'desk', src: C + 'desktop.mp4', from: 11.5, dur: 4, caps: [{id: 'c2', a: 0.2, b: 3.9, text: 'The owner gets a link, no login.'}]},
-  {id: 'p1', kind: 'phone', src: C + 'phone.mp4', from: 3.2, dur: 5, tap: 1.26, caps: [{id: 'p1', a: 0.2, b: 4.8, text: 'One tap: Hyväksy approves.'}]},
-  {id: 'p2', kind: 'phone', src: C + 'phone.mp4', from: 9.6, dur: 3.5, caps: [{id: 'p2', a: 0.2, b: 3.4, text: 'It lists where the change shows.'}]},
+  {id: 'p1', kind: 'phone', src: V + 'phone.mp4', from: 3.2, dur: 5, tap: 1.26, caps: [{id: 'p1', a: 0.2, b: 4.8, text: 'One tap: Hyväksy approves.'}]},
+  {id: 'p2', kind: 'phone', src: V + 'phone.mp4', from: 9.6, dur: 3.5, caps: [{id: 'p2', a: 0.2, b: 3.4, text: 'It lists where the change shows.'}]},
   {id: 'c3', kind: 'desk', src: C + 'desktop.mp4', from: 18.0, dur: 4, caps: [{id: 'c3', a: 0.2, b: 3.9, text: 'Decision: approve, from the phone.'}]},
   {id: 'c4', kind: 'desk', src: C + 'desktop.mp4', from: 22.0, dur: 4, caps: [{id: 'c4', a: 0.2, b: 3.9, text: 'Hours saved to Yext, read back and verified.'}]},
   {id: 'c5', kind: 'desk', src: C + 'desktop.mp4', from: 26.0, dur: 3, caps: [{id: 'c5', a: 0.2, b: 2.9, text: 'Learned: the same suggestion next time.'}]},
@@ -25,7 +25,7 @@ export const SCENES: Scene[] = [
   {id: 'ch2', kind: 'desk', src: V + 'chat.mp4', from: 11.0, dur: 4.7, rate: 1.4, caps: [{id: 'x3', a: 0.2, b: 4.5, text: 'Changed last year too. Make it recurring? Yes.'}]},
   {id: 'ch3', kind: 'desk', src: V + 'chat.mp4', from: 17.6, dur: 4.6, caps: [{id: 'x4', a: 0.2, b: 4.4, text: 'Next time: WhatsApp. Kaiku remembers.'}]},
   // 6 voice: PLACEHOLDER (orb listening); the owner's voice-note exchange replaces this scene's source, see NOTES v3
-  {id: 'voice', kind: 'desk', src: V + 'voice.mp4', from: 2.0, dur: 10, slot: 'voice', zoom: {s: 2.3, ox: 0.93, oy: 0.95}, caps: [{id: 'v1', a: 0.3, b: 9.5, text: "Don't want to type? Talk to it."}]},
+  {id: 'voice', kind: 'desk', src: V + 'voice.mp4', from: 2.0, dur: 10, slot: 'voice', zoom: {s: 2.2, ox: 0.975, oy: 0.975}, caps: [{id: 'v1', a: 0.3, b: 9.5, text: "Don't want to type? Talk to it."}]},
   // 7 end card, held still
   {id: 'end', kind: 'end', dur: 6.5, caps: []},
 ];

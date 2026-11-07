@@ -1,0 +1,151 @@
+{
+ "fps": 30,
+ "total": 85,
+ "scenes": [
+  {
+   "id": "open",
+   "a": 0,
+   "b": 6,
+   "lines": [
+    {
+     "id": "c0",
+     "a": 0.6,
+     "b": 5.6,
+     "text": "43 m. Closest ship to any bus."
+    }
+   ]
+  },
+  {
+   "id": "slaps",
+   "a": 6,
+   "b": 14,
+   "lines": [
+    {
+     "id": "o1",
+     "a": 6.4,
+     "b": 13.6,
+     "text": "Every bus."
+    },
+    {
+     "id": "o2",
+     "a": 8.2,
+     "b": 13.6,
+     "text": "Every ship."
+    },
+    {
+     "id": "o3",
+     "a": 10.0,
+     "b": 13.6,
+     "text": "How close do they get?"
+    }
+   ]
+  },
+  {
+   "id": "flight",
+   "a": 14,
+   "b": 46,
+   "lines": [
+    {
+     "id": "f1",
+     "a": 14.4,
+     "b": 19.2,
+     "text": "Buses from Föli. Ships from Fintraffic AIS."
+    },
+    {
+     "id": "f4",
+     "a": 19.6,
+     "b": 25.2,
+     "text": "The live page: an hour, played in 40 seconds."
+    },
+    {
+     "id": "f5",
+     "a": 25.6,
+     "b": 31.6,
+     "text": "Ships along the river, buses on the streets."
+    },
+    {
+     "id": "f6",
+     "a": 32.0,
+     "b": 38.6,
+     "text": "Both feeds arrive as NGSI-LD entities."
+    },
+    {
+     "id": "f7",
+     "a": 39.0,
+     "b": 45.4,
+     "text": "Each dot is one entity in the FIWARE broker."
+    }
+   ]
+  },
+  {
+   "id": "sources",
+   "a": 46,
+   "b": 52,
+   "lines": [
+    {
+     "id": "s1",
+     "a": 46.5,
+     "b": 51.6,
+     "text": "The page reads the broker, not the feeds."
+    }
+   ]
+  },
+  {
+   "id": "question",
+   "a": 52,
+   "b": 62,
+   "lines": [
+    {
+     "id": "q2",
+     "a": 52.5,
+     "b": 56.6,
+     "text": "Method: the closest ship to any bus, over 565 broker reads in 57 minutes."
+    },
+    {
+     "id": "q3",
+     "a": 56.9,
+     "b": 61.7,
+     "text": "Answer: 43 m. Line 1 and the ship UKKOPEKKA."
+    }
+   ]
+  },
+  {
+   "id": "broker",
+   "a": 62,
+   "b": 71,
+   "lines": [
+    {
+     "id": "b1",
+     "a": 62.6,
+     "b": 70.8,
+     "text": "Orion-LD, the FIWARE context broker: every bus and ship is one NGSI-LD entity."
+    }
+   ]
+  },
+  {
+   "id": "mcp",
+   "a": 71,
+   "b": 78,
+   "lines": [
+    {
+     "id": "m1",
+     "a": 71.4,
+     "b": 74.6,
+     "text": "A direct call to the Gateway function behind the MCP tool."
+    },
+    {
+     "id": "m2",
+     "a": 74.9,
+     "b": 77.8,
+     "text": "13 vehicles within 1 km of the harbour: 12 ships, 1 bus."
+    }
+   ]
+  },
+  {
+   "id": "end",
+   "a": 78,
+   "b": 85,
+   "lines": []
+  }
+ ]
+}
