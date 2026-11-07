@@ -115,3 +115,4 @@ main{padding-bottom:calc(110px + env(safe-area-inset-bottom))}
   .sg-acts{padding-right:72px}
   .invite{font-size:20px}
 }
+.chat-form{scroll-margin-bottom:28px}
