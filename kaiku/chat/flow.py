@@ -267,11 +267,64 @@ def handoff_text(bid: str, sess: dict, exclude: set[str]) -> str:
 
 def reset(sess: dict) -> None:
     sess["focus"], sess["stage"], sess["pending"], sess["followup"] = None, None, None, None
+    sess["offer"] = None
+
+
+# ---------- the last question of a conversation: how do you want me to reach you next time? ----------
+def _lang(bid: str) -> str:
+    b = _biz(bid)
+    return "fi" if b is not None and getattr(b, "owner_language", "en") == "fi" else "en"
+
+
+def others_waiting(bid: str, exclude: set[str]) -> bool:
+    for i in F.get_feed(bid).get("suggestions", []):
+        if i["kind"] == "no_change" or not is_pending(i) or i["id"] in exclude:
+            continue
+        if i["kind"] == "period" and not undecided_members(bid, i):
+            continue
+        return True
+    return False
+
+
+def ask_channel(bid: str, sess: dict) -> str:
+    """The conversation would end here: ask once how the owner wants to be reached next time (stage "channel"). Nothing is
+    asked when the owner already answered, or when they ignored the question earlier in this conversation (never nag)."""
+    from ..contact import messages as M
+    from ..learn import prefs
+    if sess.get("channel_dropped") or prefs.get_contact_channel(bid):
+        return ""
+    sess["stage"], sess["offer"], sess["focus"], sess["pending"] = "channel", "channel", None, None
+    return M.channel_question_text(_lang(bid))
+
+
+def choices(bid: str, sess: dict) -> list[dict]:
+    """The reply chips the web chat shows under a question Kaiku is waiting on; [] when nothing is asked."""
+    if sess.get("stage") != "channel":
+        return []
+    from ..contact import messages as M
+    return [{"value": ch, "label": title} for ch, title in M.channel_choices(_lang(bid))]
+
+
+async def channel_turn(bid: str, sess: dict, message: str) -> str | None:
+    """The owner's answer to the channel question: one of email / whatsapp / call is stored and confirmed in one line;
+    anything else gets the warm text once and the question is dropped. None = no question was waiting."""
+    if sess.get("stage") != "channel":
+        return None
+    from ..contact import messages as M
+    from ..learn import prefs
+    ch = prefs.parse_channel(message)
+    sess["stage"], sess["offer"] = None, None
+    lang = _lang(bid)
+    if ch is None:
+        sess["channel_dropped"] = True
+        return M.channel_unknown_text(lang)
+    prefs.set_contact_channel(bid, ch, said=message)
+    return M.channel_confirm_text(ch, lang)
 
 
 # ---------- entry points the routes call ----------
 def start_proposal(bid: str, sess: dict, item: dict) -> str:
-    sess["focus"], sess["followup"], sess["pending"] = item["id"], None, None
+    sess["focus"], sess["followup"], sess["pending"], sess["channel_dropped"] = item["id"], None, None, False
     t = proposal(bid, item)
     sess["stage"] = "ask_new" if (item["kind"] == "holiday_hours" and not item.get("proposed")) else "proposed"
     return t
@@ -317,12 +370,12 @@ def finish(bid: str, sess: dict, item: dict, action: str, r: dict) -> str:
         return "That one is already decided." if str(r.get("error", "")).startswith("already") else "That did not work, nothing was changed."
     if action == "decline":
         sess["focus"] = None
-        return LEAVE
+        return f"{LEAVE} {'' if others_waiting(bid, {item['id']}) else ask_channel(bid, sess)}".strip()
     say = receipt(bid, item, r)
     if r.get("follow_up_question") and r.get("yext") == "ok":
         return f"{say} {r['follow_up_question']}".strip()
     sess["followup"] = None
-    nxt = handoff_text(bid, sess, {item["id"]})
+    nxt = handoff_text(bid, sess, {item["id"]}) or ask_channel(bid, sess)
     return f"{say} {nxt}".strip()
 
 
@@ -338,7 +391,7 @@ async def recurring_answer(turn, bid: str, sess: dict, yes: bool) -> str:
         say = "I could not store that, so I will ask you again next time."
     else:
         say = "Okay, I will ask you each time."
-    nxt = handoff_text(bid, sess, {sid} if sid else set())
+    nxt = handoff_text(bid, sess, {sid} if sid else set()) or ask_channel(bid, sess)
     return f"{say} {nxt}".strip()
 
 

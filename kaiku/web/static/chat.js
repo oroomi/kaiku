@@ -59,6 +59,20 @@
   function focusEv(id) { try { window.dispatchEvent(new CustomEvent("kaiku:focus", { detail: { id: id || "" } })); } catch (e) {} }
   function reduce() { return window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches; }
 
+  /* ---------- reply chips: a question Kaiku waits on (how do you want me to reach you?) gets its choices as one-tap replies ---------- */
+  (function () { var st = document.createElement("style"); st.textContent = ".qchips{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 10px 4px}.qchips button{min-height:40px;padding:0 16px;border-radius:99px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:inherit;font:500 14px Inter,system-ui,sans-serif;cursor:pointer}.qchips button:hover{border-color:#8fd3e8}"; document.head.appendChild(st); })();
+  function chips(list) {
+    [].forEach.call(thread.querySelectorAll(".qchips"), function (n) { n.remove(); });
+    if (!list || !list.length) return;
+    var box = document.createElement("div"); box.className = "qchips"; box.setAttribute("data-pilot", "reply-chips");
+    list.forEach(function (c) {
+      var b = document.createElement("button"); b.type = "button"; b.textContent = c.label;
+      b.addEventListener("click", function () { box.remove(); send(c.label); });
+      box.appendChild(b);
+    });
+    thread.appendChild(box); toEnd();
+  }
+
   /* ---------- sending ---------- */
   var busy = false;
   function send(text, fromVoice) {
@@ -71,6 +85,7 @@
       .then(function (j) {
         typing(false); add({ role: "kaiku", kind: "chat", text: j.reply }); tell("kaiku", j.reply);
         Object.keys(j.statuses || {}).forEach(function (k) { setStatus(k, j.statuses[k]); });
+        chips(j.choices);
         focusEv(j.focus); root.classList.toggle("ctx", !!j.focus);
         try { window.dispatchEvent(new CustomEvent("kaiku:decided")); } catch (e) {}
         return j.reply;
@@ -94,7 +109,7 @@
     var d = m.detail || {}; if (!d.id || busy) { if (d.done) d.done(); return; }
     busy = true; typing(true); busyEv(true); toChat();
     post("/api/suggestions/" + encodeURIComponent(d.id) + "/accept", { business_id: BIZ, session: SID })
-      .then(function (j) { typing(false); kaikuSays(j.reply); if (j.ok) { root.classList.add("ctx"); focusEv(j.focus); } })
+      .then(function (j) { typing(false); kaikuSays(j.reply); chips(j.choices); if (j.ok) { root.classList.add("ctx"); focusEv(j.focus); } })
       .catch(function () { typing(false); kaikuSays("That did not go through. Please try again."); })
       .then(function () { busyEv(false); busy = false; if (d.done) d.done(); setTimeout(function () { try { msg.focus({ preventScroll: true }); } catch (e) {} }, 400); });
   });
@@ -109,7 +124,7 @@
   window.addEventListener("kaiku:discard", function (m) {
     var d = m.detail || {}; if (!d.id) return;
     post("/api/suggestions/" + encodeURIComponent(d.id) + "/discard", { business_id: BIZ, session: SID })
-      .then(function (j) { if (d.done) d.done(!!j.ok); if (j.ok) { kaikuSays(j.reply); root.classList.remove("ctx"); focusEv(""); } })
+      .then(function (j) { if (d.done) d.done(!!j.ok); if (j.ok) { kaikuSays(j.reply); chips(j.choices); root.classList.remove("ctx"); focusEv(""); } })
       .catch(function () { if (d.done) d.done(false); })
       .then(function () { try { window.dispatchEvent(new CustomEvent("kaiku:decided")); } catch (e) {} });
   });

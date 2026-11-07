@@ -130,10 +130,10 @@ async def chat(body: ChatIn):
     items = F.get_feed(body.business_id).get("suggestions", [])
     f = brain.focus_of(items, s)
     s["focus"] = f["id"] if f else None
-    if not f:
+    if not f and s.get("stage") != "channel":
         s["stage"] = None
     statuses = {i["id"]: i.get("status", "proposed") for i in items}
-    return {"reply": reply, "actions": acts, "statuses": statuses, "focus": s["focus"]}
+    return {"reply": reply, "actions": acts, "statuses": statuses, "focus": s["focus"], "choices": flow.choices(body.business_id, s)}
 
 
 @router.get("/api/chat/keyed")
@@ -185,7 +185,8 @@ async def accept(suggestion_id: str, body: AcceptIn | None = None):
     s["log"].append({"role": "kaiku", "kind": "chat", "text": reply})
     s["hist"] += [("user", f"(accepted on the card: {item.get('title_en', suggestion_id)})"), ("assistant", reply)]
     _listing_changed(body.business_id)
-    return {"ok": True, "reply": reply, "focus": s.get("focus"), "stage": s.get("stage"), "actions": turn.actions}
+    return {"ok": True, "reply": reply, "focus": s.get("focus"), "stage": s.get("stage"), "actions": turn.actions,
+            "choices": flow.choices(body.business_id, s)}
 
 
 @router.post("/api/suggestions/{suggestion_id}/discard")
@@ -207,9 +208,11 @@ async def discard(suggestion_id: str, body: AcceptIn | None = None):
     line = flow.discard_text(item)
     if s.get("focus") == item["id"]:
         flow.reset(s)
+    if not flow.others_waiting(body.business_id, {item["id"]}):
+        line = f"{line} {flow.ask_channel(body.business_id, s)}".strip()
     s["log"].append({"role": "kaiku", "kind": "chat", "text": line})
     s["hist"] += [("user", f"(discarded on the card: {item.get('title_en', suggestion_id)})"), ("assistant", line)]
-    return {"ok": True, "reply": line, "status": r.get("status"),
+    return {"ok": True, "reply": line, "status": r.get("status"), "choices": flow.choices(body.business_id, s),
             "actions": [{"type": "decided", "suggestion_id": item["id"], "action": "decline", "status": r.get("status")}]}
 
 

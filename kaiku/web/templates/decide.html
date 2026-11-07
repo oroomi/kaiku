@@ -52,6 +52,11 @@
 .dc .vis .pend{color:var(--ink3);font-size:13.5px;display:flex;gap:8px;align-items:center}
 .dc .vis .pend i{width:8px;height:8px;border-radius:50%;background:var(--cyan);animation:pulse 1.4s infinite}
 .dc .vis .seen{font:400 16px/1.4 var(--sans);color:var(--green)}
+.dc .chq .q{font:300 21px/1.3 var(--serif);margin:6px 0 0}
+.dc .chq .row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.dc .chq .row .btn{min-height:50px;padding:0 8px;font-size:15px}
+.dc .chq .row .btn[aria-pressed=true]{background:var(--cyan);color:#06222c;border-color:var(--cyan)}
+.dc .chq .got{color:var(--green);font:400 15px/1.4 var(--sans);margin:12px 0 0}
 .dc .miss{text-align:center;padding:34px 20px}
 .dc .miss .big{font:300 54px/1 var(--sans);color:var(--warn)}
 </style>
@@ -184,6 +189,15 @@
   </section>
   {% endif %}
 
+    <div class="row" id="ch-row">
+      <button class="btn" type="button" data-channel="email">{{ "Sähköposti" if fi else "Email" }}</button>
+      <button class="btn" type="button" data-channel="whatsapp">WhatsApp</button>
+      <button class="btn" type="button" data-channel="call">{{ "Puhelu" if fi else "Call" }}</button>
+    </div>
+    <p class="got" id="ch-got" hidden></p>
+  </section>
+  {% endif %}
+
   <section class="glass miss" id="expired-live" hidden aria-live="polite" data-pilot="decide-expired-live">
     {% if fi %}
     <p class="prop" lang="fi">Ehdotus vanheni ennen päätöstä.</p>
@@ -202,6 +216,16 @@
     <p class="gl" id="th-en" lang="en"></p>
     <div class="vis" id="vis"></div>
   </section>
+
+  {% if state in ("open", "done") %}
+  <section class="glass panel chq" id="chpref" {% if state == "open" %}hidden{% endif %} data-pilot="channel-question" aria-live="polite">
+    <span class="mono lab">{{ "SEURAAVALLA KERRALLA" if fi else "NEXT TIME" }}</span>
+    {% if fi %}
+    <p class="q" lang="fi">Kun jokin listaukseesi liittyvä asia tarvitsee jatkossa päätöksen, miten haluat minun tavoittavan sinut?</p>
+    <p class="gl" lang="en">Next time something about your listing needs a decision, how do you want me to reach you?</p>
+    {% else %}
+    <p class="q" lang="en">Next time something about your listing needs a decision, how do you want me to reach you?</p>
+    {% endif %}
 {% endif %}
 </div>
 {% endblock %}

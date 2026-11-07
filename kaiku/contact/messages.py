@@ -352,6 +352,48 @@ def unknown_reply_text_en() -> str:
             "When you're ready, just reply yes, or tell me the hours, like 9-13 or closed.")
 
 
+# ---------------------------------------------------------------- the channel question (asked once, at the end)
+
+_CH_EN = {"email": "email", "whatsapp": "WhatsApp", "call": "a call"}
+_CH_FI = {"email": "sähköposti", "whatsapp": "WhatsApp", "call": "puhelu"}
+
+
+def channel_question_text_en(short: bool = False) -> str:
+    q = "Next time something about your listing needs a decision, how do you want me to reach you?"
+    return q if short else q + " Email, WhatsApp or a call?"
+
+
+def channel_question_text_fi(short: bool = False) -> str:
+    q = "Kun jokin listaukseesi liittyvä asia tarvitsee jatkossa päätöksen, miten haluat minun tavoittavan sinut?"
+    return q if short else q + " Sähköpostilla, WhatsAppilla vai puhelulla?"
+
+
+def channel_reply_line_en() -> str:
+    return "Just reply email, WhatsApp or call."
+
+
+def channel_reply_line_fi() -> str:
+    return "Vastaa vain sähköposti, WhatsApp tai puhelu."
+
+
+def channel_confirm_text_en(channel: str) -> str:
+    return f"Got it, {_CH_EN.get(channel, channel)} it is. I'll start there next time."
+
+
+def channel_confirm_text_fi(channel: str) -> str:
+    return {"email": "Selvä, sähköposti. Aloitan siitä ensi kerralla.", "whatsapp": "Selvä, WhatsApp. Aloitan siitä ensi kerralla.",
+            "call": "Selvä, puhelu. Aloitan siitä ensi kerralla."}.get(channel, "Selvä.")
+
+
+def channel_unknown_text_en() -> str:
+    return ("No rush at all, I'll keep everything as it is for now. If you'd rather be reached by email, WhatsApp or a call, "
+            "just tell me any time.")
+
+
+def channel_unknown_text_fi() -> str:
+    return "Ei kiirettä, jätän kaiken ennalleen. Jos haluat jatkossa sähköpostia, WhatsAppia tai puhelun, kerro vain milloin tahansa."
+
+
 # ---------------------------------------------------------------- language dispatch (English is the default)
 
 DEFAULT_LANG = "en"
@@ -505,3 +547,26 @@ def all_final_messages(path: str | Path | None = None) -> str:
 if __name__ == "__main__":
     all_final_messages()
     print("wrote docs/final_messages.md")
+
+
+def channel_question_text(lang: str | None = None, short: bool = False) -> str:
+    return channel_question_text_fi(short) if owner_lang({"owner_language": lang}) == "fi" else channel_question_text_en(short)
+
+
+def channel_reply_line(lang: str | None = None) -> str:
+    return channel_reply_line_fi() if owner_lang({"owner_language": lang}) == "fi" else channel_reply_line_en()
+
+
+def channel_confirm_text(channel: str, lang: str | None = None) -> str:
+    return channel_confirm_text_fi(channel) if owner_lang({"owner_language": lang}) == "fi" else channel_confirm_text_en(channel)
+
+
+def channel_unknown_text(lang: str | None = None) -> str:
+    return channel_unknown_text_fi() if owner_lang({"owner_language": lang}) == "fi" else channel_unknown_text_en()
+
+
+def channel_choices(lang: str | None = None) -> list[tuple[str, str]]:
+    """(channel, button title); titles stay under WhatsApp's 20 characters."""
+    if owner_lang({"owner_language": lang}) == "fi":
+        return [("email", "Sähköposti"), ("whatsapp", "WhatsApp"), ("call", "Puhelu")]
+    return [("email", "Email"), ("whatsapp", "WhatsApp"), ("call", "Call")]
