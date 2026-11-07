@@ -54,3 +54,15 @@ Base `https://sbx-api.yextapis.com/v2/accounts/me`, `v=20261106` (same result on
 - For contrast `GET /reviews` -> 200 `{"reviews":[],"count":0}`.
 Decision: the direct entity write stays (`apply_suggestion`, snapshot, PUT, read-back verify). No `kaiku/apply/suggestions.py` and no
 `KAIKU_YEXT_SUGGESTIONS` switch were built, because every call would 403. If Fonecta enables the Suggestions API for the app, re-run the probe: the plan is propose on chain suggestion, approve on owner approval, then the same read-back.
+
+## Description and review replies
+`apply_description(entity, text)`: PUT `{"description": text}`, GET back, `verified` only if the stored text equals what we wrote.
+Event: "Description saved to Yext, read back and verified". `apply_review_reply(entity, review_id, text)`: POST
+`/v2/accounts/me/reviews/{id}/comments` on the sandbox gateway (`sbx-api.yextapis.com`); `posted` is true only when the Reviews API
+read-back shows our comment. If the key refuses, the reply is appended to `data/review_replies.jsonl` and the event says
+"Reply stored; the sandbox key cannot post review comments" (never "posted"). Replies for file-based sample reviews are always stored.
+`kaiku/chat/actions.py`: `decide(..., edited_text=)` routes both kinds; approve = the card's text, edit = the owner's own text, decline
+= learn event + `data/text_declines.jsonl`. The decision is stored as a suggestion (kind `ask`, date 1970-01-01 so it never matches a
+holiday card) so `with_decisions` shows the status. `/api/reset` only clears holidayHours, so the sample description stays; re-run
+`python tools/seed_sandbox.py` after anything that removes it (also restores the typo after a demo approval).
+Live status at build: description PUT 200 and read back; reviews POST 201 (two sample reviews); comment endpoint answers 400 for an unknown review id (reachable), a real comment post was not tried so the sample review stays unanswered.

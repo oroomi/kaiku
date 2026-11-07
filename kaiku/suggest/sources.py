@@ -96,8 +96,11 @@ def _complete(system: str, user: str, max_tokens: int = 400) -> str | None:
     try:
         import anthropic
         client = anthropic.Anthropic(max_retries=1, timeout=20.0)
-        r = client.messages.create(model=MODEL, max_tokens=max_tokens, system=system,
-                                   messages=[{"role": "user", "content": user}])
+        kw = dict(model=MODEL, max_tokens=max_tokens + 1500, system=system, messages=[{"role": "user", "content": user}])
+        try:  # same call shape as the chat brain: low effort leaves room for the answer
+            r = client.messages.create(**kw, output_config={"effort": "low"})
+        except (anthropic.BadRequestError, TypeError):
+            r = client.messages.create(**kw)
         return "".join(b.text for b in r.content if getattr(b, "type", "") == "text").strip() or None
     except Exception:
         return None
