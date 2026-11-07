@@ -10,6 +10,9 @@ from kaiku.detect import signals as sg
 from kaiku.evalpage import loader, runner
 from kaiku.suggest import backtest as bt
 
+if not any(getattr(r, "path", "") == "/eval" for r in app.routes):  # until app.py lists the module
+    from kaiku.evalpage.router import router as _router
+    app.include_router(_router)
 client = TestClient(app)
 
 CSV = """name,date,regular_hours,target
