@@ -119,22 +119,49 @@ def _plain_reason(item: dict) -> str:
 
 
 # ---------- Kaiku's pre-written texts ----------
+def _why(item: dict, n: int = 1) -> str:
+    """The suggestion's own evidence as a clause: 'last Christmas Eve you were open 9-13' (never invented)."""
+    rs = [r.get("text_en") for r in (item.get("reasons") or []) if r.get("text_en")]
+    rs = [r for r in rs if not r.lower().startswith("source:")][:n]
+    if not rs:
+        return ""
+    parts = []
+    for r in rs:
+        r = re.sub(r"\s*\([^)]*\)", "", r).strip().rstrip(".")
+        r = re.sub(r"\b0?(\d{1,2}):00\b", r"\1", r)
+        r = re.sub(r"\b0?(\d{1,2}):(\d\d)\b", r"\1:\2", r)
+        parts.append(r[:1].lower() + r[1:])
+    return "; ".join(parts)
+
+
+def _cap(s: str) -> str:
+    return s[:1].upper() + s[1:] if s else s
+
+
+# ---------- Kaiku's pre-written texts: every proposal carries its reason (the owner's rule, 7 Nov) ----------
 def proposal(bid: str, item: dict) -> str:
     k = item["kind"]
     if k == "period":
         ms = undecided_members(bid, item) or period_members(bid, item)
         lst = "; ".join(f"{d_short(m['holiday_date'])} " + ("closed" if m["proposed"] in (None, "closed", []) else hours_text(m["proposed"])) for m in ms)
-        return f"The {period_name(item)} is coming: {lst}. Shall I set all of them?"
+        why = _why(item, 2)
+        lead = f"The {period_name(item)} is coming. {_cap(why)}." if why else f"The {period_name(item)} is coming."
+        return f"{lead} Shall I set {lst}?"
     if k == "description":
         if is_missing_description(item):
-            return f"Your listing has no description. Shall I publish this one? {item.get('proposed') or ''}".strip()
+            return (f"Your listing has no description, so searches show only your name and address. "
+                    f"Shall I publish this one? {item.get('proposed') or ''}").strip()
         ty = item.get("typos") or []
+        if len(ty) == 1:
+            return (f"Your description on Connect reads \"{ty[0]['wrong']}\". Shall I correct it to \"{ty[0]['right']}\"? "
+                    f"That text shows on Google and Fonecta.")
         fix = " and ".join(f"\"{t['wrong']}\" to \"{t['right']}\"" for t in ty[:2]) + (f" and {len(ty) - 2} more" if len(ty) > 2 else "")
-        return f"Shall I correct {fix} in your description?"
+        return f"Your description has typos: {fix}. Shall I correct them? That text shows on Google and Fonecta."
     if k == "review":
         n = item.get("rating")
         star = f"{int(n) if float(n) == int(n) else n}-star review" if n else "review"
-        return f"Shall I post this reply to the {star}? \"{item.get('proposed') or ''}\""
+        return (f"The {star} has no reply yet, and it shows next to your listing. "
+                f"Shall I post this reply? \"{item.get('proposed') or ''}\"")
     name, date = holiday_name(item), d_short(item["holiday_date"]) if item.get("holiday_date") else ""
     what = f"{name} {date}".strip()
     prop = item.get("proposed")
@@ -142,10 +169,11 @@ def proposal(bid: str, item: dict) -> str:
         return f"I have no ready hours for {what}. What should they be?"
     reg = regular_that_day(bid, item.get("holiday_date") or "")
     still = f"still says {reg}" if reg and reg != "closed" else "still says you are closed"
+    why = _why(item)
+    evidence = f"{_cap(why)}, and everywhere Connect publishes {still}." if why else f"Everywhere Connect publishes {still}."
     if prop == "closed":
-        return f"{season(item)} is coming. Do you want to mark {what} as closed? Everywhere Connect publishes {still}."
-    return (f"{season(item)} is coming. Do you want to change your hours on {what} to {hours_text(prop)}? "
-            f"Everywhere Connect publishes {still}.")
+        return f"{season(item)} is coming. {evidence} Do you want to mark {what} as closed?"
+    return f"{season(item)} is coming. {evidence} Do you want to change your hours on {what} to {hours_text(prop)}?"
 
 
 def change_prompt(item: dict) -> str:
@@ -175,7 +203,12 @@ def confirm_text(item: dict, value) -> str:
         return f"Shall I post this as your reply? \"{value}\""
     h = hours_text(value)
     if k == "period":
-        return f"{h[:1].upper() + h[1:]} on all of these dates, shall I save it?"
+        ms = [m for m in (item.get("proposed") or []) if isinstance(m, dict) and m.get("date")]
+        open_d = [d_short(m["date"]) for m in ms if m.get("proposed") not in (None, "closed", [])]
+        closed_d = [d_short(m["date"]) for m in ms if m.get("proposed") in (None, "closed", [])]
+        parts = ([f"{h} on {', '.join(open_d)}"] if open_d else []) + ([f"closed on {', '.join(closed_d)}"] if closed_d else [])
+        txt = "; ".join(parts) or f"{h} on all of these dates"
+        return f"{txt[:1].upper() + txt[1:]}. Shall I save all {len(ms) or 'of them'}?"
     d = d_short(item["holiday_date"]) if item.get("holiday_date") else "that day"
     return f"{h[:1].upper() + h[1:]} on {d}, shall I save it?"
 

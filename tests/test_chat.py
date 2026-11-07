@@ -111,7 +111,7 @@ def fake_yext(monkeypatch):
     return writes
 
 
-H24 = "Christmas is coming. Do you want to change your hours on Christmas Eve 24.12. to 9-13? Everywhere Connect publishes still says 9-17."
+H24 = "Christmas is coming. Last year 9-13, and everywhere Connect publishes still says 9-17. Do you want to change your hours on Christmas Eve 24.12. to 9-13?"
 RECUR = "You changed this last year as well. Do you want to make it recurring, this time of the year?"
 
 
@@ -149,7 +149,7 @@ def test_recurring_question_only_with_last_year_data(stub_feed, fake_yext):
          "status": "proposed", "holiday_date": "2026-12-26", "reasons": []}]}))
     c = TestClient(app)
     r = c.post("/api/suggestions/t-mid/accept", json={"session": "m1"}).json()
-    assert r["reply"].startswith("Midsummer Eve is coming. Do you want to change your hours on Midsummer Eve 18.6. to 10-14?")
+    assert r["reply"].startswith("Midsummer Eve is coming. Everywhere Connect publishes still says 9-17. Do you want to change your hours on Midsummer Eve 18.6. to 10-14?")
     out = _chat(c, "m1", "yes")["reply"]
     assert out.startswith("Done. 18.6. 10-14 is saved and shows on") and "recurring" not in out
     assert "Next: Two sources disagree." in out                          # no recurring question: straight to the next card
@@ -212,9 +212,9 @@ def test_text_kinds_proposals_and_honest_receipts(stub_feed, fake_yext, monkeypa
     monkeypatch.setattr(actions, "_text_apply", lambda item, text, client=None: calls.append((item["id"], text)) or
                         ({"yext_status": "ok", "verified": True} if item["kind"] == "description" else {"yext_status": "ok", "stored": True, "posted": False}))
     c = TestClient(app)
-    assert c.post("/api/suggestions/t-desc/accept", json={"session": "x1"}).json()["reply"] == 'Shall I correct "vacination" to "vaccination" in your description?'
-    assert c.post("/api/suggestions/t-nodesc/accept", json={"session": "x2"}).json()["reply"] == "Your listing has no description. Shall I publish this one? A small clinic."
-    assert c.post("/api/suggestions/t-rev/accept", json={"session": "x3"}).json()["reply"] == 'Shall I post this reply to the 3-star review? "Thank you, sorry about the wait."'
+    assert c.post("/api/suggestions/t-desc/accept", json={"session": "x1"}).json()["reply"] == 'Your description on Connect reads "vacination". Shall I correct it to "vaccination"? That text shows on Google and Fonecta.'
+    assert c.post("/api/suggestions/t-nodesc/accept", json={"session": "x2"}).json()["reply"] == "Your listing has no description, so searches show only your name and address. Shall I publish this one? A small clinic."
+    assert c.post("/api/suggestions/t-rev/accept", json={"session": "x3"}).json()["reply"] == 'The 3-star review has no reply yet, and it shows next to your listing. Shall I post this reply? "Thank you, sorry about the wait."'
     assert _chat(c, "x1", "yes")["reply"].startswith("Done. Your description is saved and shows on Google")
     r = _chat(c, "x3", "yes")["reply"]                       # stored, not posted: never claim a post
     assert r.startswith("Your reply is stored. The sandbox key cannot post review comments") and "posted" not in r.replace("cannot post", "")
@@ -233,7 +233,7 @@ def test_period_accept_sets_every_member_date(stub_feed, fake_yext):
                                                             mem("2026-12-25", "Christmas Day", "closed"), mem("2026-12-26", "St. Stephen's Day", "closed")]}]}))
     c = TestClient(app)
     r = c.post("/api/suggestions/t-period/accept", json={"session": "p1"}).json()
-    assert r["reply"] == "The Christmas period is coming: 24.12. 9-13; 25.12. closed; 26.12. closed. Shall I set all of them?" and fake_yext == []
+    assert r["reply"] == "The Christmas period is coming. Shall I set 24.12. 9-13; 25.12. closed; 26.12. closed?" and fake_yext == []
     out = _chat(c, "p1", "yes")
     assert [w[1] for w in fake_yext] == ["2026-12-24", "2026-12-25", "2026-12-26"]
     assert out["reply"].startswith("Done. All 3 dates are saved and show on Google, Fonecta Finder and 020202 within the hour.")

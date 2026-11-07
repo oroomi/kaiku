@@ -556,7 +556,7 @@ async def post_decision(b: Business, s: Suggestion, dec: Decision, pause=None) -
             yext_status=res.yext_status, verified=verified, hours=out.get("hours"), entity=out.get("entity_id"), written=out.get("written"),
             entity_version=out.get("entity_version"), environment=out.get("environment"), publishers=res.publishers,
             where_it_shows=out.get("where_it_shows", []), broker_updated=res.broker_updated, error=(res.yext_status if not ok else None))
-        if ok and whatsapp_configured():
+        if ok and whatsapp_configured() and dec.via in ("whatsapp", "call") and dec.reason_chip != "chat":  # the chat brain writes its own receipt
             try:
                 from .contact import ladder, router as cr
                 phone = ladder.owner_phone(_s_dict(s))

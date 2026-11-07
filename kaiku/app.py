@@ -62,6 +62,19 @@ app.include_router(events.router)
 app.include_router(chain.router)
 
 # Module routers: broker, contact, decide, voice, map, learn, mcp_bridge, aura. A missing module is fine.
+@app.middleware("http")
+async def _persist_chat_sessions(request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith(("/api/chat", "/api/suggestions", "/webhooks/whatsapp", "/webhooks/call")):
+        try:
+            from .chat import router as _chat_router
+            _chat_router.persist()
+        except Exception:
+            pass
+    return response
+
+
 for _m in ["broker", "contact", "decide", "voice", "map", "learn", "suggest", "chat", "mcp_bridge", "aura", "score", "listing"]:
     try:
         app.include_router(importlib.import_module(f"kaiku.{_m}.router").router)

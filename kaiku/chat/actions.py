@@ -46,7 +46,7 @@ def _apply_event(sid: str) -> dict:
 async def _decide_one(business_id: str, item: dict, action: str, edited, via: str = "web") -> dict:
     s = materialize(business_id, item)
     b = store.get_business(business_id)
-    dec = Decision(suggestion_id=s.id, action=action, edited=edited if action == "edit" else None, via=via)
+    dec = Decision(suggestion_id=s.id, action=action, edited=edited if action == "edit" else None, via=via, reason_chip="chat")
     async with _locks.setdefault(s.id, asyncio.Lock()):
         s = store.get_suggestion(s.id) or s
         if s.status in ("approved", "edited", "declined", "applied"):
@@ -133,7 +133,7 @@ async def _decide_text(business_id: str, item: dict, action: str, edited_text, v
         s = store.get_suggestion(s.id) or s
         if s.status in ("approved", "edited", "declined", "applied"):
             return {"ok": False, "error": "already decided"}
-        dec = Decision(suggestion_id=s.id, action=action, via=via)
+        dec = Decision(suggestion_id=s.id, action=action, via=via, reason_chip="chat")
         s.status = {"approve": "approved", "edit": "edited", "decline": "declined"}[action]
         store.save_suggestion(s)
         store.save_decision(dec)
@@ -213,7 +213,10 @@ async def decide(business_id: str, suggestion_id: str, action: str, edited_hours
         else:
             sub = item if m is None else (F.find(business_id, m) or {**item, "id": m, "members": None})
         sub = {**sub, "members": None}
-        results.append(await _decide_one(business_id, sub, action, edited, via))
+        act, ed = action, edited
+        if action == "edit" and item["kind"] == "period" and sub.get("proposed") in (None, "closed", []):
+            act, ed = "approve", None  # the owner's hours apply to the open dates; a date proposed closed stays closed
+        results.append(await _decide_one(business_id, sub, act, ed, via))
     ok = all(r.get("ok") for r in results)
     first = next((r for r in results if r.get("ok")), results[0])
     out = {**first, "ok": ok, "suggestion_id": suggestion_id, "action": action, "count": len(results),

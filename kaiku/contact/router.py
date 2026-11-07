@@ -492,6 +492,7 @@ async def _chat_text(phone: str, text: str, sid: str | None, client: W.WhatsAppC
     for a in acts:
         if a.get("type") == "decided":
             dec = make_decision(a["suggestion_id"], a["action"])
+            dec["reason_chip"] = "chat"  # the brain's reply is the receipt; the chain must not send a second one
             with _lock:
                 d = _load(); d["decided"][dec["suggestion_id"]] = dec["action"]; _save(d)
             out["decisions"].append(dec)

@@ -1,6 +1,7 @@
 """Owner chat routes: GET /api/chat/open, POST /api/chat, and the keyed drawer fragment."""
 from __future__ import annotations
 
+import json
 import logging
 import time
 
@@ -18,6 +19,31 @@ router = APIRouter()
 log = logging.getLogger("kaiku.chat.router")
 _sessions: dict[str, dict] = {}
 MAX_MSG = 400
+
+
+def _sess_path():
+    from ..contact import whatsapp as W  # type: ignore
+    return W.data_dir() / "chat_sessions.json"
+
+
+def _load_sessions() -> None:
+    try:
+        d = json.loads(_sess_path().read_text(encoding="utf-8"))
+        if isinstance(d, dict):
+            _sessions.update(d)
+    except Exception:
+        pass
+
+
+def persist() -> None:
+    """Chat memory survives a restart: a WhatsApp thread spans minutes and the service restarts on every deploy."""
+    try:
+        _sess_path().write_text(json.dumps(_sessions, default=str), encoding="utf-8")
+    except Exception as e:  # pragma: no cover
+        log.warning("chat sessions not saved: %s", e)
+
+
+_load_sessions()
 
 
 def session(sid: str) -> dict:

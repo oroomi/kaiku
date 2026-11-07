@@ -23,3 +23,4 @@ data/email_log.jsonl
 data/yext_snapshot_*.json
 data/text_declines.jsonl
 data/room_state.json
+data/chat_sessions.json
