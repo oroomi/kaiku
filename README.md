@@ -2,7 +2,7 @@
 
 **What and for whom.** Kaiku is the whole chain for holiday hours (Detect, Suggest, Contact, Decide, Apply) for the owner of a small business whose opening hours Fonecta Connect publishes. The owner gets a message instead of a login, answers in plain words ("yes", "make it 10-14", "no thanks"), and the approved hours are written to Fonecta's Yext sandbox. The demo business is the **fictional** Furry Paw Vet Clinic, Fonecta's sandbox entity SinceAI07 in Vantaa.
 
-**Live:** <https://kaiku.hankintaviikko.fi> (phone and laptop) | **Demo video:** <YouTube link> | **Repo:** github.com/oroomi/kaiku
+**Live:** <https://kaiku.hankintaviikko.fi> (phone and laptop) | **Demo video:** <https://youtu.be/Opg_gzlo_II> | **Repo:** github.com/oroomi/kaiku
 **Challenge:** Fonecta, "Connect suggests, customer approves" | **Partner technology:** FIWARE (Orion-LD NGSI-LD broker) | **Team:** VY7, solo (Dayo) with Claude coding tools
 
 ![Kaiku owner page: listing score and suggestion cards for Furry Paw Vet Clinic](docs/img/hero.jpg)
