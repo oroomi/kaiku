@@ -13,3 +13,10 @@ Finnish strings (English gloss):
 - Tämä linkki ei toimi. (This link does not work.), Linkki on vanhentunut. (This link has expired.)
 Not done: no-JS form fallback.
 Timeout rule: when the decide step times out it sets the suggestion status to `expired`. A later POST (nothing waiting) never claims success. If `chain.on_decision` exists and returns truthy, the decision is accepted out of band (response 200, `late: true`, page says Kiitos. Päivitän tiedot nyt.). Otherwise 410 `{state: "expired", message_fi: "Ehdotus vanheni ennen päätöstä. Kaiku lähettää uuden ehdotuksen.", message_en: "The suggestion expired before a decision. Kaiku will send a new suggestion."}`, the token stays unused, and the page shows the calm expired state (GET /d/<token> shows it too). A POST for a suggestion that no longer exists returns 404 `{message_fi: "Ehdotusta ei löydy.", message_en: "The suggestion cannot be found."}` and emits nothing. The page header date is fetched from /api/today and shown as 17.12.2026.
+
+## Channel question after the receipt (7 Nov)
+
+After approve, edit or decline the page shows "Next time something about your listing needs a decision, how do you want me to
+reach you?" with Email / WhatsApp / Call buttons (`#chpref`, also shown when the page is reopened after a decision). A tap
+POSTs `{"channel": ...}` to `/api/decide/{token}/channel` (404 unknown token, 410 expired, 409 before the decision, 422 for
+anything but the three) and the page answers "Got it, WhatsApp it is. I'll start there next time." See docs/learn.md.

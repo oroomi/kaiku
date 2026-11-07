@@ -196,3 +196,27 @@ async def decide_post(token: str, body: DecideBody):
                 pass
     return {"ok": True, "decision": decision, "waiting_chain": waiting,
             "next": "skip" if body.action == "decline" else "apply"}
+
+
+class ChannelBody(BaseModel):
+    channel: Literal["email", "whatsapp", "call"]
+
+
+@router.post("/api/decide/{token}/channel")
+def decide_channel(token: str, body: ChannelBody):
+    """The question after the receipt: how does the owner want to be reached next time? Same token as the decision; it is
+    asked only once the decision is in (token used), and never after the link expired. Stored with the other prefs
+    (kaiku.learn.prefs), read by the contact ladder."""
+    from ..learn import prefs
+    rec = tokens.lookup(token)
+    if not rec:
+        raise HTTPException(404, "unknown link")
+    if rec["expired"]:
+        raise HTTPException(410, "link expired")
+    if not rec["used"]:
+        raise HTTPException(409, "answer the suggestion first")
+    b = store.get_business(rec["business_id"])
+    prefs.set_contact_channel(rec["business_id"], body.channel, said=f"tapped {body.channel} on the decision page")
+    lang = M.owner_lang(b)
+    return {"ok": True, "channel": body.channel, "message": M.channel_confirm_text(body.channel, lang),
+            "message_en": M.channel_confirm_text_en(body.channel), "message_fi": M.channel_confirm_text_fi(body.channel)}

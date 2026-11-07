@@ -45,6 +45,30 @@
     }).catch(function () { tl.hidden = true; });
   }
 
+  /* the last question: how do you want me to reach you next time? One tap, one line back. */
+  var chrow = $("ch-row");
+  if (chrow) {
+    var CH_GOT = { email: ["Selvä, sähköposti. Aloitan siitä ensi kerralla.", "Got it, email it is. I'll start there next time."],
+                   whatsapp: ["Selvä, WhatsApp. Aloitan siitä ensi kerralla.", "Got it, WhatsApp it is. I'll start there next time."],
+                   call: ["Selvä, puhelu. Aloitan siitä ensi kerralla.", "Got it, a call it is. I'll start there next time."] };
+    [].forEach.call(chrow.querySelectorAll("[data-channel]"), function (b) {
+      b.addEventListener("click", function () {
+        var ch = b.dataset.channel;
+        [].forEach.call(chrow.querySelectorAll("button"), function (x) { x.disabled = true; });
+        fetch("/api/decide/" + encodeURIComponent(token) + "/channel", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ channel: ch }) })
+          .then(function (r) { if (!r.ok) throw new Error("fail"); return r.json(); })
+          .then(function (j) {
+            [].forEach.call(chrow.querySelectorAll("button"), function (x) { x.disabled = false; x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+            var g = $("ch-got"); g.textContent = j.message || (FI ? CH_GOT[ch][0] : CH_GOT[ch][1]); g.hidden = false;
+          })
+          .catch(function () {
+            [].forEach.call(chrow.querySelectorAll("button"), function (x) { x.disabled = false; });
+            var g = $("ch-got"); g.textContent = both(T.fail); g.hidden = false;
+          });
+      });
+    });
+  }
+
   var was = $("was");
   if (was) { var t = T["done_" + was.dataset.act]; if (t) was.textContent = both(t); }
   if (!$("form")) return;
@@ -126,6 +150,7 @@
     var no = res.next === "skip";
     $("form").hidden = true; $("permbox").hidden = true;
     var th = $("thanks"); th.hidden = false;
+    var cq = $("chpref"); if (cq) { cq.hidden = false; [].forEach.call(cq.querySelectorAll("button"), function (x) { x.disabled = false; }); }
     $("th-fi").textContent = no ? T.thanksNo[0] : T.thanks[0];
     $("th-en").textContent = no ? T.thanksNo[1] : T.thanks[1]; $("th-en").hidden = !$("th-en").textContent;
     th.scrollIntoView({ block: "nearest" });

@@ -73,6 +73,11 @@ class Fake:
     def texts(self):
         return [c[3]["text"]["body"] for c in self.calls if c[3].get("type") == "text"]
 
+    def bodies(self):
+        """Every message body, plain text or interactive (the last question of a conversation goes out with buttons)."""
+        return [c[3]["text"]["body"] if c[3].get("type") == "text" else c[3]["interactive"]["body"]["text"]
+                for c in self.calls if c[3].get("type") in ("text", "interactive")]
+
 
 def client(fake):
     # a configured client around a FAKE transport: the empty env creds never reach Meta
@@ -250,7 +255,7 @@ def test_decline_on_whatsapp(fake_yext):
     f = Fake()
     run(R.handle_payload(inbound("no thanks", "wamid.N"), client(f)))
     assert fake_yext == [] and store.get_suggestion("t-hours").status == "declined"
-    assert store.get_decisions("t-hours")[0].via == "whatsapp" and "leave it" in f.texts()[0]
+    assert store.get_decisions("t-hours")[0].via == "whatsapp" and "leave it" in f.bodies()[0]
 
 
 # ---------------------------------------------------------------- 4. fallback parser
@@ -304,8 +309,8 @@ def test_decline_tap_declines_via_whatsapp_and_kaiku_says_leave_it(fake_yext):
     run(R.handle_payload(button("decline:t-hours"), client(f)))
     assert store.get_suggestion("t-hours").status == "declined" and fake_yext == []
     assert store.get_decisions("t-hours")[0].action == "decline" and store.get_decisions("t-hours")[0].via == "whatsapp"
-    assert f.texts() == ["Okay, I leave it as it is."]                   # Kaiku's own line, not the legacy thank-you text
-    assert M.decline_thanks_text(None) not in f.texts()
+    assert f.bodies()[0].startswith("Okay, I leave it as it is.")      # Kaiku's own line, not the legacy thank-you text
+    assert M.decline_thanks_text(None) not in f.bodies()
 
 
 def test_status_log_untouched(tmp_path):

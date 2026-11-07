@@ -27,3 +27,20 @@ yes / no / hours / the owner's own text inside a stage are handled deterministic
 
 ## Known limits
 Period edits apply one set of hours to all undecided dates. Finnish owners skip the stage handler (English texts only for the demo). `tests/test_email.py::test_real_smtp_path` fails on main as well (environment SMTP).
+
+## The last question: how do you want me to reach you next time? (7 Nov)
+
+When a conversation would otherwise end (after the decision receipt, and after the recurring-permission question has been
+answered when it was asked, and after a discard with nothing else waiting) Kaiku asks once, in `kaiku/chat/flow.py`
+(`ask_channel`, stage `channel`): "Next time something about your listing needs a decision, how do you want me to reach you?
+Email, WhatsApp or a call?" One brain, one flow, three surfaces:
+
+- **Web chat**: the reply carries `choices` and `chat.js` shows Email / WhatsApp / Call as reply chips (a tap sends the word).
+- **WhatsApp**: the same reply goes out as an interactive message with three buttons (`pref:email`, `pref:whatsapp`,
+  `pref:call`); with `WA_BUTTONS=0` it is plain text ending in "Just reply email, WhatsApp or call." A tap and a typed
+  answer are the same answer. Only the three count ("sms" does not).
+- **Anything else** gets the warm text once ("No rush at all, ...") and the question is dropped for this conversation; it is
+  never repeated and never asked again once answered. Confirmation is one line: "Got it, WhatsApp it is. I'll start there next time."
+
+The answer is stored by `kaiku.learn.prefs.set_contact_channel` (see docs/learn.md). The email decision page asks the same
+question under the receipt (docs/decide.md). Finnish per owner_language (`kaiku/contact/messages.py`, `channel_*`).

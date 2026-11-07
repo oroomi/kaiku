@@ -206,6 +206,9 @@ def contact(suggestion: dict, client: W.WhatsAppClient | None = None, escalate_s
             email_escalate_s: float | None = None) -> dict:
     """Start the ladder: email first when an owner address exists (and the suggestion needs a decision), else WhatsApp."""
     s = suggestion
+    pref = preferred_channel(s)
+    if pref in ("whatsapp", "call") and s.get("kind") != "no_change":
+        return _preferred(s, pref, client, escalate_s, email_escalate_s)
     to = E.owner_email(s)
     if to and s.get("kind") != "no_change":
         r = E.send_decision_email(s, to)
@@ -224,6 +227,65 @@ def contact(suggestion: dict, client: W.WhatsAppClient | None = None, escalate_s
     return _whatsapp(s, client, escalate_s)
 
 
+def preferred_channel(s: dict) -> str | None:
+    """The owner's own answer to "how do you want me to reach you next time?" (kaiku.learn.prefs), None = not asked yet."""
+    try:
+        from kaiku.learn import prefs  # type: ignore
+        return prefs.get_contact_channel(s.get("business_id") or "")
+    except Exception:
+        return None
+
+
+def _preferred(s: dict, pref: str, client, escalate_s, email_escalate_s) -> dict:
+    """Start with the channel the owner asked for; the others stay as escalation in the usual order:
+    whatsapp -> email -> call, call -> whatsapp -> email. The call rung still obeys KAIKU_NO_CALL and outbound_allowed
+    (call.place_call), WhatsApp and email still go through the guarded clients: a preference never bypasses them."""
+    name = "WhatsApp" if pref == "whatsapp" else "a call"
+    _log(s, pref, f"preferred channel: {pref}", f"Reaching the owner by {name} first (their preference)" if pref == "whatsapp"
+         else "Reaching the owner by call first (their preference)",
+         "Otetaan yhteyttä ensin WhatsAppilla (omistajan toive)" if pref == "whatsapp" else "Otetaan yhteyttä ensin puhelulla (omistajan toive)")
+    delay = escalate_s if escalate_s is not None else escalate_after_s()
+    if pref == "whatsapp":
+        _whatsapp(s, client, escalate_s, after="email", email_escalate_s=email_escalate_s)
+    else:
+        _call_step(s, first=True)
+        if not is_decided(s["id"]):
+            _schedule(s, delay, _wa_after_call, (s, client, escalate_s, email_escalate_s))
+    return s
+
+
+def _wa_after_call(s: dict, client=None, escalate_s: float | None = None, email_escalate_s: float | None = None) -> str:
+    _timers.pop(s["id"], None)
+    if is_decided(s["id"]):
+        return "decided"
+    _log(s, "whatsapp", "no decision after the call", "No answer to the call, WhatsApp next", "Ei vastausta puheluun, seuraavaksi WhatsApp")
+    _whatsapp(s, client, escalate_s, after="email", email_escalate_s=email_escalate_s, final=True)
+    return "sent"
+
+
+def _email_step(s: dict, client=None, escalate_s: float | None = None, email_escalate_s: float | None = None,
+                final: bool = False) -> str:
+    """The email rung of a preferred-channel ladder: send the decision link, then (unless email was the last rung) the call."""
+    _timers.pop(s["id"], None)
+    if is_decided(s["id"]):
+        return "decided"
+    to = E.owner_email(s)
+    if to:
+        _log(s, "email", "no decision on the first channel", "No reply yet, email with the decision link next", "Ei vastausta, seuraavaksi sähköposti")
+        r = E.send_decision_email(s, to)
+        if r.get("ok") and not r.get("dry_run"):
+            _log(s, "email", "sent to " + E.mask(to), "Email sent with the decision link", "Sähköposti lähetetty päätöslinkillä",
+                 message_en=f"Email to {E.mask(to)}: \"{r.get('subject') or 'your holiday hours, one question'}\" with the decision link.")
+        elif r.get("ok"):
+            _log(s, "email", "dry run: " + str(r.get("path")), "Email drafted (dry run, no SMTP configured)",
+                 "Sähköposti luonnosteltu (testitila, SMTP ei käytössä)")
+        else:
+            _log(s, "email", f"failed: {r.get('error')}", "Email failed", "Sähköposti epäonnistui")
+    if not final:
+        _schedule_call(s, escalate_s if escalate_s is not None else escalate_after_s())
+    return "sent"
+
+
 def _wa_step(s: dict, client=None, escalate_s: float | None = None) -> str:
     _timers.pop(s["id"], None)
     if is_decided(s["id"]):
@@ -234,7 +296,16 @@ def _wa_step(s: dict, client=None, escalate_s: float | None = None) -> str:
     return "sent"
 
 
-def _whatsapp(s: dict, client: W.WhatsAppClient | None = None, escalate_s: float | None = None) -> dict:
+def _after_whatsapp(s: dict, delay: float, after: str, client, escalate_s, email_escalate_s, final: bool) -> None:
+    """What follows a WhatsApp rung: the call (default ladder) or, in a preferred-channel ladder, the email first."""
+    if after == "email":
+        _schedule(s, delay, _email_step, (s, client, escalate_s, email_escalate_s, final))
+    else:
+        _schedule_call(s, delay)
+
+
+def _whatsapp(s: dict, client: W.WhatsAppClient | None = None, escalate_s: float | None = None, after: str = "call",
+              email_escalate_s: float | None = None, final: bool = False) -> dict:
     client = client or W.get_client()
     phone = owner_phone(s)
     if not phone:
@@ -272,13 +343,13 @@ def _whatsapp(s: dict, client: W.WhatsAppClient | None = None, escalate_s: float
         s["status"] = "sent"
         _log(s, "whatsapp", f"sent {s.get('kind')} message {r.get('message_id')}", message_en=(chat_text or body))
         if btns is not None:
-            _schedule_call(s, escalate_s if escalate_s is not None else escalate_after_s())
+            _after_whatsapp(s, escalate_s if escalate_s is not None else escalate_after_s(), after, client, escalate_s, email_escalate_s, final)
     else:
         _log(s, "whatsapp", f"failed: {r.get('error')}")
         if client.configured and not r.get("blocked"):
-            _schedule_call(s, 0)  # WhatsApp unreachable: go straight to step 2
-        else:  # no WhatsApp on this instance: the call waits its normal turn and never fires at once
-            _schedule_call(s, escalate_s if escalate_s is not None else escalate_after_s())
+            _after_whatsapp(s, 0, after, client, escalate_s, email_escalate_s, final)  # WhatsApp unreachable: go straight to step 2
+        else:  # no WhatsApp on this instance: the next rung waits its normal turn and never fires at once
+            _after_whatsapp(s, escalate_s if escalate_s is not None else escalate_after_s(), after, client, escalate_s, email_escalate_s, final)
     return s
 
 
@@ -297,7 +368,7 @@ def _schedule_call(s: dict, delay: float) -> None:
     _schedule(s, delay, _call_step, (s,))
 
 
-def _call_step(s: dict) -> str:
+def _call_step(s: dict, first: bool = False) -> str:
     _timers.pop(s["id"], None)
     if is_decided(s["id"]):
         return "decided"
@@ -314,7 +385,10 @@ def _call_step(s: dict) -> str:
             why = r.get("reason") or r.get("error") or "unknown"
             _log(s, "call", f"call not placed: {why}", f"Call not placed ({why})", f"Puhelua ei soitettu ({why})")
             return "failed"
-        _log(s, "call", "call placed after no WhatsApp decision", "No reply on WhatsApp, Kaiku is calling", "Ei vastausta WhatsAppiin, Kaiku soittaa")
+        if first:
+            _log(s, "call", "call placed first (the owner's preference)", "Kaiku is calling (the owner's preference)", "Kaiku soittaa (omistajan toive)")
+        else:
+            _log(s, "call", "call placed after no WhatsApp decision", "No reply on WhatsApp, Kaiku is calling", "Ei vastausta WhatsAppiin, Kaiku soittaa")
         return "placed"
     except Exception as e:
         _log(s, "call", f"call failed: {type(e).__name__}")

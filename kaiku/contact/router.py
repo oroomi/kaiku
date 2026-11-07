@@ -414,6 +414,11 @@ async def handle_payload(payload: dict, client: W.WhatsAppClient | None = None) 
         decision = None
         if it["kind"] == "button":
             act, bsid = _split_button_id(it.get("button_id", ""))
+            if act == "pref":  # a tap on Email / WhatsApp / Call under the last question: the same answer as typing it
+                if bsid in ("email", "whatsapp", "call") and await _chat_text(phone, bsid, sid, client, out, answer_channel=True):
+                    continue
+                out["ignored"] += 1
+                continue
             sid = bsid or sid
             with _lock:
                 known = _known(_load(), sid)
@@ -479,7 +484,8 @@ async def handle_payload(payload: dict, client: W.WhatsAppClient | None = None) 
     return out
 
 
-async def _chat_text(phone: str, text: str, sid: str | None, client: W.WhatsAppClient, out: dict, focus: str | None = None) -> bool:
+async def _chat_text(phone: str, text: str, sid: str | None, client: W.WhatsAppClient, out: dict, focus: str | None = None,
+                     answer_channel: bool = False) -> bool:
     """Any inbound text goes to the chat brain; its reply goes back as a WhatsApp text. False = brain unavailable, the
     keyword parser takes over (yes / no / new times), so the lane never goes silent."""
     bid = _business_for(sid)
@@ -490,6 +496,8 @@ async def _chat_text(phone: str, text: str, sid: str | None, client: W.WhatsAppC
             d = _load()
             awaiting = d["awaiting_edit"].pop(phone, None)
             _save(d)
+        if answer_channel:  # a button tap is an answer even when the session lost its stage (restart, stale message)
+            chat_session(phone)["stage"] = "channel"
         reply, acts = await chat_turn(phone, text, bid, awaiting or focus)
     except Exception as e:
         log.warning("chat brain failed on WhatsApp (%s), keyword parser", type(e).__name__)
@@ -502,9 +510,45 @@ async def _chat_text(phone: str, text: str, sid: str | None, client: W.WhatsAppC
                 d = _load(); d["decided"][dec["suggestion_id"]] = dec["action"]; _save(d)
             out["decisions"].append(dec)
     if reply:
-        client.send_text(phone, reply)
+        sess = chat_session(phone)
+        if sess.get("offer") == "channel" and sess.get("stage") == "channel":
+            _send_channel_question(client, phone, reply, sess)
+        else:
+            client.send_text(phone, reply)
         out["replies"] += 1
     return True
+
+
+def buttons_on() -> bool:
+    """Same switch the opener uses: WA_BUTTONS=0 sends plain text with a reply line instead of buttons."""
+    W.load_env()
+    return (os.environ.get("WA_BUTTONS") or "1").strip() != "0"
+
+
+def _send_channel_question(client: W.WhatsAppClient, phone: str, reply: str, sess: dict) -> None:
+    """The last question of the conversation, "how do you want me to reach you next time?", as an interactive message
+    with three buttons (pref:email, pref:whatsapp, pref:call), or plain text with a reply line when WA_BUTTONS=0."""
+    from kaiku.chat import flow  # type: ignore
+    bid = DEFAULT_BUSINESS
+    try:
+        from kaiku import store  # type: ignore
+        sid = (sess.get("focus") or _load()["latest"].get(phone))
+        bid = _business_for(sid) or DEFAULT_BUSINESS
+        lang = flow._lang(bid)
+    except Exception:
+        lang = "en"
+    sess["offer"] = None
+    if buttons_on():
+        btns = [(f"pref:{ch}", title) for ch, title in M.channel_choices(lang)]
+        q = M.channel_question_text(lang)
+        body = reply
+        if len(body) > 1000 and reply.endswith(q):
+            client.send_text(phone, reply[: -len(q)].strip())
+            body = q
+        r = client.send_buttons(phone, body[:1024], btns)
+        if r.get("ok"):
+            return
+    client.send_text(phone, f"{reply} {M.channel_reply_line(lang)}")
 
 
 def send_receipt(phone: str, apply_result: dict, client: W.WhatsAppClient | None = None) -> dict:

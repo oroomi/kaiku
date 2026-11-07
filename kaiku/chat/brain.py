@@ -216,7 +216,9 @@ async def respond(bid: str, sess: dict, message: str) -> tuple[str, list]:
     lang = "fi" if biz and getattr(biz, "owner_language", "en") == "fi" else "en"
     items = F.get_feed(bid).get("suggestions", [])
     turn = Turn(bid, sess)
-    det = await flow.handle(turn, sess, message) if lang != "fi" else None
+    det = await flow.channel_turn(bid, sess, message)  # the last question of a conversation, any language
+    if det is None and lang != "fi":
+        det = await flow.handle(turn, sess, message)
     if det is not None:
         return det, turn.actions
     reply = None

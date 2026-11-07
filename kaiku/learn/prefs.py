@@ -70,6 +70,49 @@ def get_prefs(business_id: str) -> dict:
     return load().get(business_id, {"edits": {}, "edits_by_weekday": {}, "declines": {}, "standing_permission": None})
 
 
+CHANNELS = ("email", "whatsapp", "call")
+_CH_NAME_EN = {"email": "email", "whatsapp": "WhatsApp", "call": "a call"}
+_CH_NAME_FI = {"email": "sähköposti", "whatsapp": "WhatsApp", "call": "puhelu"}
+_CH_WORDS = {"email": ("email", "e-mail", "mail", "sähköposti", "sahkoposti", "sähköpostilla", "sahkopostilla", "mailiin"),
+             "whatsapp": ("whatsapp", "whats app", "whatsap", "wa", "whatsappilla", "whatsappiin"),
+             "call": ("call", "phone", "ring", "call me", "phone call", "a call", "by call", "by phone", "soita", "puhelu",
+                      "puhelimella", "soitto", "soittaa")}
+
+
+def parse_channel(text: str) -> str | None:
+    """'email' | 'whatsapp' | 'call' from the owner's own words, None for anything else (sms is none of the three)."""
+    t = re.sub(r"[^\w\s-]", " ", (text or "").lower())
+    t = re.sub(r"\s+", " ", t).strip()
+    t = re.sub(r"^(?:by|via|through|on|please|just|use|with|prefer|i prefer|i d prefer|id prefer|i would prefer|" r"i want|i d like|id like)\s+", "", t)
+    t = re.sub(r"^(?:by|via|through|on|please|just|use|with)\s+", "", t)
+    if not t or len(t.split()) > 5:
+        return None
+    hits = {ch for ch, ws in _CH_WORDS.items() for w in ws if re.search(r"(?<!\w)" + re.escape(w) + r"(?!\w)", t)}
+    return next(iter(hits)) if len(hits) == 1 else None
+
+
+def get_contact_channel(business_id: str) -> str | None:
+    """How the owner wants to be reached first next time: 'email' | 'whatsapp' | 'call' | None (never asked / not answered)."""
+    v = load().get(business_id or "", {}).get("contact_channel")
+    return v if v in CHANNELS else None
+
+
+def set_contact_channel(business_id: str, channel: str, said: str = "") -> dict:
+    """Store the owner's preferred first channel (persisted with the other prefs, wiped by the same reset) and emit the
+    learn event. The detail carries the owner's own words."""
+    if channel not in CHANNELS:
+        raise ValueError("channel must be one of " + ", ".join(CHANNELS))
+    with _lock:
+        allp = load()
+        p = allp.setdefault(business_id, {"edits": {}, "edits_by_weekday": {}, "declines": {}, "standing_permission": None})
+        p["contact_channel"] = channel
+        write_json_atomic(_file(), allp)
+    _emit(business_id, {}, f"Opittu: haluaa jatkossa yhteydenoton: {_CH_NAME_FI[channel]}",
+          f"Learned: prefers {_CH_NAME_EN[channel] if channel != 'call' else 'a call'} next time",
+          {"channel": channel, "said": (said or "")[:200]})
+    return {"contact_channel": channel}
+
+
 def _emit(business_id, suggestion, fi, en, detail):
     try:
         from kaiku import events  # type: ignore
