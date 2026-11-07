@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Kaiku, FIWARE in the chain{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/fiware.css?v={{ asset_v() }}">{% endblock %}
+{% block content %}
+<div class="fw" data-entity="{{ entity_id }}">
+  <header class="fw-hero glass">
+    <span class="mono ttl">FIWARE OPEN INNOVATION AWARD</span>
+    <h1>Kaiku keeps one truth in an NGSI-LD broker.</h1>
+    <p class="gloss">Read-only. Every value below is read from the live Orion-LD broker when this page loads, with the time of the read. The demo entity is fictional (Furry Paw Vet Clinic, sandbox). <span class="mono" id="hero-state">...</span></p>
+  </header>
+
+  <section class="glass fw-sec" id="s1" aria-labelledby="h1s">
+    <div class="sec-head"><span class="mono" id="h1s">1 / ONE BUSINESS, FIVE DATASETIDS, ONE TRUTH</span><span class="mono read" id="r1">read at ...</span></div>
+    <p class="gloss">Five sources disagree about Christmas Eve. Each writes its own instance of the same attribute <code>holidayHours</code>, told apart by <code>datasetId</code>. The instance without a datasetId is the default: the resolved truth.</p>
+    <p class="mono offline" id="off1" hidden></p>
+    <div class="tbl" id="ds-table" role="table" aria-label="holidayHours instances">
+      <p class="empty">Reading the broker...</p>
+    </div>
+    <div class="row-actions">
+      <button class="ghost" id="raw-toggle" type="button" aria-expanded="false">Show raw NGSI-LD JSON</button>
+      <code class="tech" id="entity-url">GET /api/fiware/entity?id={{ entity_id }}</code>
+    </div>
+    <pre class="raw" id="raw" hidden></pre>
+  </section>
+
+  <section class="glass fw-sec" id="s2" aria-labelledby="h2s">
+    <div class="sec-head"><span class="mono" id="h2s">2 / THE CHAIN IN THE BROKER</span><span class="mono read" id="r2">read at ...</span></div>
+    <p class="gloss">Detect is a subscription firing. Suggest is a proposed instance. Decide is the owner's tap writing the default instance.</p>
+    <p class="mono offline" id="off2" hidden></p>
+    <ul class="subs" id="subs"><li class="empty">Reading the broker...</li></ul>
+    <div class="strip-head"><span class="mono">LAST BROKER EVENTS</span><span class="mono live" id="conn"><i></i><span>connecting</span></span></div>
+    <ol class="evs" id="evs"></ol>
+    <p class="empty" id="evs-empty">No broker step has happened yet. Run the chain from the owner page and each broker step lands here as it happens.</p>
+  </section>
+
+  <section class="glass fw-sec" id="s3" aria-labelledby="h3s">
+    <div class="sec-head"><span class="mono" id="h3s">3 / AN AI AGENT OVER NGSI-LD, WITH A HUMAN GATE</span><span class="mono read" id="r3">read at ...</span></div>
+    <p class="gloss">ngsi-ld-mcp is an MCP server we wrote for any NGSI-LD broker. It is mounted on this host at <code>/mcp</code>.</p>
+    <p class="mono offline" id="off3" hidden></p>
+    <ul class="tools" id="tools"><li class="empty">Reading the tool list...</li></ul>
+    <p class="mono sub-label">LIVE READ-ONLY CALL</p>
+    <p class="tech" id="mcp-call">...</p>
+    <pre class="raw show" id="mcp-out">...</pre>
+    <p class="mono sub-label">THE HUMAN APPROVAL MODEL</p>
+    <ol class="gate">
+      <li>An agent can only write a <b>proposed</b> instance (<code>datasetId ...:kaiku:proposed</code>) with its reason. Nothing physical or published happens without the owner's yes.</li>
+      <li>The owner's yes is the only call that writes the <b>default</b> instance, with a named approver. On the public endpoint approve and reject are hidden from the agent.</li>
+      <li>The broker notification then applies it: the change is pushed to the business listing. The broker holds both instances, so it is the audit log.</li>
+    </ol>
+  </section>
+
+  <section class="glass fw-sec" id="s4" aria-labelledby="h4s">
+    <div class="sec-head"><span class="mono" id="h4s">4 / SAME BROKER, CITY DATA</span><span class="mono read" id="r4">read at ...</span></div>
+    <p class="live-line"><span>Buses <b id="c-bus">...</b></span><span>ships <b id="c-ship">...</b></span><span>weather <b id="c-wx">...</b></span></p>
+    <p class="gloss" id="aura-note">Aura reads Turku buses (Foli), ships (Digitraffic AIS) and weather (Open-Meteo) from the same Orion-LD. <span id="aura-cap"></span></p>
+    <p><a class="dlink" href="/aura">Open Aura, the live map</a></p>
+  </section>
+
+  <section class="glass fw-sec" id="s5" aria-labelledby="h5s">
+    <div class="sec-head"><span class="mono" id="h5s">5 / JUDGE'S CURL AND THE MODEL</span><span class="mono read" id="r5">read at ...</span></div>
+    <p class="mono sub-label">BROKER VERSION <span id="ver" class="ver">...</span></p>
+    <pre class="cmd">curl -s http://127.0.0.1:1026/version</pre>
+    <p class="mono sub-label">THE ENTITY, ATTRS=HOLIDAYHOURS</p>
+    <pre class="cmd">curl -s 'http://127.0.0.1:1026/ngsi-ld/v1/entities/{{ entity_id }}?attrs=holidayHours' \
+  -H 'Accept: application/json' \
+  -H 'Link: &lt;{{ sdm_context }}&gt;; rel="http://www.w3.org/ns/json-ld#context"; type="application/ld+json"' | python3 -m json.tool</pre>
+    <p class="mono sub-label">THE SAME READ THROUGH THIS PAGE'S PROXY (PUBLIC, GET ONLY)</p>
+    <pre class="cmd" id="proxy-curl">curl -s '{{ public_url }}/api/fiware/entity?id={{ entity_id }}&amp;attrs=holidayHours'</pre>
+    <p class="mono sub-label">THE MODEL</p>
+    <ul class="model">
+      <li><b>Type</b> <code>Store</code> from Smart Data Models <code>dataModel.PointOfInterest</code>, with <code>name</code>, <code>address</code>, <code>location</code>, <code>category</code> and <code>openingHoursSpecification</code> (schema.org day URIs).</li>
+      <li><b>@context</b> in the Link header: <code>{{ sdm_context }}</code> and <code>{{ core_context }}</code>.</li>
+      <li><b>holidayHours</b> is a multi-instance Property: one instance per source, each with <code>datasetId</code> <code>{{ dataset_prefix }}{lastyear|website|google|peers|proposed}</code> and <code>observedAt</code>. The instance without datasetId is the default. <code>holidayHours</code> is ours, not in the SDM context (Orion expands it to its default vocabulary).</li>
+    </ul>
+    <p class="mono sub-label">WHAT DID NOT WORK, SAID PLAINLY</p>
+    <ul class="model">
+      <li>Orion-LD (post-v1.12.0 build) accepts datasetId instances only when an entity is created. POST and PATCH on <code>/attrs</code>, upsert and batch answer 501. So we read, merge, delete and re-create the entity. Not atomic across processes.</li>
+      <li>The <code>q</code> filter on a key inside an object value is accepted but not evaluated. We subscribe on watched attributes and filter in our handler.</li>
+      <li>A newly added attribute does not fire a subscription, so the status attribute is seeded at creation.</li>
+      <li>The Yext write never depends on the broker: if it is down the chain continues on an in-memory fallback and says "broker offline".</li>
+    </ul>
+  </section>
+
+  <section class="glass fw-sec" id="s6" aria-labelledby="h6s">
+    <div class="sec-head"><span class="mono" id="h6s">6 / HOW THIS MAPS TO THE AWARD</span></div>
+    <ul class="crit mono">
+      <li><b>Integration 35</b> <span>the broker is the spine of the chain: section 1 (five datasetIds), section 2 (subscriptions fire, proposal and decision written)</span></li>
+      <li><b>Technical 30</b> <span>section 5 (Link-header context, SDM model, Orion limits found and worked around) and section 3 (MCP server, human gate)</span></li>
+      <li><b>Innovation 20</b> <span>section 1 and 3 (source disagreement as datasetId, proposal and approval as two instances of one attribute)</span></li>
+      <li><b>Practical 15</b> <span>section 2 (holiday hours reach the listing) and section 4 (the same broker serves city data)</span></li>
+    </ul>
+    <p class="gloss">Narrative: <a class="dlink" href="https://github.com/oroomi/kaiku/blob/main/docs/fiware.md" target="_blank" rel="noopener">docs/fiware.md</a> in the repository.</p>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/fiware.js?v={{ asset_v() }}" defer></script>{% endblock %}

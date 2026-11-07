@@ -65,6 +65,9 @@ flowchart LR
 ```
 The broker is the spine: each source writes its own instance of `holidayHours` (a `datasetId` per source); a subscription fires Detect, the engine adds a `proposed` instance, the owner's answer writes the default instance, and Apply writes Yext. The Yext write never depends on the broker (`broker/fallback.py`). Apply uses the Yext Management API directly; the Yext Suggestions API returns 403 for the sandbox key ([docs/apply.md](docs/apply.md)). Details: [ARCHITECTURE.md](ARCHITECTURE.md).
 
+## FIWARE
+Orion-LD is the spine of the chain: one business, five datasetIds, one truth (`holidayHours` has one instance per source, the default instance is the owner-approved truth), subscriptions that fire the chain, and an MCP agent (`ngsi-ld-mcp/`) that can propose but never decide. Open **[/fiware](https://kaiku.hankintaviikko.fi/fiware)** (read-only, every figure read live) and read the narrative in **[docs/fiware.md](docs/fiware.md)**; the broker details are in [docs/broker.md](docs/broker.md).
+
 ## Evaluation
 Honest answer: on 10 cases we wrote ourselves, wrong-suggestion rate 0.0 and abstain rate 0.2. That is a self-consistency check, not accuracy; we have no Fonecta dataset or scoring script yet. Reliability in the product: a confidence gate (below 0.6 Kaiku asks and proposes nothing), "no change" shown as a note, and a question instead of a guess when sources conflict. See [EVAL.md](EVAL.md).
 
