@@ -250,10 +250,12 @@
       const v = state.vehicles.get(id);
       if (!v) { state.vehicles.set(id, { kind, from: [lon, lat], to: [lon, lat], t0: now, h, trail: [[lon, lat]] }); return; }
       if (h != null) v.h = h;
-      if (far(v.to, [lon, lat])) { // > 600 m between two reads: a GPS jump or a reused id; snap, no tween, no trail
+      if (far(v.to, [lon, lat])) { // > 300 m between two reads (measured max 180 m in 11 s on 7 Nov): a GPS jump or a reused id; snap, no tween, no trail
         v.from = v.to = [lon, lat]; v.t0 = now; v.trail = [[lon, lat]]; return;
       }
-      v.from = pos(v, now); v.to = [lon, lat]; v.t0 = now;
+      v.from = pos(v, now); v.to = [lon, lat];
+      v.dur = Math.max(100, Math.min(DUR, now - v.t0)); // tween over the measured read interval, so the arrow never lags its data
+      v.t0 = now;
       const last = v.trail[v.trail.length - 1];
       if (!last || last[0] !== lon || last[1] !== lat) { v.trail.push([lon, lat]); if (v.trail.length > 6) v.trail.shift(); }
     });
@@ -269,10 +271,10 @@
   }
   function far(a, b) {
     const dx = (a[0] - b[0]) * 55.3, dy = (a[1] - b[1]) * 111.3; // km at 60.45 N
-    return dx * dx + dy * dy > 0.36;
+    return dx * dx + dy * dy > 0.09;
   }
   function pos(v, now) {
-    const k = Math.max(0, Math.min(1, (now - v.t0) / DUR)); // clamped: a clock that steps back must not extrapolate
+    const k = Math.max(0, Math.min(1, (now - v.t0) / (v.dur || DUR))); // clamped: a clock that steps back must not extrapolate
     return [v.from[0] + (v.to[0] - v.from[0]) * k, v.from[1] + (v.to[1] - v.from[1]) * k];
   }
   let lastVeh = 0, lastTrail = 0;
