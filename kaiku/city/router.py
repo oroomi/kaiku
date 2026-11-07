@@ -116,7 +116,7 @@ def _counts(rows: list[dict]) -> dict:
 def christmas() -> dict:
     now = datetime.now(TZ)
     d = (date(now.year, 12, 24) - now.date()).days
-    return {"date": HOLIDAY, "days": d, "local_time": now.strftime("%H:%M")}
+    return {"date": HOLIDAY, "days": d, "local_time": now.strftime("%H:%M"), "now": now.isoformat()}
 
 
 async def read_stores() -> dict:

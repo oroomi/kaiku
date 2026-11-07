@@ -115,8 +115,9 @@
 
   // ---------------------------------------------------------------- HUD
   function setText(id, t, cls) { const el = $(id); if (!el) return; el.textContent = t; if (cls !== undefined) el.className = cls; }
+  let skew = 0; // server clock minus page clock, so the HUD time is the server's (also under a recorder's virtual clock)
   function clock() {
-    const t = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Helsinki", hour: "2-digit", minute: "2-digit" }).format(new Date());
+    const t = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Helsinki", hour: "2-digit", minute: "2-digit" }).format(new Date(Date.now() + skew));
     setText("h-time", "TURKU " + t);
   }
 
@@ -184,6 +185,7 @@
       const d = await (await fetch("/api/city/stores")).json();
       state.source = d.source; state.counts = d.counts;
       state.rows = new Map(d.rows.map((r) => [r.id, r]));
+      if (d.holiday && d.holiday.now) { const sv = Date.parse(d.holiday.now); if (!isNaN(sv)) { skew = sv - Date.now(); clock(); } }
       const days = d.holiday && d.holiday.days;
       setText("h-xmas", typeof days === "number" ? (days > 0 ? `CHRISTMAS EVE IN ${days} DAYS` : days === 0 ? "CHRISTMAS EVE TODAY" : "CHRISTMAS EVE 24.12.") : "CHRISTMAS EVE: NO DATA");
       renderCounts(); pushStores();
