@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Record the /city demo: fly-in, idle, 8 room answers through the real API (each a new visitor), the dots turning
-green from Orion-LD notifications. Playwright 1920x1080 headless (SwiftShader WebGL) -> ffmpeg H.264.
+green from Orion-LD notifications. Playwright 1920x1080 headless (SwiftShader WebGL) -> ffmpeg H.264, 20 fps.
 
 Two modes. --mode frames (default): SwiftShader on this 2-core box renders ~1-4 fps, so the page runs on Playwright's
 virtual clock (page.clock) and is stepped 40 ms per frame, one screenshot per frame, 25 fps out. Every frame is the real
@@ -47,7 +47,7 @@ def room_answer(base: str, answer: str) -> dict:
 
 def frames_mode(a, w, h, tmp: Path) -> dict:
     import threading
-    fps = 25
+    fps = 20
     step = 1000 // fps
     with sync_playwright() as p:
         browser = p.chromium.launch(args=ARGS)

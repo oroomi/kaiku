@@ -125,10 +125,10 @@ most 10 features. "Christmas Eve in N days" uses the real Helsinki date (the veh
 not the chain's time-travel clock).
 
 ## Video
-`bin/record_city.py` -> `/root/hack/shots/city_demo.mp4` (1920x1080, 25 fps): fly-in, idle, 8 room answers through the API
+`bin/record_city.py` -> `/root/hack/shots/city_demo.mp4` (1920x1080, 20 fps): fly-in, idle, 8 room answers through the API
 2 s apart (each a new cookie jar), 10 s more. Headless SwiftShader WebGL measured 0.8 fps at 1920x1080 and 3.8 fps at
 1280x720 on this 2-core VPS (load 8), so a realtime capture was a slideshow. The default `--mode frames` runs the page on
-Playwright's virtual clock and screenshots every 40 ms of page time. Every frame is the real page and the answers,
+Playwright's virtual clock and screenshots every 50 ms of page time. Every frame is the real page and the answers,
 notifications and SSE pushes are real; vehicle motion is time-compressed because the broker positions refresh in wall time
 while frames render. `--mode realtime` uses `record_video_dir` for a machine with a GPU.
 

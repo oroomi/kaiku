@@ -249,7 +249,11 @@
       const [id, lon, lat, h] = a; seen.add(id);
       const v = state.vehicles.get(id);
       if (!v) { state.vehicles.set(id, { kind, from: [lon, lat], to: [lon, lat], t0: now, h, trail: [[lon, lat]] }); return; }
-      v.from = pos(v, now); v.to = [lon, lat]; v.t0 = now; if (h != null) v.h = h;
+      if (h != null) v.h = h;
+      if (far(v.to, [lon, lat])) { // > 600 m between two reads: a GPS jump or a reused id; snap, no tween, no trail
+        v.from = v.to = [lon, lat]; v.t0 = now; v.trail = [[lon, lat]]; return;
+      }
+      v.from = pos(v, now); v.to = [lon, lat]; v.t0 = now;
       const last = v.trail[v.trail.length - 1];
       if (!last || last[0] !== lon || last[1] !== lat) { v.trail.push([lon, lat]); if (v.trail.length > 6) v.trail.shift(); }
     });
@@ -262,6 +266,10 @@
     setText("h-wx", w && typeof w.temp === "number" ? `${w.temp.toFixed(1)} °C ${(w.wtype || "").toUpperCase()}` : "WEATHER: NO DATA");
     if (d.source && d.source !== "broker") setText("h-buses", `${fmt.format((d.buses || []).length)} BUSES (CACHE)`);
     void c;
+  }
+  function far(a, b) {
+    const dx = (a[0] - b[0]) * 55.3, dy = (a[1] - b[1]) * 111.3; // km at 60.45 N
+    return dx * dx + dy * dy > 0.36;
   }
   function pos(v, now) {
     const k = Math.max(0, Math.min(1, (now - v.t0) / DUR)); // clamped: a clock that steps back must not extrapolate
@@ -283,7 +291,7 @@
       if (v.kind !== "bus") continue;
       const pts = [...v.trail.slice(0, -1), pos(v, now)];
       for (let i = pts.length - 1, age = 0; i > 0; i--, age++)
-        f.push({ type: "Feature", properties: { age }, geometry: { type: "LineString", coordinates: [pts[i - 1], pts[i]] } });
+        if (!far(pts[i - 1], pts[i])) f.push({ type: "Feature", properties: { age }, geometry: { type: "LineString", coordinates: [pts[i - 1], pts[i]] } });
     }
     map.getSource("trails").setData({ type: "FeatureCollection", features: f });
   }
