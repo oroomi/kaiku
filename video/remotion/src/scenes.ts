@@ -13,7 +13,7 @@ export const SCENES: Scene[] = [
   {id: 'r_email', kind: 'phone', src: 'appr_1080/phone_email.png', from: 0, dur: 3.2, still: true, caps: [{id: 'r0', a: 0.15, b: 3.1, text: 'No login: an email with a decision link.'}]},
   {id: 'r_wa', kind: 'phone', src: 'appr_1080/phone_wa.png', from: 0, dur: 3.2, still: true, caps: [{id: 'r1', a: 0.15, b: 3.1, text: 'No reply: WhatsApp, answer in your own words.'}]},
   {id: 'r_call', kind: 'phone', src: 'appr_1080/phone_call.png', from: 0, dur: 3.2, still: true, caps: [{id: 'r2', a: 0.15, b: 3.1, text: 'Still no reply: Kaiku calls.'}]},
-  {id: 'reliab', kind: 'desk', src: 'appr_1080/F.mp4', from: 4, dur: 9, sample: true, caps: [{id: 'f1', a: 0.2, b: 4.2, text: 'Father's Day: no change, with the reason.'}, {id: 'f2', a: 4.6, b: 8.8, text: 'Closed on Sundays, not a public holiday.'}]},
+  {id: 'reliab', kind: 'desk', src: 'appr_1080/F.mp4', from: 4, dur: 9, sample: true, caps: [{id: 'f1', a: 0.2, b: 4.2, text: "Father's Day: no change, with the reason."}, {id: 'f2', a: 4.6, b: 8.8, text: 'Closed on Sundays, not a public holiday.'}]},
   {id: 'fiware', kind: 'desk', src: 'appr_1080/G.mp4', from: 0, dur: 8, sample: true, caps: [{id: 'g1', a: 0.3, b: 3.9, text: 'Orion-LD is the spine of the chain.'}, {id: 'g2', a: 4.2, b: 7.9, text: 'Subscription fires for 24.12. in the live view.'}]},
   {id: 'aura', kind: 'desk', src: 'cap/aura.mp4', from: 6, dur: 8, caps: [{id: 'u1', a: 0.3, b: 7.7, text: 'Aura: live Turku buses and ships, same broker.'}]},
   {id: 'roomx', kind: 'desk', src: 'cap/room.mp4', from: 2, dur: 6, caps: [{id: 'q1', a: 0.3, b: 5.7, text: 'Scan the QR: own one Turku business.'}]},
