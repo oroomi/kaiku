@@ -16,12 +16,12 @@ Fonecta: Connect Suggests, Customer Approves
 FIWARE (tick). Nothing else needs ticking for the product; ElevenLabs and Anthropic go under "Built with".
 
 ### One-line pitch / public summary line (no limit stated; 128 characters here)
-The vet is closed on Christmas Eve. Google does not know. Kaiku asks the owner, and the owner answers in one tap.
+The vet closes early on Christmas Eve. Google does not know. Kaiku asks the owner, and the owner answers in one tap.
 
 (Alternative, 137 characters: Connect suggests, the customer approves: Kaiku runs the whole holiday-hours chain, by email, WhatsApp or a phone call, no login.)
 
 ### Public summary, what voters see (no limit stated; about 480 characters)
-Small business owners forget to add holiday hours, so Google shows the wrong ones and customers turn up at a closed door. Kaiku notices the missing hours, suggests last year's with the exact reason, and reaches the owner by email, then WhatsApp, then a phone call. The owner taps Accept or just says "make it 10-14". We write the change to Fonecta's Yext sandbox, read it back, and promise to update the information everywhere. It learns how each owner likes to be reached. It runs live, no login.
+Small business owners forget to add holiday hours, so Google shows the wrong ones and customers turn up at a closed door. Kaiku notices the missing hours, suggests last year's with the exact reason, and reaches the owner by email, then WhatsApp, then a phone call. The owner taps Accept or just says "make it 10-14". We write the change to Fonecta's Yext sandbox, read it back, and tell the owner we will update their information everywhere. It learns how each owner likes to be reached. It runs live, no login.
 
 ### Description, short (no limit stated; about 300 characters)
 Kaiku runs Fonecta's whole chain for holiday hours: detect the missing hours, suggest with the reason, contact the owner by email, WhatsApp or a phone call, decide in one tap or in plain words, apply to the Yext sandbox with a read-back. A FIWARE Orion-LD broker is the spine. Live at kaiku.hankintaviikko.fi.
