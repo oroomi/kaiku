@@ -16,6 +16,15 @@ Checked against the live product on 7 Nov 2026 01:50Z (https://kaiku.hankintavii
 
 Description (100 words): Kaiku runs Fonecta's whole chain for holiday hours. A FIWARE Orion-LD subscription detects that Christmas Eve hours are missing. Kaiku suggests last year's hours with the reason, and asks one question instead of guessing when it is unsure. The owner is reached by email, then a WhatsApp message with Accept and Discard buttons, then a call, and answers in plain words or one tap, no login. The change is written to the team's Yext sandbox entity and read back. Kaiku learns from edits and declines and stores standing permission. Honest eval: 10 cases we wrote, not Fonecta's data; 362 tests pass.
 
+## FIWARE lines for the form
+| Field | Text |
+|---|---|
+| Partner technologies | FIWARE (NGSI-LD, Orion-LD context broker, Smart Data Models) |
+| One-line architecture | Orion-LD is the chain's spine: a subscription detects missing holiday hours, Kaiku writes its proposal as a `datasetId` instance of `holidayHours`, the owner's tap writes the default instance, and the broker notification applies it to the listing; an MCP server (`ngsi-ld-mcp`) lets AI agents propose but only a human decide. |
+| FIWARE page (live demo, read-only) | https://kaiku.hankintaviikko.fi/fiware |
+| Narrative for the FIWARE judge | docs/fiware.md in the repo |
+| Repo link | github.com/oroomi/kaiku (private until submission) |
+
 ## Slide 8, item by item
 | # | Fonecta asks for | Our answer | Where |
 |---|---|---|---|
