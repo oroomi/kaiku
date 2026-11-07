@@ -1,13 +1,13 @@
 # Final customer messages
 
-Fonecta slide 8 asks for "your final customer messages as text". These are the messages the product sends or says today (live at https://kaiku.hankintaviikko.fi, main 1b4ac90, 7 Nov 2026). Demo business: Furry Paw Vet Clinic, the **fictional** Yext sandbox entity SinceAI07; demo date 17.12.2026 (time travel); the owner's phone and email are the team's own. English is the demo language; Finnish versions for Finnish owners are in section 9.
+Fonecta slide 8 asks for "your final customer messages as text". These are the messages the product sends or says today (live at https://kaiku.hankintaviikko.fi, 7 Nov 2026). Demo business: Furry Paw Vet Clinic, the **fictional** Yext sandbox entity SinceAI07; demo date 17.12.2026 (time travel); the owner's phone and email are the team's own. English is the demo language; Finnish versions for Finnish owners are in section 9.
 
 How this file was made: every text below was printed by the product code, not typed by hand. WhatsApp opener: `kaiku.contact.ladder.chat_text_for(suggestion, buttons=True)`. Email: `kaiku.contact.email.build_message`. Chat lines: `kaiku.chat.flow` (`proposal`, `change_prompt`, `confirm_text`, `receipt`, `discard_text`, `RECURRING_Q`) fed with the live `GET /api/feed/furry-paw` cards. Call: `kaiku.contact.call.FIRST_MESSAGE`. Cold start and no-change: `kaiku.contact.messages` via the suggest engine. The Finnish appendix in section 9 is the output of `python -m kaiku.contact.messages` (which still writes the older plain-text layout; see the note there).
 
 ## The order the owner is reached
 1. Email with a one-tap decision link, no login (sent at once).
 2. After `EMAIL_ESCALATE_AFTER_S` (60 s in the live config) with no decision: the WhatsApp opener below, two buttons.
-3. After `WA_ESCALATE_AFTER_S` (36000 s in the live config, so the phone does not ring unprompted; code default 120): a call by Kaiku.
+3. After `WA_ESCALATE_AFTER_S` (600 s, ten minutes, in the live config; code default 120): a call by Kaiku, English for the demo.
 A decision on any channel cancels the next step.
 
 ## 1. Email (step 1)
@@ -93,7 +93,7 @@ Other cards, same shape:
 
 > Your description on Connect reads "vacination". Shall I correct it to "vaccination"? We'll update your information everywhere.
 >
-> (review card) The 3-star review has no reply yet, and it shows next to your listing. Shall I post this reply? "Thank you for sharing your feedback, and for your kind words about our staff. We understand that waiting 40 minutes for a booked appointment is frustrating, especially when you are caring for a pet. We appreciate you letting us know, and we are glad the team made your visit a more comfortable one."
+> (review card; the review is a labelled sample in the sandbox and which one is waiting changes) A review has no reply yet. Shall I post this reply? "Thank you for sharing your feedback, and for your kind words about our staff. We understand that waiting 40 minutes for a booked appointment is frustrating, especially when you are caring for a pet. We appreciate you letting us know, and we are glad the team made your visit a more comfortable one."
 
 (The review draft is written by the model from the sandbox review; the review text is sample data in Fonecta's sandbox.)
 

@@ -1,6 +1,6 @@
 # Data sources
 
-Slide 8 asks for 3 to 5 key data sources, where Connect would get them in production, and what did not work. The five that feed the holiday chain are in the table; the sections below give licence, use and failures for each. Three more sources (OpenStreetMap, Föli and Digitraffic, Open-Meteo) serve the Turku map, the room and the FIWARE entry and are listed after. Checked against the running product on 7 Nov 2026 (main 1b4ac90).
+Slide 8 asks for 3 to 5 key data sources, where Connect would get them in production, and what did not work. The five that feed the holiday chain are in the table; the sections below give licence, use and failures for each. Three more sources (OpenStreetMap, Föli and Digitraffic, Open-Meteo) serve the Turku map, the room and the FIWARE entry and are listed after. Checked against the running product on 7 Nov 2026 about 11:25Z. Fonecta gave no dataset format or sample during the event, so every file named here is ours or public.
 
 ## The five key sources at a glance
 | # | Source | What it tells the chain | Where Connect would get it in production | What did not work |
@@ -61,7 +61,7 @@ Slide 8 asks for 3 to 5 key data sources, where Connect would get them in produc
 - Nager.Date has no uudenvuodenaatto.
 - Our Orion-LD build rejects `datasetId` writes after the entity is created (501), so the client deletes and re-creates the entity. Subscriptions with `q` on an object value do not match, so the router filters.
 - The Yext sandbox has no publishers, so "where it shows" is an honest statement, not a live sync.
-- The call lane first failed on ElevenLabs key permissions (401 missing_permissions) and on Zadarma number verification; both were fixed on 6 Nov and the call was placed and answered at 21:24Z and 21:46:53Z (`data/call_log.jsonl`, docs/call.md).
+- The call lane first failed on ElevenLabs key permissions (401 missing_permissions) and on Zadarma number verification; both were fixed on 6 Nov and the call was placed and answered at 21:24Z and approved on the phone at 21:46:53Z, and placed again on 7 Nov 10:18Z and 10:23Z (`data/call_log.jsonl` on the demo host, docs/call.md).
 - Serper: works, but a fictional business has no Google listing, so the Google signal is untested on a real match.
 
 ## Bonus: live sources that replaced dataset files, and what we learned
@@ -70,8 +70,8 @@ Slide 8 asks for at least one dataset file replaced by a live source. Four live 
 | File it replaces or avoids | Live source | Receipt | What we learned |
 |---|---|---|---|
 | Holiday list | Nager.Date `PublicHolidays/{year}/FI`, rewritten into `data/holidays_fi_2026.json` (38 dates, 2025 to 6.1.2027); `curl` of the API returned 200 on 7 Nov | file `source` field names the API; `kaiku/detect/holidays.py::build_cache` | the live source has no New Year's Eve and no flag days, so we add them; it needs a 5 s timeout and the bundled file as fallback to stay demo-safe |
-| The clinic's hours, holiday rows, description, reviews as the owner sees them | Yext sandbox entity SinceAI07 read through the Management API for the "On Fonecta now" panel and the listing score | `GET /api/listing/furry-paw` returns entity SinceAI07 with `read_at`; `GET /api/score/furry-paw` returns score 45 (3 of 7 checks) computed from it | the sandbox had no description or reviews, so the team wrote labelled samples; the sandbox has no publishers, so "where it shows" is a statement, not a syndication; the write is real and we read it back |
+| The clinic's hours, holiday rows, description, reviews as the owner sees them | Yext sandbox entity SinceAI07 read through the Management API for the "On Fonecta now" panel and the listing score | `GET /api/listing/furry-paw` returns entity SinceAI07 with `read_at`; `GET /api/score/furry-paw` returns a score (40, 3 of 7 checks at the time of writing; it moves) computed from it | the sandbox had no description or reviews, so the team wrote labelled samples; the sandbox has no publishers, so "where it shows" is a statement, not a syndication; the write is real and we read it back |
 | 40 placeholder points on the map | OpenStreetMap via Overpass: 813 Turku businesses, `fallback: false`, fetched 6 Nov 19:15Z | `data/turku_businesses.json` (`count` 813) | Overpass is often at capacity, so the loader tries three mirrors with backoff; only 2 of 813 mention 24 Dec, so history is never invented |
-| No file at all (no static sample exists for these) | Föli SIRI (buses), Digitraffic AIS (ships), Open-Meteo (weather) into the Orion-LD broker | `GET /api/aura/status` on 7 Nov 01:55Z: ships 44, weather 1, buses 0 (night, no buses running) | Digitraffic needs gzip and a `Digitraffic-User` header; Föli sends no heading, so we derive it from movement |
+| No file at all (no static sample exists for these) | Föli SIRI (buses), Digitraffic AIS (ships), Open-Meteo (weather) into the Orion-LD broker | `GET /api/aura/status` on 7 Nov 11:22Z: buses 156, ships 41, weather 1 (the numbers move) | Digitraffic needs gzip and a `Digitraffic-User` header; Föli sends no heading, so we derive it from movement |
 
 The honest limit: the holiday history ("last year 9-13") is still a labelled sample, because the sandbox holds none. That is the one input a pilot with real Connect data would replace first.

@@ -33,7 +33,7 @@ def env(tmp_path, monkeypatch):
         monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("ELEVENLABS_VOICE_ID", "voice1")
     monkeypatch.setenv("PUBLIC_URL", "https://x.example")
-    monkeypatch.setenv("OWNER_WHATSAPP", "+358451291684")
+    monkeypatch.setenv("OWNER_WHATSAPP", "+358401234567")
     return p
 
 
@@ -111,11 +111,11 @@ def test_place_call_payload_and_log(env, tmp_path, monkeypatch):
     monkeypatch.setenv("ELEVENLABS_AGENT_ID", "ag_1")
     monkeypatch.setenv("ELEVENLABS_PHONE_NUMBER_ID", "ph1")
     f = Fake([(200, {"success": True, "conversation_id": "conv_1", "callSid": "x"})])
-    r = C.place_call(SUG, "+358 45 129 1684", api=C.Api("secretkey", f))
+    r = C.place_call(SUG, "+358 40 123 4567", api=C.Api("secretkey", f))
     assert r == {"ok": True, "conversation_id": "conv_1"}
     p = f.calls[0][3]
     assert f.calls[0][1].endswith(("/v1/convai/twilio/outbound-call", "/v1/convai/sip-trunk/outbound-call"))
-    assert p["to_number"] == "+358451291684" and p["agent_id"] == "ag_1" and p["agent_phone_number_id"] == "ph1"
+    assert p["to_number"] == "+358401234567" and p["agent_id"] == "ag_1" and p["agent_phone_number_id"] == "ph1"
     dv = p["conversation_initiation_client_data"]["dynamic_variables"]
     assert dv["holiday_name"] == "Christmas Eve" and dv["holiday_date"] == "December 24"
     assert dv["proposed_hours"] == "9 AM to 1 PM" and dv["suggestion_id"] == "sg-1" and dv["last_year"] == "9 AM to 1 PM"
@@ -144,7 +144,7 @@ def test_place_call_failure(env, monkeypatch):
 
 
 def test_dry_run_unconfigured(env):
-    assert C.place_call(SUG, "+358451291684", api=C.Api("k", Fake([]))) == {"ok": False, "reason": "call lane not configured"}
+    assert C.place_call(SUG, "+358401234567", api=C.Api("k", Fake([]))) == {"ok": False, "reason": "call lane not configured"}
 
 
 def test_ladder_signature_compat(env):

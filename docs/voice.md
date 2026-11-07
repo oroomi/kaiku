@@ -5,7 +5,7 @@ Hold space or the orb, speak, release. EN glosses in brackets.
 `POST /api/voice/stt` -> `POST /api/voice/ask` -> `POST /api/voice/tts` -> `<audio>` (unlocked on the first press for iOS). The browser never sees a key.
 Page change: if an action navigates elsewhere, the answer and remaining actions wait in sessionStorage and the next page speaks and spotlights them.
 
-**Routes.** `/api/voice/stt` raw audio body, scribe_v1, 400 if empty/under 800 bytes, 413 over 6 MB. `/api/voice/tts` `{text}` -> audio/mpeg, eleven_flash_v2_5,
+**Routes.** `/api/voice/stt` raw audio body, scribe_v1, 400 if empty/under 800 bytes, 413 over 6 MB. `/api/voice/tts` `{text}` -> audio/mpeg, eleven_v4,
 cached by sha256(voice|model|format|text) in `data/tts_cache/` (self-ignoring), daily char cap `VOICE_TTS_DAILY_CHARS`. `/api/voice/ask` `{text,page,lang,history}` -> `{text, actions, tools, steps, ms}`.
 
 **Brain.** `brain.py`: Anthropic `claude-sonnet-5-5`, manual tool loop, max 6 steps, effort low. Actions are built server-side from the tools that ran (the model never writes

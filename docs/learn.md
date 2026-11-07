@@ -34,3 +34,6 @@ WhatsApp after `EMAIL_ESCALATE_AFTER_S`, then the call). `whatsapp` = WhatsApp f
 call first, then WhatsApp, then email. The first rung logs "Reaching the owner by WhatsApp first (their preference)" (or by
 call). A preference never bypasses the outbound safety: WhatsApp and email go through the guarded clients and the call rung
 is `call.place_call`, which still obeys `KAIKU_NO_CALL` and `outbound_allowed`.
+
+## Standing permission in the chain (7 Nov)
+When a standing permission covers a holiday, `apply_prefs` sets `auto_apply`; `kaiku/chain.py` then skips the contact and decide waits, applies the decision (`reason_chip: standing`), and sends the owner one WhatsApp line afterwards ("Under your standing permission I set ... everywhere Connect publishes. Reply with other hours if you want it changed."). Test: `tests/test_core.py::test_standing_permission_applies_without_asking`.

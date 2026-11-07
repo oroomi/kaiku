@@ -41,7 +41,7 @@ Sources fetched 6.11.2026: https://yrityksille.fonecta.fi (says Kontakti is now 
 Each entry has `kind` named|category and status `sandbox: written to the entity; in production Connect syncs this to <channel>`.
 
 ## Sandbox limitation and demo wording
-The sandbox has no publisher listings, so nothing syncs anywhere. The demo says: "Saved to the Yext entity just now, confirmed by reading it back. In production Connect passes it on to Google, Fonecta Caller, Finder, 020202 and the other channels." Never "now live on Google". Show the verified read-back and the snapshot/revert as the proof.
+The sandbox has no publisher listings, so nothing syncs anywhere. The demo says: "Saved to the Yext entity just now, confirmed by reading it back. In production we update your information everywhere." Never "now live on Google". Show the verified read-back and the snapshot/revert as the proof.
 
 ## Revert and reset
 `revert()` always sends `holidayHours` (as `[]` when the snapshot had none) and verifies by read-back, so rows written after the snapshot are removed. `reset_demo(entity_id)` removes all holiday rows, keeps regular hours, verifies, and returns the hours (for a demo-reset endpoint).
