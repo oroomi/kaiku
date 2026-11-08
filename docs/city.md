@@ -165,6 +165,12 @@ state, so production creates its own subscription on its next start.
   glow in the upper third (checked from 1280x720 stills: 18 ships and 23 buses inside the view).
 - Film timeline (frames mode, virtual s): 0-1.5 title on the globe, 1.5-8.5 flight, 8.5-14 landing + sentence, 14-30 the 8
   room answers 2 s apart, 30-39 harbour move, 39-48 hold. `--mode realtime` calls `harbour()` after the answers too.
+- Film v4 (8 Nov 01:04Z, burst box, test server 8231): `/root/hack/shots/city_demo_v4.mp4`, 961 frames, 48.05 s, 1920x1080,
+  20 fps, 12.5 MB, 8 of 8 answers ok, counter 8, no page errors, 0 cuts (scene > 0.25), pre-warm 10 s wall, render 405 s.
+  Pixels below luminance 20: 0.05-0.58 on every flight frame from 2.5 s on and on the harbour hold (0.10); the title and
+  first flight frames (0-2 s) read 0.63-0.89 because the globe sits in black space at zoom 1.6, not because tiles are missing.
+  Ship wakes are rare in the film: most ships lie at the quay, and a still ship gets no wake. Afterwards the 8231
+  subscription was deleted and `seed --force` reset the 8 Stores.
 
 ## What did not work / known edges
 - `q` on `holidayHoursStatus.status` is not evaluated by this Orion-LD build; the handler filters.
