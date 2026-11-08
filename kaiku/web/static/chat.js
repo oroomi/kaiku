@@ -31,7 +31,11 @@
     var b = el.querySelector(".b"), t = b.querySelector(".tg"); if (t) t.remove();
     b.insertAdjacentHTML("beforeend", tagFor(el._m));
   }
-  function toEnd() { requestAnimationFrame(function () { thread.scrollTop = thread.scrollHeight; }); }
+  /* follow the end of the conversation only while the reader is already there; a reader who scrolled up to re-read
+     is never pulled back down by a typing dot, a live note or a chip (8 Nov: "when you scroll inside the chat it stops scrolling") */
+  var stick = true;
+  thread.addEventListener("scroll", function () { stick = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 60; }, { passive: true });
+  function toEnd(force) { if (!force && !stick) return; requestAnimationFrame(function () { thread.scrollTop = thread.scrollHeight; stick = true; }); }
   function tell(role, text, replay) { try { window.dispatchEvent(new CustomEvent("kaiku:chat", { detail: { role: role, text: text, replay: !!replay } })); } catch (e) {} }
   function busyEv(on) { try { window.dispatchEvent(new CustomEvent("kaiku:busy", { detail: { on: on } })); } catch (e) {} }
   function add(m, animate, noScroll) { inviteOff(); var el = bubble(m, animate !== false); thread.appendChild(el); if (!noScroll) toEnd(); return el; }
@@ -52,7 +56,7 @@
       first = false;
       var ms = j.messages || [];
       ms.forEach(function (m) { add(m, false, true); if (m.kind === "chat") tell(m.role === "user" ? "user" : "kaiku", m.text, true); });
-      if (!ms.length) inviteOn(); else toEnd();
+      if (!ms.length) inviteOn(); else toEnd(true);
       if (j.focus) { root.classList.add("ctx"); focusEv(j.focus); }
     }).catch(function () { first = false; inviteOn(); }).then(function () { loading = false; });
   }
@@ -78,7 +82,7 @@
   function send(text, fromVoice) {
     text = (text || "").trim(); if (!text || busy) return Promise.resolve("");
     busy = true; 
-    add({ role: "user", kind: "chat", text: text }); tell("user", text); msg.value = ""; typing(true); busyEv(true);
+    add({ role: "user", kind: "chat", text: text }, true, true); toEnd(true); tell("user", text); msg.value = ""; typing(true); busyEv(true);
     return fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ business_id: BIZ, message: text, session: SID }) })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
@@ -94,7 +98,8 @@
       .then(function (r) { busyEv(false); busy = false; if (!fromVoice) msg.focus({ preventScroll: true }); return r; });
   }
   form.addEventListener("submit", function (e) { e.preventDefault(); send(msg.value); });
-  window.kaikuChatAsk = function (t) { return send(t, true); };   /* the voice orb hands its transcript to the chat */
+  window.kaikuChatAsk = function (t) { return send(t, true); };
+  if (/(^|[?&])chattest=1/.test(location.search)) window.__kaikuChat = { add: add, typing: typing };   /* test hook, only with ?chattest=1 */   /* the voice orb hands its transcript to the chat */
 
 
   /* ---------- the cards talk to the chat: Accept, Suggest a change, and the contact-ladder system line ---------- */
