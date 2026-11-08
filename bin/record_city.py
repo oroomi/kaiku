@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Record the /city demo: fly-in, idle, 8 room answers through the real API (each a new visitor), the dots turning
+"""Record the /city demo: pre-warm, fly-in, landing, 8 room answers through the real API (each a new visitor), the dots turning
 green from Orion-LD notifications. Playwright 1920x1080 headless (SwiftShader WebGL) -> ffmpeg H.264, 20 fps.
 
 Two modes. --mode frames (default): SwiftShader on this 2-core box renders ~1-4 fps, so the page runs on Playwright's
@@ -61,9 +61,20 @@ def frames_mode(a, w, h, tmp: Path) -> dict:
         # pause first, then let the globe tiles arrive in wall time (pausing after a natural run hung the first screenshot)
         page.clock.pause_at(int(time.time() * 1000) + 1000)
         page.wait_for_timeout(4000)
-        page.evaluate("window.__city.start()")
-        plan = {int((18 + 2 * i) * 1000): ans for i, ans in enumerate(ANSWERS)}  # virtual ms -> answer
-        end_ms = 18000 + 2000 * len(ANSWERS) + 10000
+        # start() pre-warms every zoom of the descent under an opaque cover and resolves when done; the page's timers run
+        # on the virtual clock, so drive it (wall pauses let the tiles arrive) until the promise resolves. No frame is
+        # recorded before that, so the film never shows a loading tile.
+        page.evaluate("() => { window.__city.start().then(() => { window.__warm = true; }); return 0; }")
+        t0 = time.time()
+        while not page.evaluate("!!window.__warm") and time.time() - t0 < 300:
+            page.clock.run_for(50)
+            time.sleep(0.05)
+        print(f"pre-warm done in {time.time() - t0:.0f} s wall", flush=True)
+        # timeline (virtual s): 0-1.5 title on the globe, 1.5-8.5 flight, 8.5-14 landing + sentence,
+        # 14-30 the 8 room answers 2 s apart, 30-39 harbour move, 39-48 hold on the harbour
+        plan = {int((14 + 2 * i) * 1000): ans for i, ans in enumerate(ANSWERS)}  # virtual ms -> answer
+        harbour_ms, harboured = 30000, False
+        end_ms = 48000
         results, threads, t, n = [], [], 0, 0
         while t <= end_ms:
             for at in [k for k in plan if k <= t]:
@@ -71,6 +82,9 @@ def frames_mode(a, w, h, tmp: Path) -> dict:
                 th = threading.Thread(target=lambda x=ans: results.append(room_answer(a.base, x)))
                 th.start()
                 threads.append(th)
+            if not harboured and t >= harbour_ms:
+                page.evaluate("window.__city.harbour()")
+                harboured = True
             page.clock.run_for(step)
             page.screenshot(path=str(tmp / f"f{n:05d}.jpg"), type="jpeg", quality=88, timeout=120000)
             t += step
@@ -120,15 +134,16 @@ def main() -> int:
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
         page.goto(a.base + a.path, wait_until="load", timeout=30000)
-        page.wait_for_timeout(12000)   # the fly-in
-        page.wait_for_timeout(6000)    # idle drift
+        page.wait_for_timeout(14000)   # pre-warm + the fly-in
         results = []
         for ans in ANSWERS:
             r = room_answer(a.base, ans)
             results.append(r)
             print("answer", ans, r, flush=True)
             page.wait_for_timeout(2000)
-        page.wait_for_timeout(10000)
+        page.wait_for_timeout(2000)
+        page.evaluate("window.__city.harbour()")  # act two
+        page.wait_for_timeout(18000)
         fps = page.evaluate("(()=>{const f=window.__fps;return f.n/((performance.now()-f.t0)/1000)})()")
         approved = page.evaluate("document.getElementById('c-approved').textContent")
         events = page.evaluate("[...document.querySelectorAll('#c-events li')].map(l=>l.textContent)")

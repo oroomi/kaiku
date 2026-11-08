@@ -6,8 +6,8 @@ Föli buses and AIS ships moving, read from the same broker; a weather chip. Whe
 Christmas Eve?" on their phone (`/join`), the answer is written to the broker, an NGSI-LD subscription fires, and that
 notification (not a poll) turns the dot green with a pulse.
 
-URLs: `/city` (full intro), `/city?intro=0` (land directly), `?room=1` (QR panel), `?embed=1` (no header, no voice orb),
-`?hold=1` (wait for `window.__city.start()`, used by the recorder). Keys: R or Space replays the fly-in.
+URLs: `/city` (full intro, then act two on its own), `/city?intro=0` (land directly), `?room=1` (QR panel), `?embed=1` (no header, no voice orb),
+`?hold=1` (wait for `window.__city.start()`, used by the recorder). Keys: R or Space replays the fly-in, H toggles the harbour view.
 
 ## Data path (all real, all through Orion-LD)
 1. Seed, `kaiku/city/seed.py`: `data/turku_businesses.json` (OpenStreetMap contributors, ODbL; 813 businesses within 1.5 km
@@ -26,7 +26,7 @@ URLs: `/city` (full intro), `/city?intro=0` (land directly), `?room=1` (QR panel
 3. Vehicles, `GET /api/city/vehicles` and the SSE `positions` brief every 5 s: `kaiku.aura.router.read_broker()` (Vehicle and
    WeatherObserved entities kept live in the same Orion-LD by the Aura feeder). The page tweens each vehicle between two broker
    reads (linear, over the measured read interval, at most 5 s; a jump over 300 m between reads snaps instead, measured
-   max 180 m in 11 s on 7 Nov), draws buses as cyan arrows rotated by heading with a 6-position fading trail, ships as amber diamonds.
+   max 180 m in 11 s on 7 Nov), draws buses as cyan arrows rotated by heading with a 10-position trail tapering 3 px to 0.5 px, ships as white diamonds with a cyan halo and a 3-position white wake (act two, below).
 4. The subscription, `ensure_subscription()` at start-up: `subscriptionName kaiku-city-store-status`, entities type Store,
    watchedAttributes `[holidayHoursStatus]`, notification `{PUBLIC_URL}/city/notify`, normalized, attributes
    `[holidayHoursStatus, name, location]`. If a subscription with that name exists with another endpoint (a test server made
