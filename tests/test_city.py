@@ -1,6 +1,7 @@
 """/city: seed -> 813 Store entities, stores API, the notification -> SSE + event, the room hook. Fake brokers only."""
 import asyncio
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -238,9 +239,9 @@ def test_vehicles_api_shape_unchanged_and_act_two_layers(client, monkeypatch):
     assert set(d) == {"buses", "ships", "weather", "counts", "source"}
     assert d["buses"][0][:4] == ["bus-1", 22.27, 60.45, 90] and len(d["buses"][0]) == 7
     assert d["ships"][0] == ["ship-1", 22.21, 60.437, 270, "VIKING GRACE"]
-    html = client.get("/city").text
-    for s in ("city-beacon", "city-glow", 'id="ccover"'):
-        assert s in html, s
+    assert 'id="ccover"' in client.get("/city").text
     js = (Path(__file__).resolve().parents[1] / "kaiku" / "web" / "static" / "city.js").read_text()
-    for s in ('id: "city-beacon"', 'id: "city-glow"', 'type: "heatmap"', "harbour", "areTilesLoaded"):
+    for lid in ("city-beacon", "city-beacon-core", "city-glow"):
+        assert re.search(r'addLayer\(\s*\{\s*id:\s*"' + lid + '"', js), lid
+    for s in ('type: "heatmap"', "harbour", "areTilesLoaded", "maxTileCacheSize", "SHIPS (CACHE)"):
         assert s in js, s

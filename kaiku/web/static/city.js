@@ -129,24 +129,28 @@
       paint: { "icon-opacity": 0, "icon-opacity-transition": { duration: 1000 } } });
     sym("buses", "bus-arrow", ["interpolate", ["linear"], ["zoom"], 11, 0.65, 16, 1.43]);
     sym("ships", "ship-diamond", ["interpolate", ["linear"], ["zoom"], 11, 0.84, 16, 1.68]);
-    // the beacon to fly to: a cyan point at Turku from the first globe frame, fading out between zoom 11 and 12.5
+    // the beacon to fly to: a cyan point at Turku from the first globe frame, fading out between zoom 11 and 12.5.
+    // Added last with no `before`, so both beacon layers sit above city-glow, the store dots and the style's labels.
+    // No opacity transition: the breathing sets a new value up to 15 times a second and must never lag towards 0.
     map.addLayer({ id: "city-beacon", type: "circle", source: "beacon",
       paint: { "circle-color": C.cyan, "circle-blur": 1, "circle-pitch-alignment": "viewport",
                "circle-radius": ["interpolate", ["linear"], ["zoom"], 1.6, 35, 11, 35, 12.5, 30],
-               "circle-opacity": beaconOpacity(0.6) } });
+               "circle-opacity": beaconOpacity(0.62), "circle-opacity-transition": { duration: 0, delay: 0 } } });
     map.addLayer({ id: "city-beacon-core", type: "circle", source: "beacon",
       paint: { "circle-color": C.cyan, "circle-blur": 0.2, "circle-pitch-alignment": "viewport",
                "circle-radius": ["interpolate", ["linear"], ["zoom"], 1.6, 2, 11, 2, 12.5, 2],
-               "circle-opacity": beaconOpacity(1) } });
+               "circle-opacity": beaconOpacity(1), "circle-opacity-transition": { duration: 0, delay: 0 } } });
   }
 
   const TRAIL_OPACITY = ["case", ["==", ["get", "k"], "ship"], ["interpolate", ["linear"], ["get", "age"], 0, 0.7, 2, 0.15],
                          ["interpolate", ["linear"], ["get", "age"], 0, 0.8, 9, 0.06]];
   function beaconOpacity(v) { return ["interpolate", ["linear"], ["zoom"], 11, v, 12.5, 0]; }
   let lastBeacon = 0;
-  function beaconFrame(now) { // breathe 0.35..0.8 over 2.2 s, at most 15 Hz, only while it can be seen
+  const BEACON_MIN = 0.45, BEACON_MAX = 0.8;
+  function beaconFrame(now) { // breathe 0.45..0.8 over 2.2 s, at most 15 Hz, only while it can be seen
     if (now - lastBeacon < 66 || map.getZoom() > 12.6) return; lastBeacon = now;
-    const b = 0.575 + 0.225 * Math.sin((now / 2200) * 2 * Math.PI);
+    const s = Math.sin((now / 2200) * 2 * Math.PI);
+    const b = Math.max(BEACON_MIN, (BEACON_MIN + BEACON_MAX) / 2 + ((BEACON_MAX - BEACON_MIN) / 2) * (Number.isFinite(s) ? s : 1));
     map.setPaintProperty("city-beacon", "circle-opacity", beaconOpacity(b));
   }
 
@@ -316,7 +320,10 @@
     setText("h-ships", d.ships ? `${fmt.format(d.ships.length)} SHIPS` : "SHIPS: NO DATA");
     const w = d.weather;
     setText("h-wx", w && typeof w.temp === "number" ? `${w.temp.toFixed(1)} °C ${(w.wtype || "").toUpperCase()}` : "WEATHER: NO DATA");
-    if (d.source && d.source !== "broker") setText("h-buses", `${fmt.format((d.buses || []).length)} BUSES (CACHE)`);
+    if (d.source && d.source !== "broker") {
+      setText("h-buses", `${fmt.format((d.buses || []).length)} BUSES (CACHE)`);
+      setText("h-ships", `${fmt.format((d.ships || []).length)} SHIPS (CACHE)`);
+    }
     void c;
   }
   function far(a, b) {
@@ -376,15 +383,28 @@
   function land() {
     state.flying = false; state.landed = true; state.drift = !REDUCE; state.view = "turku";
     state.landedAt = performance.now(); state.nextHarbour = state.landedAt + 25000; state.returnAt = 0;
-    showDots();
-    setTimeout(() => $("s1").classList.add("on"), 200);
-    setTimeout(() => $("s2").classList.add("on"), 2000);
+    showDots(); // the dots show at once
+    // the Newsreader sentence waits for the street tiles (map idle, cap 4 s), so it never sits on an empty tint
+    const sentence = () => {
+      if (!state.landed) return;
+      setTimeout(() => state.landed && $("s1").classList.add("on"), 200);
+      setTimeout(() => state.landed && $("s2").classList.add("on"), 2000);
+    };
+    if (map.areTilesLoaded()) { sentence(); return; }
+    let done = false;
+    const go = () => { if (done) return; done = true; sentence(); };
+    map.once("idle", go);
+    setTimeout(go, 4000);
   }
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // Pre-warm: step the camera through the zooms of the descent under an opaque cover, waiting for each zoom's tiles
-  // (cap 1.5 s per step), so the visible flight never passes a zoom whose tiles have not arrived.
+  // (cap 1.5 s per step), so the visible flight never passes a zoom whose tiles have not arrived. The last step is the
+  // landing camera itself, held until its tiles are really loaded (cap 6 s) and the map is idle; maxTileCacheSize keeps
+  // them through the descent.
+  const idleOrCap = (ms) => new Promise((r) => { let d = false; const go = () => { if (!d) { d = true; r(); } };
+                                              map.once("idle", go); setTimeout(go, ms); map.triggerRepaint(); });
   async function prewarm() {
-    const zs = [2, 4, 6, 8, 10, 12, 13.5, 15.2];
+    const zs = [2, 4, 6, 8, 10, 12, 13.5];
     for (const z of zs) {
       const k = (z - EUROPE.zoom) / (TURKU.zoom - EUROPE.zoom), kc = Math.min(1, k * 2.2);
       map.jumpTo({ zoom: z, pitch: TURKU.pitch * k, bearing: TURKU.bearing * k,
@@ -394,6 +414,11 @@
       await wait(200);
       while (!map.areTilesLoaded() && performance.now() - t0 < 1500) await wait(50);
     }
+    map.jumpTo(TURKU); // exactly the landing camera
+    const t0 = performance.now();
+    await wait(200);
+    while (!map.areTilesLoaded() && performance.now() - t0 < 6000) await wait(50);
+    await idleOrCap(Math.max(500, 6500 - (performance.now() - t0)));
     state.warmed = true;
   }
   async function fly() {
@@ -442,6 +467,7 @@
     const start = INTRO ? EUROPE : TURKU;
     map = new maplibregl.Map({
       container: "cmap", style, ...start, maxPitch: 70, attributionControl: false,
+      maxTileCacheSize: 2000, // the descent passes eight zooms; the default (viewport-sized) cache evicts the street tiles
       pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5), canvasContextAttributes: { antialias: false },
     });
     window.__city = { map, state, harbour, turku: toTurku };

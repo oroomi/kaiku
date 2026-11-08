@@ -143,11 +143,14 @@ state, so production creates its own subscription on its next start.
 ## Act two (8 Nov 2026, after Dayo watched cut 3: "the zooming kinda went blank... the view doesn't really show the buses and the ships very well")
 - No blank descent. `start()` (the intro) first pre-warms: an opaque night cover (#090b0d) with the title on top hides the map
   while the camera jumps through zoom 2, 4, 6, 8, 10, 12, 13.5, 15.2 (pitch and bearing scaled to match the flight), waiting
-  at each for `map.areTilesLoaded()` (at least 200 ms, at most 1.5 s per step). Then jumpTo the globe, a 300 ms fade, the
+  at each for `map.areTilesLoaded()` (at least 200 ms, at most 1.5 s per step). The last step is exactly the landing camera, held until `areTilesLoaded()` (cap 6 s) and then `idle`;
+  `maxTileCacheSize: 2000` keeps those street tiles through the descent (the default viewport-sized cache evicted them: the
+  8 Nov verifier saw a uniform #0b1216 tint for ~12 s after landing). If the tiles are still loading at landing, the dots show
+  at once and the sentence waits for `idle` (cap 4 s). Ships read "(CACHE)" like the buses when the vehicles source is not the broker. Then jumpTo the globe, a 300 ms fade, the
   visible 7 s flight over tiles that are already in the cache. `start()` returns a promise that resolves when the pre-warm is
   done; the recorder drives the virtual clock until it resolves and records no frame before (measured on the burst box:
   5.4 s wall, 39-44 clock steps). R replays without a second pre-warm.
-- The beacon (`city-beacon` halo, 35 px radius blurred, opacity breathing 0.35-0.8 over 2.2 s; `city-beacon-core` 2 px): a
+- The beacon (`city-beacon` halo, 35 px radius blurred, opacity breathing 0.45-0.8 over 2.2 s, no opacity transition, both beacon layers added last so they sit above city-glow and the dots; `city-beacon-core` 2 px): a
   cyan point at Turku from the first globe frame, fading out between zoom 11 and 12.5. The title moved to 56 % from the top
   so it no longer covers the beacon on the globe.
 - The glow (`city-glow`, MapLibre heatmap on the same `stores` source, zoom 5-12.5): amber ramp to transparent, radius 8 px
