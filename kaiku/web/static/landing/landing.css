@@ -145,3 +145,7 @@ body.lp{margin:0;background:var(--bg);color:var(--ink);font:500 16px/24px "Plus 
 /* orchestrator fixes 8 Nov: tile icons keep the tiles' 52% size inside the landing; tiles stay visible in the panel on phones */
 .lp .t3d__face svg{width:52%;height:52%}
 @media (max-width:640px){.lp .tilepanel .hero__tiles{display:block}.lp .tilepanel .float{display:block}.lp .tilepanel .f1{top:18px;left:4%;transform:scale(.72)}.lp .tilepanel .f3{top:26px;right:4%;transform:scale(.72)}.lp .tilepanel .f2{bottom:22px;left:8%;transform:scale(.72)}.lp .tilepanel .f4{bottom:18px;right:8%;transform:scale(.72)}}
+
+/* rotating subject in the headline */
+.rot{display:inline-block;white-space:nowrap;text-align:left;vertical-align:top}
+.rot__w{display:inline-block;will-change:transform,opacity}
