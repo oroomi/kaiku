@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Kaiku, admin{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/admin/admin.css?v={{ asset_v() }}">{% endblock %}
+{% block content %}
+{% if keyed %}
+<div class="adm" id="admin">
+  <section class="glass a-sec" data-pilot="admin-contact" aria-labelledby="a-h-contact">
+    <h2 class="mono" id="a-h-contact">Try it with your own contact</h2>
+    <div class="dcontact">
+      <label class="dfield"><span class="mono">Email</span>
+        <input type="email" id="dc-email" autocomplete="off" inputmode="email" placeholder="name@company.fi" aria-label="Demo contact email"></label>
+      <label class="dfield"><span class="mono">Phone (international)</span>
+        <input type="tel" id="dc-phone" autocomplete="off" inputmode="tel" placeholder="+358 40 123 4567" aria-label="Demo contact phone"></label>
+      <div class="drow">
+        <button class="primary" id="dc-save" type="button">Save</button>
+        <button class="ghost" id="dc-clear" type="button">Back to my own</button>
+      </div>
+      <p class="mono soft" id="dc-msg" aria-live="polite">Using the owner's own.</p>
+    </div>
+    <p class="mono soft a-note">WhatsApp reaches only numbers in the Meta test app; email and the call reach anyone.</p>
+    <p class="mono soft a-note" id="c-score">Reading the score...</p>
+    <div class="drow">
+      <button class="primary" id="run" type="button">Run the chain (24.12.)</button>
+      <button class="ghost" id="reset" type="button" title="Removes the holiday hours from the Yext sandbox, clears runs and events, sets the date to 17.12.2026">Reset demo</button>
+    </div>
+    <p class="mono soft" id="d-msg" aria-live="polite"></p>
+  </section>
+
+  <section class="a-sec" data-pilot="admin-fiware" aria-labelledby="a-h-live">
+    <h2 class="mono" id="a-h-live">FIWARE, live</h2>
+    <div class="panels">
+      <article class="glass panel" data-pilot="admin-panel-aura" data-src="/aura">
+        <h3 class="mono">Aura</h3>
+        <p class="p-sub">Live Turku buses, ships and weather, read from the broker.</p>
+        <div class="p-frame"><img src="/static/admin/aura.jpg" width="960" height="600" alt="Aura: live Turku buses, ships and weather" loading="lazy"></div>
+        <div class="drow"><button class="primary p-load" type="button">Load the live view</button><a class="ghost p-open" href="/aura">Open full screen</a></div>
+      </article>
+      <article class="glass panel" data-pilot="admin-panel-city" data-src="/city?embed=1">
+        <h3 class="mono">The city twin</h3>
+        <p class="p-sub">813 OpenStreetMap stores turn green as their Christmas Eve hours are approved.</p>
+        <div class="p-frame"><img src="/static/admin/city.jpg" width="960" height="600" alt="The city twin: 813 stores on a map of Turku" loading="lazy"></div>
+        <div class="drow"><button class="primary p-load" type="button">Load the live view</button><a class="ghost p-open" href="/city">Open full screen</a></div>
+      </article>
+      <article class="glass panel" data-pilot="admin-panel-room" data-src="/room">
+        <h3 class="mono">The room</h3>
+        <p class="p-sub">The broker's events, as they happen.</p>
+        <div class="p-frame"><img src="/static/admin/room.jpg" width="960" height="600" alt="The room: the broker's events as they happen" loading="lazy"></div>
+        <div class="drow"><button class="primary p-load" type="button">Load the live view</button><a class="ghost p-open" href="/room">Open full screen</a></div>
+      </article>
+    </div>
+    <div class="glass panel p-text" data-pilot="admin-broker">
+      <h3 class="mono">The broker table</h3>
+      <p class="p-sub">Every holidayHours instance, by datasetId, read from the Orion-LD broker. <a href="/fiware">Open the broker table</a></p>
+      <p class="mono soft">Judge check</p>
+      <code class="a-code">curl https://kaiku.hankintaviikko.fi/api/fiware/entity</code>
+    </div>
+  </section>
+
+  <section class="glass a-sec" data-pilot="admin-three" aria-labelledby="a-h-three">
+    <h2 class="mono" id="a-h-three">FIWARE in three sentences</h2>
+    <ol class="three">
+      <li>The broker is the spine: every step of the chain happens in it, not beside it.</li>
+      <li>Each source writes its own copy of the holiday hours; the owner's yes writes the one that counts.</li>
+      <li>A subscription fires when something is missing, and the broker's notification is what applies the change.</li>
+    </ol>
+  </section>
+
+  <section class="glass a-sec" data-pilot="admin-links" aria-labelledby="a-h-else">
+    <h2 class="mono" id="a-h-else">Everything else</h2>
+    <nav class="links" aria-label="Everything else">
+      <a id="c-judge" href="/judge?key={{ key|urlencode }}">Judge page</a>
+      <a href="/console?key={{ key|urlencode }}">Console</a>
+      <a href="/eval">Eval</a>
+      <a href="/map">Map</a>
+      <a href="https://youtu.be/Opg_gzlo_II" rel="noopener">The film</a>
+      <a href="https://github.com/oroomi/kaiku/blob/main/docs/KAIKU_DECK.pdf" rel="noopener">The deck</a>
+      <a href="https://github.com/oroomi/kaiku" rel="noopener">The repository</a>
+      <a href="/">The landing page</a>
+    </nav>
+  </section>
+</div>
+{% else %}
+<div class="adm"><section class="glass a-sec">
+  <span class="mono">ADMIN</span>
+  <p class="empty">This page is for the team. Open it with the demo key.</p>
+</section></div>
+{% endif %}
+{% endblock %}
+{% block scripts %}{% if keyed %}<script src="/static/console.js?v={{ asset_v() }}" defer></script><script src="/static/admin/admin.js?v={{ asset_v() }}" defer></script>{% endif %}{% endblock %}
