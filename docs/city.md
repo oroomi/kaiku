@@ -140,6 +140,32 @@ event times are the broker's observedAt (wall time), the clock runs on page time
 After the test the `kaiku-city-store-status` subscription (pointing at 8230) was deleted and the Stores reset to their seed
 state, so production creates its own subscription on its next start.
 
+## Act two (8 Nov 2026, after Dayo watched cut 3: "the zooming kinda went blank... the view doesn't really show the buses and the ships very well")
+- No blank descent. `start()` (the intro) first pre-warms: an opaque night cover (#090b0d) with the title on top hides the map
+  while the camera jumps through zoom 2, 4, 6, 8, 10, 12, 13.5, 15.2 (pitch and bearing scaled to match the flight), waiting
+  at each for `map.areTilesLoaded()` (at least 200 ms, at most 1.5 s per step). Then jumpTo the globe, a 300 ms fade, the
+  visible 7 s flight over tiles that are already in the cache. `start()` returns a promise that resolves when the pre-warm is
+  done; the recorder drives the virtual clock until it resolves and records no frame before (measured on the burst box:
+  5.4 s wall, 39-44 clock steps). R replays without a second pre-warm.
+- The beacon (`city-beacon` halo, 35 px radius blurred, opacity breathing 0.35-0.8 over 2.2 s; `city-beacon-core` 2 px): a
+  cyan point at Turku from the first globe frame, fading out between zoom 11 and 12.5. The title moved to 56 % from the top
+  so it no longer covers the beacon on the globe.
+- The glow (`city-glow`, MapLibre heatmap on the same `stores` source, zoom 5-12.5): amber ramp to transparent, radius 8 px
+  at zoom 6 to 40 px at zoom 11, low intensity, opacity 0 by zoom 12, so the city arrives as warm light that resolves into
+  the dots (the dot layers are unchanged).
+- Land tint lifted to stay above luminance 20 down to street zoom (#0f1c23 at zoom 12, #0b1216 at 15).
+- Buses: trail 10 positions (was 6), width 3 px newest to 0.5 px oldest at zoom 15, arrows 1.3x. Ships: white (#eef6f9)
+  diamonds with a cyan halo, 1.4x, and a 3-position white wake (2 px). Positions are only what the broker gives; a ship that
+  has not moved has no wake.
+- The harbour move: `window.__city.harbour()`, the H key, and on the live page automatically 25 s after landing when nobody
+  has touched the map (back to the centre 20 s after arriving, again every 60 s; a touch postpones it).
+  `easeTo({center: [22.236, 60.4445], zoom: 13.45, pitch: 56, bearing: 56, duration: 9000, easeInOutCubic})`, then the
+  1 deg/s drift. The brief's start value (22.218, 60.438, zoom 13.7, bearing -50) looked out to sea: no city in frame.
+  Bearing 56 looks up the Aura from the port, so the ships sit in the lower half as white diamonds and the centre's dots
+  glow in the upper third (checked from 1280x720 stills: 18 ships and 23 buses inside the view).
+- Film timeline (frames mode, virtual s): 0-1.5 title on the globe, 1.5-8.5 flight, 8.5-14 landing + sentence, 14-30 the 8
+  room answers 2 s apart, 30-39 harbour move, 39-48 hold. `--mode realtime` calls `harbour()` after the answers too.
+
 ## What did not work / known edges
 - `q` on `holidayHoursStatus.status` is not evaluated by this Orion-LD build; the handler filters.
 - The existing `kaiku-holiday-hours-resolved` subscription (broker module) watches `holidayHours` on every Store, so a room
