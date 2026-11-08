@@ -30,7 +30,7 @@ def client():
 
 def test_set_get_clear_masked(client, env):
     r = client.post("/api/demo/contact", headers=K, json={"email": "erik@fonecta.fi", "phone": "+358 45 123 4684"})
-    assert r.status_code == 200 and r.json() == {"email": "e***@fonecta.fi", "phone": "+358***684", "set": True}
+    assert r.status_code == 200 and r.json() == {"email": "e***@fonecta.fi", "phone": "+358***684", "channels": ["email", "whatsapp", "call"], "set": True}
     assert "erik@" not in json.dumps(client.get("/api/demo/contact?key=testkey").json())
     assert json.loads((env / "demo_contact.json").read_text())["phone"] == "+358451234684"
     assert client.delete("/api/demo/contact", headers=K).json()["set"] is False

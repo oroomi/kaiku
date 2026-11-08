@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Try Kaiku on your own phone</title>
+<meta name="description" content="Three doors: the web, your inbox, or your phone. Kaiku reaches you where you are.">
+<meta name="theme-color" content="#e8f3fe">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230c1418'/%3E%3Cpath d='M6 22a10 10 0 0 1 20 0' fill='none' stroke='%238fd3e8' stroke-width='2.5' stroke-linecap='round'/%3E%3Ccircle cx='21' cy='13' r='2.6' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preload" href="/static/fonts/PlusJakartaSans-500.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="/static/landing/landing.css?v={{ asset_v() }}">
+<link rel="stylesheet" href="/static/landing/try.css?v={{ asset_v() }}">
+</head>
+<body class="lp tr">
+<header class="nav">
+  <nav class="nav__l nav__l--back" aria-label="Main"><a href="/">Back</a></nav>
+  <a class="nav__logo" href="/" aria-label="Kaiku home">kaiku<span class="gt">.fi</span></a>
+  <a class="nav__cta" href="/owner"><span>Open the owner page <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span></a>
+</header>
+
+<main class="try">
+  <section class="try__head">
+    <p class="label">TRY IT ON YOUR OWN PHONE</p>
+    <h1 class="h-hero">Three doors. Pick one.</h1>
+    <p class="lead">Kaiku reaches you where you are. Try the web, your inbox, or your phone; nothing is written to any listing but Fonecta's sandbox.</p>
+    <p class="try__state" id="state" role="status" aria-live="polite" hidden></p>
+  </section>
+
+  <section class="doors" aria-label="Three doors">
+    <article class="door">
+      <span class="chip">Door 1, on the web</span>
+      <h2>Web</h2>
+      <p>Open the owner page, accept the Christmas Eve card and chat with Kaiku. Nothing to enter.</p>
+      <div class="door__foot"><a class="btn btn--dark" href="/owner">Open the owner page <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></a></div>
+    </article>
+
+    <article class="door">
+      <span class="chip">Door 2, in your email</span>
+      <h2>Email</h2>
+      <p>Kaiku sends you the real proposal with the decision link. The chain stops after the email: no WhatsApp, no call.</p>
+      <form class="door__form" id="f-email" novalidate>
+        <label for="e1">Your email</label>
+        <input id="e1" name="email" type="email" inputmode="email" autocomplete="email" placeholder="name@company.fi" required>
+        <p class="msg" role="alert" hidden></p>
+        <div class="door__foot"><button class="btn btn--dark" type="submit">Send me the proposal</button></div>
+      </form>
+    </article>
+
+    <article class="door">
+      <span class="chip">Door 3, on your phone</span>
+      <h2>Phone</h2>
+      <p>The full ladder to you: email first, WhatsApp if there is no decision, then a call.</p>
+      <form class="door__form" id="f-phone" novalidate>
+        <label for="e2">Your email</label>
+        <input id="e2" name="email" type="email" inputmode="email" autocomplete="email" placeholder="name@company.fi" required>
+        <label for="p2">Your phone</label>
+        <input id="p2" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+358401234567" required>
+        <label class="tick"><input type="checkbox" name="own" id="own"><span>This is my own number</span></label>
+        <p class="warn">The call comes from a Finnish mobile number, may be shown as unknown, lasts under a minute, only reads the proposal and takes a yes. WhatsApp only reaches numbers on Meta's allow list; otherwise that step is skipped and the call follows.</p>
+        <p class="msg" role="alert" hidden></p>
+        <div class="door__foot"><button class="btn btn--dark" type="submit">Email first, then call me</button></div>
+      </form>
+    </article>
+  </section>
+
+  <section class="live" id="live" hidden aria-label="What Kaiku is doing">
+    <p class="ok" id="ok"></p>
+    <ul id="ev"></ul>
+  </section>
+</main>
+<script src="/static/landing/try.js?v={{ asset_v() }}"></script>
+</body>
+</html>

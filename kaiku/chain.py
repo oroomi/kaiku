@@ -35,6 +35,15 @@ HOLIDAYS = {  # tiny stub table; the real calendar lives in kaiku/detect/holiday
 _waiters: dict[str, "asyncio.Future[Decision]"] = {}
 _stubs: set[str] = set()
 log = logging.getLogger("kaiku.chain")
+
+
+def _dc_allows(ch: str) -> bool:
+    """The try page's channel guard (kaiku.demo_contact.allows); True when the module is missing."""
+    try:
+        from . import demo_contact as _DC
+        return _DC.allows(ch)
+    except Exception:
+        return True
 STUB_DECIDE_DELAY = 3.0  # seconds before the stub decide auto-approves
 
 
@@ -556,7 +565,7 @@ async def post_decision(b: Business, s: Suggestion, dec: Decision, pause=None) -
             yext_status=res.yext_status, verified=verified, hours=out.get("hours"), entity=out.get("entity_id"), written=out.get("written"),
             entity_version=out.get("entity_version"), environment=out.get("environment"), publishers=res.publishers,
             where_it_shows=out.get("where_it_shows", []), broker_updated=res.broker_updated, error=(res.yext_status if not ok else None))
-        if ok and whatsapp_configured() and dec.via in ("whatsapp", "call") and dec.reason_chip != "chat":  # the chat brain writes its own receipt
+        if ok and whatsapp_configured() and dec.via in ("whatsapp", "call") and dec.reason_chip != "chat" and _dc_allows("whatsapp"):  # the chat brain writes its own receipt; a try-page visitor who chose email only gets no WhatsApp
             try:
                 from .contact import ladder, router as cr
                 phone = ladder.owner_phone(_s_dict(s))
@@ -626,7 +635,7 @@ async def run_chain(business_id: str, holiday_date: str, now: Optional[datetime]
                 if whatsapp_configured():
                     from .contact import ladder, whatsapp as W
                     phone = ladder.owner_phone(_s_dict(s))
-                    if phone and W.outbound_allowed():
+                    if phone and W.outbound_allowed() and _dc_allows("whatsapp"):
                         hol = (s.holiday_name_en or "that day")
                         hours = "closed" if s.proposed in (None, "closed") else ", ".join(f"{_short(x.start)}-{_short(x.end)}" for x in s.proposed)
                         txt = (f"Under your standing permission I set {hol} {int(day[8:10])}.{int(day[5:7])}. to {hours} everywhere Connect publishes. "
@@ -761,6 +770,10 @@ async def api_reset(request: Request, learn: int = 0, key: str = "", contact: in
     got = key or request.headers.get("x-kaiku-key", "")
     if not want or not hmac.compare_digest(got.encode(), want.encode()):
         raise HTTPException(403, "Nollaus vaatii avaimen. / Reset needs the key.")
+    return await reset_demo(learn=learn, contact=contact)
+
+
+async def reset_demo(learn: int = 0, contact: int = 0) -> dict:
     for t in list(_tasks):
         t.cancel()
     out: dict = {}

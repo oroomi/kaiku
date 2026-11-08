@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import re
+import time
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
@@ -18,6 +19,7 @@ log = logging.getLogger("kaiku.demo_contact")
 router = APIRouter()
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _PHONE = re.compile(r"^\+\d{8,15}$")
+CHANNELS = ("email", "whatsapp", "call")
 
 
 def _file() -> Path:
@@ -28,9 +30,62 @@ def _file() -> Path:
 def load() -> dict:
     try:
         d = json.loads(_file().read_text())
-        return {"email": str(d.get("email") or "").strip(), "phone": str(d.get("phone") or "").strip()}
+        ch = d.get("channels")
+        ch = [c for c in CHANNELS if c in ch] if isinstance(ch, list) else list(CHANNELS)
+        return {"email": str(d.get("email") or "").strip(), "phone": str(d.get("phone") or "").strip(), "channels": ch}
+    except FileNotFoundError:
+        return {"email": "", "phone": "", "channels": list(CHANNELS)}
+    except Exception:  # a contact file that exists but cannot be read: fail closed, email only, never the owner's phone
+        return {"email": "", "phone": "", "channels": ["email"]}
+
+
+def _mode_file() -> Path:
+    return _file().with_name("try_mode.json")
+
+
+def set_mode(channels, seconds: int) -> None:
+    """Fail-closed marker written by the public try page: while it lasts, only these rungs may fire, whatever the contact
+    file says later (cleared, overwritten or corrupt). The ladder reads it at fire time."""
+    chs = [c for c in CHANNELS if c in (channels or [])]
+    f = _mode_file()
+    tmp = f.with_suffix(".tmp")
+    tmp.write_text(json.dumps({"channels": chs, "until": time.time() + float(seconds)}))
+    os.replace(tmp, f)
+
+
+def clear_mode() -> None:
+    try:
+        _mode_file().unlink()
+    except FileNotFoundError:
+        pass
+
+
+def _mode() -> list | None:
+    """The unexpired try-mode channels, None when there is no live marker; an unreadable marker means email only."""
+    try:
+        d = json.loads(_mode_file().read_text())
+    except FileNotFoundError:
+        return None
     except Exception:
-        return {"email": "", "phone": ""}
+        return ["email"]
+    try:
+        if float(d.get("until", 0)) > time.time():
+            return [c for c in CHANNELS if c in (d.get("channels") or [])]
+    except Exception:
+        return ["email"]
+    return None
+
+
+def allows(ch: str) -> bool:
+    """May this rung (email / whatsapp / call) fire? A live try-mode marker decides first; else the demo contact's channels;
+    with no contact at all everything is allowed (the owner's own demo)."""
+    m = _mode()
+    if m is not None:
+        return ch in m
+    d = load()
+    if not (d["email"] or d["phone"]):
+        return ch in d["channels"]
+    return ch in d["channels"]
 
 
 def email() -> str:
@@ -54,7 +109,7 @@ def mask_phone(p: str) -> str:
 
 def masked() -> dict:
     d = load()
-    return {"email": mask_email(d["email"]), "phone": mask_phone(d["phone"]), "set": bool(d["email"] or d["phone"])}
+    return {"email": mask_email(d["email"]), "phone": mask_phone(d["phone"]), "channels": d["channels"], "set": bool(d["email"] or d["phone"])}
 
 
 def _check_key(request: Request) -> None:
@@ -73,7 +128,7 @@ def _emit(en: str) -> None:
         pass
 
 
-def save(email_: str = "", phone_: str = "") -> dict:
+def save(email_: str = "", phone_: str = "", channels=None) -> dict:
     """Validate and store; both empty clears. Raises ValueError with a plain message."""
     e, p = (email_ or "").strip(), re.sub(r"[ \-()]", "", (phone_ or "").strip())
     if e and not _EMAIL.match(e):
@@ -83,9 +138,10 @@ def save(email_: str = "", phone_: str = "") -> dict:
     if not e and not p:
         clear()
         return masked()
+    chs = [c for c in CHANNELS if c in channels] if isinstance(channels, (list, tuple)) else list(CHANNELS)
     f = _file()
     tmp = f.with_suffix(".tmp")
-    tmp.write_text(json.dumps({"email": e, "phone": p}))
+    tmp.write_text(json.dumps({"email": e, "phone": p, "channels": chs}))
     os.replace(tmp, f)
     m = masked()
     _emit("Demo contact set: " + ", ".join(x for x in (m["email"], m["phone"]) if x))
@@ -97,6 +153,11 @@ def clear() -> None:
     try:
         _file().unlink()
     except FileNotFoundError:
+        pass
+    try:  # a cleared contact must not leave a pending WhatsApp or call that would then fall back to the owner's own phone
+        from kaiku.contact import ladder as _ladder
+        _ladder.cancel_pending()
+    except Exception:
         pass
     if had:
         _emit("Demo contact cleared: back to the owner's own")
@@ -118,7 +179,7 @@ async def api_set(request: Request):
     if not isinstance(body, dict):
         body = {}
     try:
-        return save(str(body.get("email") or ""), str(body.get("phone") or ""))
+        return save(str(body.get("email") or ""), str(body.get("phone") or ""), body.get("channels"))
     except ValueError as exc:
         raise HTTPException(400, str(exc))
 

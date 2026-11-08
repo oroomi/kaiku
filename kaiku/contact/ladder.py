@@ -306,6 +306,10 @@ def _after_whatsapp(s: dict, delay: float, after: str, client, escalate_s, email
 
 def _whatsapp(s: dict, client: W.WhatsAppClient | None = None, escalate_s: float | None = None, after: str = "call",
               email_escalate_s: float | None = None, final: bool = False) -> dict:
+    from kaiku import demo_contact as DC
+    if not DC.allows("whatsapp"):
+        _log(s, "whatsapp", "blocked: the visitor chose email only")
+        return s
     client = client or W.get_client()
     phone = owner_phone(s)
     if not phone:
@@ -370,6 +374,10 @@ def _schedule_call(s: dict, delay: float) -> None:
 
 def _call_step(s: dict, first: bool = False) -> str:
     _timers.pop(s["id"], None)
+    from kaiku import demo_contact as DC
+    if not DC.allows("call"):
+        _log(s, "call", "blocked: the visitor chose email only")
+        return "blocked"
     if is_decided(s["id"]):
         return "decided"
     try:

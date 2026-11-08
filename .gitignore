@@ -25,3 +25,6 @@ data/text_declines.jsonl
 data/room_state.json
 data/chat_sessions.json
 data/demo_contact.json
+data/try_log.jsonl
+data/try_lock.json
+data/try_off
