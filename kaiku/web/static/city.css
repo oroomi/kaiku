@@ -13,7 +13,7 @@ body:has(.city) main{max-width:none;padding:0;margin:0}
 
 .ccover{position:absolute;inset:0;z-index:3;background:#090b0d;opacity:0;transition:opacity .3s ease;pointer-events:none}
 .ccover.on{opacity:1}
-.ctitle{position:absolute;left:0;right:0;top:38%;text-align:center;z-index:4;opacity:0;transition:opacity 1.2s ease;pointer-events:none}
+.ctitle{position:absolute;left:0;right:0;top:56%;text-align:center;z-index:4;opacity:0;transition:opacity 1.2s ease;pointer-events:none}
 .ctitle.on{opacity:1}
 .ctitle .mono{color:var(--cyan);font-size:12px;letter-spacing:.32em}
 .ctitle h1{font:300 clamp(40px,7vw,88px)/1.05 var(--serif);margin:10px 0 0;letter-spacing:-.01em;text-shadow:0 0 40px rgba(143,211,232,.25)}

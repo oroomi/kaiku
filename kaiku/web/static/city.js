@@ -9,7 +9,7 @@
   const EUROPE = { center: [18, 58], zoom: 1.6, pitch: 0, bearing: 0 };
   const TURKU = { center: [22.2666, 60.4518], zoom: 15.2, pitch: 62, bearing: -20 };
   // act two: west along the Aura to the port and the river mouth (18 of 40 ships measured inside 22.19-22.26 / 60.42-60.46)
-  const HARBOUR = { center: [22.218, 60.438], zoom: 13.7, pitch: 58, bearing: -50 };
+  const HARBOUR = { center: [22.236, 60.4445], zoom: 13.45, pitch: 56, bearing: 56 }; // looking up the Aura to the centre
   const BEACON = [22.2666, 60.4518];
   const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
   const C = { night: "#090b0d", amber: "#ffd27a", green: "#9fe0b5", white: "#eef6f9", cyan: "#8fd3e8" };
@@ -40,7 +40,7 @@
               "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 10, 1, 12, 0] };
     // Land keeps a faint Horizon teal above the water until the buildings take over at street zoom, so the descent
     // never passes through a black screen; Natural Earth relief shows on the globe and fades out by zoom 8.
-    const LAND = ["interpolate", ["linear"], ["zoom"], 0, "#132530", 6, "#10202a", 10, "#0c181f", 12, "#0b151b", 14, C.night];
+    const LAND = ["interpolate", ["linear"], ["zoom"], 0, "#132530", 6, "#10202a", 10, "#101e26", 12, "#0f1c23", 13.5, "#0e1a20", 15, "#0b1216"];
     const WATER = ["interpolate", ["linear"], ["zoom"], 0, "#04070a", 9, "#06090d", 12, "#0e1c24", 14, "#12232c"];
     for (const l of s.layers) {
       if (l.id === "background") { l.paint = Object.assign({}, l.paint, { "background-color": LAND }); }
