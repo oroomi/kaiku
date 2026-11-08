@@ -1,0 +1,25 @@
+.adm{max-width:1180px;margin:0 auto;padding:12px 16px 48px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.a-sec{padding:18px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.a-sec h2{margin:0;font-size:11px;color:var(--ink3);letter-spacing:.1em;font-weight:500}
+.a-note{margin:0;font-size:11px;line-height:1.45;color:var(--ink3)}
+.adm .dcontact{display:grid;gap:10px;max-width:560px}
+.adm .dfield{display:flex;flex-direction:column;gap:4px}
+.adm .dfield input{min-height:44px;border-radius:12px;border:1px solid var(--edge);background:rgba(255,255,255,.05);color:var(--ink);padding:0 12px;font:15px var(--sans)}
+.adm .drow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.adm .drow button,.adm .drow .ghost{flex:1 1 140px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;border-radius:14px}
+.panels{display:grid;grid-template-columns:1fr;gap:14px}
+.panel{padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.panel h3{margin:0;font-size:11px;color:var(--cyan);letter-spacing:.14em;font-weight:500}
+.p-sub{margin:0;font-size:14px;line-height:1.45;color:var(--ink2)}
+.p-sub a{color:var(--cyan)}
+.p-frame{position:relative;aspect-ratio:16/10;border-radius:14px;overflow:hidden;background:var(--t3);border:1px solid var(--edge)}
+.p-frame img,.p-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;object-fit:cover}
+.p-text{gap:8px}
+.a-code{display:block;overflow-x:auto;padding:12px;border-radius:12px;background:rgba(0,0,0,.35);border:1px solid var(--edge);font:13px var(--mono);color:var(--green);white-space:nowrap}
+.three{margin:0;padding:0;list-style:none;counter-reset:s;display:grid;gap:14px}
+.three li{counter-increment:s;font:400 clamp(19px,2.6vw,26px)/1.35 var(--serif);color:var(--ink);padding-left:2.2em;position:relative}
+.three li::before{content:counter(s);position:absolute;left:0;top:.2em;font:500 11px var(--mono);letter-spacing:.1em;color:var(--cyan);border:1px solid var(--edge);border-radius:99px;width:24px;height:24px;display:flex;align-items:center;justify-content:center}
+.links{display:flex;flex-wrap:wrap;gap:10px}
+.links a{min-height:44px;display:inline-flex;align-items:center;padding:0 16px;border:1px solid var(--edge);border-radius:99px;color:var(--ink);text-decoration:none;font-size:14px}
+.links a:hover{border-color:var(--cyan);color:var(--cyan)}
+@media (min-width:900px){.panels{grid-template-columns:repeat(3,1fr)}.a-sec{padding:22px}}
