@@ -8,11 +8,16 @@
   const INTRO = P.get("intro") !== "0" && !REDUCE;
   const EUROPE = { center: [18, 58], zoom: 1.6, pitch: 0, bearing: 0 };
   const TURKU = { center: [22.2666, 60.4518], zoom: 15.2, pitch: 62, bearing: -20 };
+  // act two: west along the Aura to the port and the river mouth (18 of 40 ships measured inside 22.19-22.26 / 60.42-60.46)
+  const HARBOUR = { center: [22.218, 60.438], zoom: 13.7, pitch: 58, bearing: -50 };
+  const BEACON = [22.2666, 60.4518];
+  const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
   const C = { night: "#090b0d", amber: "#ffd27a", green: "#9fe0b5", white: "#eef6f9", cyan: "#8fd3e8" };
   const fmt = new Intl.NumberFormat("en-US");
   const state = { rows: new Map(), counts: null, source: null, total: 0, approved: 0, seenApproved: new Map(),
                   vehicles: new Map(), pulses: [], landed: false, dotsOn: false, vehOn: false, drift: false,
-                  lastTouch: 0, flying: false };
+                  lastTouch: 0, flying: false, warmed: false, view: "turku",
+                  landedAt: 0, nextHarbour: 0, returnAt: 0 };
   let map;
 
   // ---------------------------------------------------------------- style
@@ -61,10 +66,12 @@
     g.translate(s / 2, s / 2); g.fillStyle = C.cyan; g.shadowColor = C.cyan; g.shadowBlur = 6;
     g.beginPath(); g.moveTo(0, -14); g.lineTo(9, 11); g.lineTo(0, 6); g.lineTo(-9, 11); g.closePath(); g.fill();
   });
+  // ships: white diamonds with a cyan halo (amber is the stores' colour)
   const DIAMOND = () => icon((g, s) => {
-    g.translate(s / 2, s / 2); g.fillStyle = C.amber; g.shadowColor = C.amber; g.shadowBlur = 6;
-    g.beginPath(); g.moveTo(0, -11); g.lineTo(8, 0); g.lineTo(0, 11); g.lineTo(-8, 0); g.closePath(); g.fill();
-  });
+    g.translate(s / 2, s / 2); g.fillStyle = C.white; g.shadowColor = C.cyan; g.shadowBlur = 10;
+    const d = () => { g.beginPath(); g.moveTo(0, -11); g.lineTo(8, 0); g.lineTo(0, 11); g.lineTo(-8, 0); g.closePath(); g.fill(); };
+    d(); d();
+  }, 56);
 
   // ---------------------------------------------------------------- layers
   function firstSymbol() { return (map.getStyle().layers.find((l) => l.type === "symbol") || {}).id; }
@@ -84,14 +91,26 @@
       },
     }, before);
     for (const id of ["stores", "pulse", "buses", "ships", "trails"]) map.addSource(id, { type: "geojson", data: EMPTY });
+    map.addSource("beacon", { type: "geojson", data: { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: BEACON } } });
     map.addImage("bus-arrow", ARROW(), { pixelRatio: 2 });
     map.addImage("ship-diamond", DIAMOND(), { pixelRatio: 2 });
     const col = ["match", ["get", "s"], "approved", C.green, "known", C.white, C.amber];
     const BIG = ["match", ["get", "s"], "approved", 1.7, 1];
+    // the stores as one warm glow during the descent (zoom 6 to 12), resolving into the dots below
+    map.addLayer({ id: "city-glow", type: "heatmap", source: "stores", minzoom: 5, maxzoom: 12.5,
+      paint: { "heatmap-weight": 1,
+               "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 6, 0.04, 9, 0.08, 11, 0.12],
+               "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 6, 8, 11, 40],
+               "heatmap-color": ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(255,210,122,0)", 0.15, "rgba(255,210,122,0.12)",
+                                 0.4, "rgba(255,210,122,0.38)", 0.75, "rgba(255,210,122,0.7)", 1, "rgba(255,226,170,0.9)"],
+               "heatmap-opacity": ["interpolate", ["linear"], ["zoom"], 5.5, 0, 6.5, 0.9, 11.5, 0.75, 12, 0] } }, before);
+    // buses: 10-position trail tapering 3 px -> 0.5 px; ships: 3-position white wake, 2 px
+    const SHIP = ["==", ["get", "k"], "ship"];
+    const busW = (a, b) => ["interpolate", ["linear"], ["get", "age"], 0, a, 9, b];
     map.addLayer({ id: "trails", type: "line", source: "trails", layout: { "line-cap": "round" },
-      paint: { "line-color": C.cyan, "line-width": 2,
-               "line-opacity": ["*", ["interpolate", ["linear"], ["get", "age"], 0, 0.55, 5, 0.04], 0],
-               "line-opacity-transition": { duration: 1000 } } });
+      paint: { "line-color": ["case", SHIP, C.white, C.cyan],
+               "line-width": ["interpolate", ["linear"], ["zoom"], 11, ["case", SHIP, 1, busW(1.2, 0.3)], 15, ["case", SHIP, 2, busW(3, 0.5)]],
+               "line-opacity": 0, "line-opacity-transition": { duration: 1000 } } });
     map.addLayer({ id: "st-halo", type: "circle", source: "stores",
       paint: { "circle-color": col, "circle-blur": 1,
                "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, ["*", BIG, 6], 16, ["*", BIG, 18]],
@@ -108,8 +127,27 @@
                 "icon-rotation-alignment": "map", "icon-pitch-alignment": "map",
                 "icon-allow-overlap": true, "icon-ignore-placement": true },
       paint: { "icon-opacity": 0, "icon-opacity-transition": { duration: 1000 } } });
-    sym("buses", "bus-arrow", ["interpolate", ["linear"], ["zoom"], 11, 0.5, 16, 1.1]);
-    sym("ships", "ship-diamond", ["interpolate", ["linear"], ["zoom"], 11, 0.6, 16, 1.2]);
+    sym("buses", "bus-arrow", ["interpolate", ["linear"], ["zoom"], 11, 0.65, 16, 1.43]);
+    sym("ships", "ship-diamond", ["interpolate", ["linear"], ["zoom"], 11, 0.84, 16, 1.68]);
+    // the beacon to fly to: a cyan point at Turku from the first globe frame, fading out between zoom 11 and 12.5
+    map.addLayer({ id: "city-beacon", type: "circle", source: "beacon",
+      paint: { "circle-color": C.cyan, "circle-blur": 1, "circle-pitch-alignment": "viewport",
+               "circle-radius": ["interpolate", ["linear"], ["zoom"], 1.6, 35, 11, 35, 12.5, 30],
+               "circle-opacity": beaconOpacity(0.6) } });
+    map.addLayer({ id: "city-beacon-core", type: "circle", source: "beacon",
+      paint: { "circle-color": C.cyan, "circle-blur": 0.2, "circle-pitch-alignment": "viewport",
+               "circle-radius": ["interpolate", ["linear"], ["zoom"], 1.6, 2, 11, 2, 12.5, 2],
+               "circle-opacity": beaconOpacity(1) } });
+  }
+
+  const TRAIL_OPACITY = ["case", ["==", ["get", "k"], "ship"], ["interpolate", ["linear"], ["get", "age"], 0, 0.7, 2, 0.15],
+                         ["interpolate", ["linear"], ["get", "age"], 0, 0.8, 9, 0.06]];
+  function beaconOpacity(v) { return ["interpolate", ["linear"], ["zoom"], 11, v, 12.5, 0]; }
+  let lastBeacon = 0;
+  function beaconFrame(now) { // breathe 0.35..0.8 over 2.2 s, at most 15 Hz, only while it can be seen
+    if (now - lastBeacon < 66 || map.getZoom() > 12.6) return; lastBeacon = now;
+    const b = 0.575 + 0.225 * Math.sin((now / 2200) * 2 * Math.PI);
+    map.setPaintProperty("city-beacon", "circle-opacity", beaconOpacity(b));
   }
 
   function showDots() {
@@ -121,7 +159,7 @@
       state.vehOn = true;
       map.setPaintProperty("buses", "icon-opacity", 1);
       map.setPaintProperty("ships", "icon-opacity", 0.95);
-      map.setPaintProperty("trails", "line-opacity", ["interpolate", ["linear"], ["get", "age"], 0, 0.55, 5, 0.04]);
+      map.setPaintProperty("trails", "line-opacity", TRAIL_OPACITY);
     }, 1000);
   }
 
@@ -269,7 +307,7 @@
       v.dur = Math.max(100, Math.min(DUR, now - v.t0)); // tween over the measured read interval, so the arrow never lags its data
       v.t0 = now;
       const last = v.trail[v.trail.length - 1];
-      if (!last || last[0] !== lon || last[1] !== lat) { v.trail.push([lon, lat]); if (v.trail.length > 6) v.trail.shift(); }
+      if (!last || last[0] !== lon || last[1] !== lat) { v.trail.push([lon, lat]); if (v.trail.length > (kind === "ship" ? 3 : 10)) v.trail.shift(); }
     });
     take(d.buses, "bus"); take(d.ships, "ship");
     for (const id of [...state.vehicles.keys()]) if (!seen.has(id)) state.vehicles.delete(id);
@@ -302,10 +340,9 @@
     if (now - lastTrail < 250) return; lastTrail = now; // trails at 4 Hz
     const f = [];
     for (const v of state.vehicles.values()) {
-      if (v.kind !== "bus") continue;
       const pts = [...v.trail.slice(0, -1), pos(v, now)];
       for (let i = pts.length - 1, age = 0; i > 0; i--, age++)
-        if (!far(pts[i - 1], pts[i])) f.push({ type: "Feature", properties: { age }, geometry: { type: "LineString", coordinates: [pts[i - 1], pts[i]] } });
+        if (!far(pts[i - 1], pts[i])) f.push({ type: "Feature", properties: { age, k: v.kind }, geometry: { type: "LineString", coordinates: [pts[i - 1], pts[i]] } });
     }
     map.getSource("trails").setData({ type: "FeatureCollection", features: f });
   }
@@ -314,6 +351,7 @@
     if (map && map.getSource("buses")) {
       if (state.vehOn) vehFrame(now);
       pulseFrame(now);
+      beaconFrame(now);
       if (state.drift && !state.flying && now - state.lastTouch > 8000 && !map.isMoving()) {
         const dt = state._lt ? Math.max(0, Math.min(100, now - state._lt)) : 16;
         map.setBearing(map.getBearing() + dt / 1000);
@@ -336,21 +374,66 @@
 
   // ---------------------------------------------------------------- camera
   function land() {
-    state.flying = false; state.landed = true; state.drift = !REDUCE;
+    state.flying = false; state.landed = true; state.drift = !REDUCE; state.view = "turku";
+    state.landedAt = performance.now(); state.nextHarbour = state.landedAt + 25000; state.returnAt = 0;
     showDots();
     setTimeout(() => $("s1").classList.add("on"), 200);
     setTimeout(() => $("s2").classList.add("on"), 2000);
   }
-  function fly() {
-    state.flying = true; state.drift = false; state.landed = false;
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  // Pre-warm: step the camera through the zooms of the descent under an opaque cover, waiting for each zoom's tiles
+  // (cap 1.5 s per step), so the visible flight never passes a zoom whose tiles have not arrived.
+  async function prewarm() {
+    const zs = [2, 4, 6, 8, 10, 12, 13.5, 15.2];
+    for (const z of zs) {
+      const k = (z - EUROPE.zoom) / (TURKU.zoom - EUROPE.zoom), kc = Math.min(1, k * 2.2);
+      map.jumpTo({ zoom: z, pitch: TURKU.pitch * k, bearing: TURKU.bearing * k,
+                   center: [EUROPE.center[0] + (TURKU.center[0] - EUROPE.center[0]) * kc,
+                            EUROPE.center[1] + (TURKU.center[1] - EUROPE.center[1]) * kc] });
+      const t0 = performance.now();
+      await wait(200);
+      while (!map.areTilesLoaded() && performance.now() - t0 < 1500) await wait(50);
+    }
+    state.warmed = true;
+  }
+  async function fly() {
+    state.flying = true; state.drift = false; state.landed = false; state.view = "turku"; state.returnAt = 0;
     $("s1").classList.remove("on"); $("s2").classList.remove("on");
-    map.jumpTo(EUROPE);
     $("ctitle").classList.add("on");
+    if (!state.warmed) {
+      $("ccover").classList.add("on");
+      await prewarm();
+    }
+    map.jumpTo(EUROPE);
+    $("ccover").classList.remove("on");
     setTimeout(() => {
       setTimeout(() => $("ctitle").classList.remove("on"), 1800);
       map.flyTo({ ...TURKU, duration: 7000, curve: 1.42, easing: (t) => 1 - Math.pow(1 - t, 3), essential: true });
       map.once("moveend", land);
     }, 1500);
+  }
+
+  // act two: the harbour move, and back
+  function harbour() {
+    if (!map || state.flying) return;
+    state.view = "harbour"; state.harbourAt = performance.now();
+    state.returnAt = state.harbourAt + 9000 + 20000; state.nextHarbour = state.harbourAt + 60000;
+    map.easeTo({ ...HARBOUR, duration: REDUCE ? 0 : 9000, easing: easeInOutCubic, essential: true });
+  }
+  function toTurku() {
+    if (!map || state.flying) return;
+    state.view = "turku"; state.returnAt = 0;
+    map.easeTo({ ...TURKU, duration: REDUCE ? 0 : 9000, easing: easeInOutCubic, essential: true });
+  }
+  // live page: 25 s after landing with nobody touching the map, go to the harbour; back 20 s after arriving; every 60 s
+  function autoCamera() {
+    if (P.get("hold") === "1" || REDUCE || !state.landed || state.flying) return;
+    const now = performance.now();
+    if (state.lastTouch > state.landedAt && now - state.lastTouch < 25000) {
+      state.nextHarbour = state.lastTouch + 25000; state.returnAt = 0; return;
+    }
+    if (state.view === "turku" && now >= state.nextHarbour) harbour();
+    else if (state.view === "harbour" && (!state.returnAt || now >= state.returnAt)) toTurku();
   }
 
   async function init() {
@@ -361,7 +444,8 @@
       container: "cmap", style, ...start, maxPitch: 70, attributionControl: false,
       pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5), canvasContextAttributes: { antialias: false },
     });
-    window.__city = { map, state };
+    window.__city = { map, state, harbour, turku: toTurku };
+    if (INTRO) $("ccover").classList.add("on");
     map.on("zoom", () => { if (map.getZoom() > 11) showDots(); });
     for (const ev of ["pointerdown", "wheel", "touchstart"]) map.getCanvasContainer().addEventListener(ev, () => { state.lastTouch = performance.now(); }, { passive: true });
     map.on("load", async () => {
@@ -372,12 +456,15 @@
       fetch("/api/city/vehicles").then((r) => r.json()).then(onPositions).catch(() => {});
       requestAnimationFrame(loop);
       window.__city.ready = true;
-      window.__city.start = () => (INTRO ? fly() : land());
+      setInterval(autoCamera, 1000);
+      // returns a promise that resolves once the pre-warm is done (the recorder drives the clock until it does)
+      window.__city.start = () => (INTRO ? fly() : (land(), Promise.resolve()));
       if (P.get("hold") !== "1") window.__city.start(); // ?hold=1: the recorder starts the fly-in on its first frame
     });
     addEventListener("keydown", (e) => {
       if (e.target.closest && e.target.closest("input,textarea,button")) return;
       if ((e.key === "r" || e.key === "R" || e.code === "Space") && !REDUCE) { e.preventDefault(); fly(); }
+      if (e.key === "h" || e.key === "H") { state.lastTouch = 0; state.view === "harbour" ? toTurku() : harbour(); }
     });
   }
 

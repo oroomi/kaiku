@@ -226,3 +226,21 @@ def test_sub_name_is_per_test_server(monkeypatch):
     assert cr.sub_name() == cr.SUB_NAME
     monkeypatch.setenv("PUBLIC_URL", "http://127.0.0.1:8230")
     assert cr.sub_name() == cr.SUB_NAME + "-8230"
+
+
+def test_vehicles_api_shape_unchanged_and_act_two_layers(client, monkeypatch):
+    async def fake():
+        return {"buses": [{"id": "bus-1", "lon": 22.27, "lat": 60.45, "heading": 90, "line": "1", "dest": "Satama", "delay": 0}],
+                "ships": [{"id": "ship-1", "lon": 22.21, "lat": 60.437, "heading": 270, "name": "VIKING GRACE"}],
+                "weather": {"temp": 4.2, "wtype": "cloudy"}, "source": "broker"}
+    monkeypatch.setattr(cr, "_vehicles", fake)
+    d = client.get("/api/city/vehicles").json()
+    assert set(d) == {"buses", "ships", "weather", "counts", "source"}
+    assert d["buses"][0][:4] == ["bus-1", 22.27, 60.45, 90] and len(d["buses"][0]) == 7
+    assert d["ships"][0] == ["ship-1", 22.21, 60.437, 270, "VIKING GRACE"]
+    html = client.get("/city").text
+    for s in ("city-beacon", "city-glow", 'id="ccover"'):
+        assert s in html, s
+    js = (Path(__file__).resolve().parents[1] / "kaiku" / "web" / "static" / "city.js").read_text()
+    for s in ('id: "city-beacon"', 'id: "city-glow"', 'type: "heatmap"', "harbour", "areTilesLoaded"):
+        assert s in js, s

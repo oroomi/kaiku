@@ -6,7 +6,8 @@
 {% endblock %}
 {% block content %}
 <div class="city{% if room %} has-room{% endif %}" id="city" data-pilot="city">
-  <div id="cmap" aria-label="3D map of central Turku: businesses, buses and ships read from the Orion-LD broker"></div>
+  <div id="cmap" data-layers="city-beacon city-glow" aria-label="3D map of central Turku: businesses, buses and ships read from the Orion-LD broker"></div>
+  <div class="ccover" id="ccover" aria-hidden="true"></div>
   <div class="ctitle" id="ctitle" aria-hidden="true">
     <div class="mono">FIWARE NGSI-LD &middot; ORION-LD</div>
     <h1>Turku, one broker</h1>
