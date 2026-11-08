@@ -1,13 +1,16 @@
 import json
+import os
 
 import pytest
+
+# the same seed values tests/test_core.py expects, so the store and settings look identical whichever module loads kaiku first
+os.environ.setdefault("OWNER_WHATSAPP", "+358000000000")
+os.environ.setdefault("KAIKU_STEP_GAP", "0")
 from fastapi.testclient import TestClient
 
 from kaiku import chain
 from kaiku import demo_contact as DC
-from kaiku.app import app
 from kaiku.contact import ladder as L
-from kaiku.tryit import router as T
 
 
 @pytest.fixture(autouse=True)
@@ -26,12 +29,14 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setattr(chain, "reset_demo", fake_reset)
     monkeypatch.setattr(chain, "api_run", fake_run)
     from datetime import datetime
+    from kaiku.tryit import router as T  # imported here, not at module level: importing the app early would seed the store before test_core sets its env
     monkeypatch.setattr(T, "_now", lambda: datetime(2026, 11, 8, 12, 0, tzinfo=T.HEL))
     return tmp_path
 
 
 @pytest.fixture
 def client():
+    from kaiku.app import app
     return TestClient(app)
 
 
@@ -67,6 +72,7 @@ def test_phone_door_rules(client, env):
 
 def test_phone_outside_hours(client, monkeypatch):
     from datetime import datetime
+    from kaiku.tryit import router as T
     monkeypatch.setattr(T, "_now", lambda: datetime(2026, 11, 8, 23, 0, tzinfo=T.HEL))
     r = client.post("/api/try", json={"door": "phone", "email": "a@b.fi", "phone": "+358451234684", "own_number": True})
     assert r.status_code == 400 and "between 8 and 22" in r.json()["detail"]
